@@ -332,4 +332,6 @@ La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
 est complète et validée de bout en bout (code + Docker Compose + rendu
 visuel). Pistes restantes avant une vraie mise en production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- `docs/APDP.md` (référencé dans CLAUDE.md, pas encore écrit).
+- Faire valider `docs/APDP.md` par l'APDP / un professionnel du droit —
+  plusieurs points (base légale, durée de conservation, responsable de
+  traitement) y sont explicitement marqués comme non tranchés.
