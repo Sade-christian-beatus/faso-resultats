@@ -222,14 +222,12 @@ et examen) sont des étapes distinctes, contrôlées séparément.
   déjà été).
 - **Champs sensibles non exposés** : `date_naissance` et `lieu_naissance` sont
   volontairement absents de `ResultatPublicOut`, par principe de minimisation
-  des données (APDP) — le candidat n'a pas besoin de se les voir confirmer
-  pour retrouver son résultat. ⚠️ Décision prise sans validation produit
-  explicite ; à confirmer.
-- **Anti-scraping non traité à ce stade** : la recherche ne demande que
-  `numero_pv` (+ `jury`), sans second facteur (ex. date de naissance). Le
-  rate limiting (30 req/min/IP par défaut) limite le débit mais n'empêche pas
-  un scraping lent et distribué. À réévaluer si le produit expose un jour les
-  résultats à plus grande échelle.
+  des données (APDP). Décision actée — voir « Historique des décisions
+  techniques importantes » dans `CLAUDE.md`.
+- **Pas de second facteur anti-scraping en Phase 1** : la recherche ne demande
+  que `numero_pv` (+ `jury`), protégée par le rate limiting (30 req/min/IP) et
+  l'absence de tout endpoint de liste/wildcard. Risque accepté pour la Phase 1,
+  à réévaluer avant un déploiement à grande échelle — voir `CLAUDE.md`.
 
 ### Cache (`app/core/cache.py`)
 
@@ -295,6 +293,33 @@ observé dans cet environnement de développement, dont le réseau bloque
 vérifiée (via Playwright, sans CSS). À vérifier dans un navigateur avec accès
 internet avant mise en production.
 
+## Validation Docker Compose
+
+Un vrai `docker compose up --build` a été tenté (pas seulement testé service
+par service en local) pour valider l'empaquetage complet. Résultat mitigé :
+
+- **`docker compose config`** : réussi — le fichier est valide, l'interpolation
+  des variables d'environnement, les volumes, les healthchecks et les
+  dépendances entre services (`depends_on: condition: service_healthy`)
+  sont corrects.
+- **`docker compose up --build`** : **bloqué par la politique réseau de cet
+  environnement de développement**, pas par un défaut du projet — le
+  téléchargement de toute image Docker Hub (`postgres:15-alpine`,
+  `redis:7-alpine`, `nginx:alpine`, et même `python:3.11-slim` utilisée par le
+  `Dockerfile` backend) échoue avec un rejet côté proxy réseau sur
+  `production.cloudfront.docker.com`. Confirmé sur plusieurs images
+  différentes → blocage de politique, pas un incident isolé.
+- **Ce qui a été validé à la place**, en dehors de Docker, avec les vrais
+  services (PostgreSQL 16 et Redis réels, pas de mock) : migrations Alembic,
+  API complète (auth, ingestion, publication, recherche publique), cache,
+  rate limiting, et le frontend dans un vrai navigateur (Playwright) — voir
+  les sections précédentes. Le code applicatif est donc éprouvé ; seul
+  l'empaquetage Docker lui-même (construction d'image, réseau inter-conteneurs,
+  volumes montés) n'a pas pu être vérifié bout en bout ici.
+- **À faire** : lancer `docker compose up --build -d` dans un environnement
+  avec accès normal à Docker Hub (poste de dev, CI) pour valider
+  l'empaquetage final avant toute mise en production.
+
 ## Ce qui reste à faire (Phase 1)
 
 La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
@@ -302,5 +327,6 @@ est fonctionnellement complète. Pistes restantes avant une vraie mise en
 production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
 - Valider le rendu visuel du frontend dans un navigateur avec accès internet.
-- Trancher les points ouverts APDP/anti-scraping notés plus haut.
+- Valider `docker compose up --build` de bout en bout dans un environnement
+  avec accès à Docker Hub (voir « Validation Docker Compose » ci-dessus).
 - `docs/APDP.md` (référencé dans CLAUDE.md, pas encore écrit).

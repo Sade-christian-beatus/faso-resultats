@@ -236,7 +236,21 @@ Après chaque étape majeure, produire un résumé structuré :
 > Section à maintenir à jour manuellement à chaque décision structurante.
 > Format : date, décision, justification.
 
-- **[À compléter au fur et à mesure]**
+- **2026-07-03 — `date_naissance` et `lieu_naissance` exclus de l'API publique**
+  (`/api/v1/public/results`). Le candidat retrouve déjà son résultat via son
+  numéro de PV ; il n'a pas besoin de se voir confirmer sa date/lieu de
+  naissance pour ça. Minimisation des données conforme à l'esprit APDP.
+  Décision assumée sans étude produit formelle — à revoir si un usage
+  démontre le besoin (ex. vérification d'identité renforcée).
+- **2026-07-03 — Pas de second facteur anti-scraping en Phase 1** sur la
+  recherche publique de résultat (numéro de PV + jury optionnel uniquement).
+  Protection actuelle : rate limiting (30 req/min/IP par défaut) + absence
+  de tout endpoint de liste/wildcard (il faut déjà connaître un numéro de PV
+  précis, aucune énumération possible côté API). Jugé suffisant pour le
+  volume et l'usage de la Phase 1. À réévaluer avant un déploiement à grande
+  échelle (ex. jour de proclamation du BAC) : envisager une seconde donnée
+  de vérification (date de naissance) ou un captcha si des abus sont
+  constatés.
 
 ---
 
