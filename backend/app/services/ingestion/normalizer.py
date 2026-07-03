@@ -1,0 +1,128 @@
+"""Normalisation des lignes brutes extraites d'un fichier source (PDF, Excel, OCR)
+vers les champs attendus par le modèle Resultat. Fonctions pures, sans I/O,
+pour rester testables sans fichier ni base de données.
+"""
+
+import re
+import unicodedata
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any
+
+CHAMPS_OBLIGATOIRES = ("numero_pv", "nom", "prenom", "jury", "decision")
+
+# Alias d'en-têtes tolérés par champ canonique (déjà normalisés : minuscules, sans accent).
+_ALIAS_ENTETES: dict[str, tuple[str, ...]] = {
+    "numero_pv": ("numero_pv", "numero pv", "num pv", "n pv", "matricule"),
+    "jury": ("jury", "centre", "centre d examen", "centre examen"),
+    "nom": ("nom",),
+    "prenom": ("prenom", "prenoms"),
+    "date_naissance": ("date de naissance", "date_naissance", "ne le", "nee le"),
+    "lieu_naissance": ("lieu de naissance", "lieu_naissance"),
+    "etablissement": ("etablissement", "ecole"),
+    "decision": ("decision", "resultat", "mention"),
+    "moyenne": ("moyenne", "moy"),
+}
+
+_FORMATS_DATE = ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d")
+
+
+def _sans_accents(texte: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", texte) if unicodedata.category(c) != "Mn"
+    )
+
+
+def normaliser_entete(entete: str) -> str:
+    """'Numéro PV' -> 'numero pv' ; 'Prénom(s)' -> 'prenom s' etc."""
+    texte = _sans_accents(str(entete)).lower().strip()
+    texte = re.sub(r"[^a-z0-9]+", " ", texte).strip()
+    return texte
+
+
+def construire_mapping_colonnes(entetes_brutes: list[str]) -> dict[str, str]:
+    """Associe chaque en-tête brute du fichier au champ canonique correspondant, si reconnu."""
+    mapping: dict[str, str] = {}
+    for entete_brute in entetes_brutes:
+        entete_normalisee = normaliser_entete(entete_brute)
+        for champ, alias in _ALIAS_ENTETES.items():
+            if entete_normalisee in alias:
+                mapping[entete_brute] = champ
+                break
+    return mapping
+
+
+def _parser_date(valeur: Any) -> tuple[date | None, str | None]:
+    if valeur is None or valeur == "":
+        return None, None
+    if isinstance(valeur, date):
+        return valeur, None
+    texte = str(valeur).strip()
+    for fmt in _FORMATS_DATE:
+        try:
+            from datetime import datetime as _dt
+
+            return _dt.strptime(texte, fmt).date(), None
+        except ValueError:
+            continue
+    return None, f"date de naissance illisible : '{texte}'"
+
+
+def _parser_moyenne(valeur: Any) -> tuple[float | None, str | None]:
+    if valeur is None or valeur == "":
+        return None, None
+    if isinstance(valeur, int | float):
+        return float(valeur), None
+    texte = str(valeur).strip().replace(",", ".")
+    try:
+        return float(texte), None
+    except ValueError:
+        return None, f"moyenne illisible : '{texte}'"
+
+
+@dataclass
+class ResultatNormalisation:
+    donnees: dict[str, Any]
+    erreurs: list[str] = field(default_factory=list)
+
+
+def normaliser_ligne(
+    ligne_brute: dict[str, Any], mapping_colonnes: dict[str, str]
+) -> ResultatNormalisation:
+    """Transforme une ligne brute (en-têtes du fichier -> valeurs) en champs canoniques
+    prêts pour Resultat, en collectant les erreurs de validation plutôt qu'en levant une
+    exception : chaque ligne en erreur reste visible pour correction manuelle.
+    """
+    valeurs: dict[str, Any] = {}
+    for entete_brute, valeur in ligne_brute.items():
+        champ = mapping_colonnes.get(entete_brute)
+        if champ:
+            valeurs[champ] = valeur.strip() if isinstance(valeur, str) else valeur
+
+    erreurs: list[str] = []
+
+    for champ in CHAMPS_OBLIGATOIRES:
+        if not valeurs.get(champ):
+            erreurs.append(f"{champ} manquant")
+
+    date_naissance, erreur_date = _parser_date(valeurs.get("date_naissance"))
+    if erreur_date:
+        erreurs.append(erreur_date)
+
+    moyenne, erreur_moyenne = _parser_moyenne(valeurs.get("moyenne"))
+    if erreur_moyenne:
+        erreurs.append(erreur_moyenne)
+
+    donnees = {
+        "numero_pv": str(valeurs.get("numero_pv") or "").strip(),
+        "jury": str(valeurs.get("jury") or "").strip(),
+        "nom": str(valeurs.get("nom") or "").strip(),
+        "prenom": str(valeurs.get("prenom") or "").strip(),
+        "decision": str(valeurs.get("decision") or "").strip().upper(),
+        "date_naissance": date_naissance.isoformat() if date_naissance else None,
+        "lieu_naissance": str(valeurs.get("lieu_naissance") or "").strip() or None,
+        "etablissement": str(valeurs.get("etablissement") or "").strip() or None,
+        "moyenne": moyenne,
+    }
+
+    return ResultatNormalisation(donnees=donnees, erreurs=erreurs)

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     rate_limit_login: str = "5/minute"
 
     uploads_dir: str = "/app/uploads"
+    max_upload_size_mb: int = 20
 
     @property
     def cors_origins_list(self) -> list[str]:

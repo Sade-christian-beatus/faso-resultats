@@ -17,3 +17,8 @@ ignore = ["B008"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+# SQLAlchemy 2.0 async bridges sync DBAPI calls through greenlet; without this,
+# coverage silently misses any code that runs on the other side of that bridge.
+concurrency = ["greenlet", "thread"]

@@ -121,6 +121,10 @@ Index : `(examen_id, statut)` — envoi en masse.
 - **`bcrypt` épinglé à 4.0.1** : `passlib` 1.7.4 lit `bcrypt.__about__.__version__`,
   supprimé dans `bcrypt` 4.1+. Épingler évite un warning au démarrage ; le hash
   bcrypt lui-même n'est pas affecté par cette version.
+- **`coverage.run.concurrency = ["greenlet", "thread"]`** : SQLAlchemy 2.0 async
+  fait passer les appels DBAPI synchrones par un greenlet (`greenlet_spawn`).
+  Sans ce réglage, `coverage.py` ne trace pas le code exécuté côté greenlet et
+  sous-évalue fortement la couverture des routes qui touchent la base.
 
 ## Auth admin (JWT)
 
@@ -139,9 +143,71 @@ Index : `(examen_id, statut)` — envoi en masse.
 - `backend/seed.py` : crée l'admin par défaut (`admin@faso-resultats.bf` /
   `ChangeMe123!`, à changer avant mise en production), idempotent.
 
+## Admin — examens
+
+- `POST /api/v1/admin/exams` : crée un examen en statut `DRAFT`.
+- `GET /api/v1/admin/exams` : liste tous les examens (vue admin, tous statuts).
+- `POST /api/v1/admin/exams/{id}/publish` : passe l'examen en `PUBLISHED`,
+  le rendant visible côté public (une fois les routes publiques construites).
+  Séparé volontairement de la publication d'une ingestion : charger des
+  résultats et rendre un examen public sont deux décisions distinctes.
+
+## Pipeline d'ingestion
+
+Toute importation suit strictement : **upload → prévisualisation → correction
+manuelle possible → publication explicite**, conformément à CLAUDE.md.
+
+### Parsers (`app/services/ingestion/`)
+
+- `normalizer.py` : logique pure (aucune I/O) qui reconnaît les en-têtes de
+  colonnes (alias français tolérants aux accents/casse) et normalise chaque
+  ligne brute vers les champs `Resultat`, en **collectant les erreurs plutôt
+  qu'en levant une exception** — une ligne en erreur reste visible dans
+  l'aperçu pour correction manuelle, au lieu de faire échouer tout l'import.
+  Champs obligatoires : `numero_pv`, `jury`, `nom`, `prenom`, `decision`.
+- `excel_parser.py` (openpyxl) : entièrement testé avec de vrais fichiers
+  `.xlsx` générés dans les tests (aucune dépendance externe nécessaire pour
+  écrire *et* lire du Excel).
+- `pdf_parser.py` (pdfplumber) : extrait les tableaux d'un PDF natif (texte,
+  non scanné). ⚠️ Non calibré sur de vrais PV — aucun spécimen OCECOS/DGEC
+  n'était disponible pendant le développement, et générer un PDF de test
+  réaliste aurait nécessité une dépendance supplémentaire non justifiée à ce
+  stade. À valider dès qu'un vrai PV PDF sera fourni.
+- `ocr_parser.py` (pdf2image + OpenCV + pytesseract, `lang='fra'`) : pipeline
+  image → texte, puis découpage en colonnes par heuristique (séparateur =
+  2+ espaces). La fonction de découpage (`lignes_depuis_texte`) est pure et
+  testée ; le pipeline image lui-même nécessite les binaires `tesseract` et
+  `poppler` (présents dans le Dockerfile, absents de l'environnement de dev
+  sandbox) et n'a donc pas pu être testé en conditions réelles. ⚠️ Heuristique
+  de premier jet, à calibrer sur de vrais PV scannés.
+- `dispatch.py` : sélectionne le bon parser selon `TypeFichier`.
+- `publication.py` : transforme l'aperçu validé (`Ingestion.apercu_donnees`)
+  en lignes `Resultat` prêtes à insérer.
+
+### Flux admin (`app/routes/admin/ingestions.py`)
+
+1. `POST /api/v1/admin/ingestions` (multipart : `file`, `examen_id`,
+   `type_fichier`) : sauvegarde le fichier sous
+   `{UPLOADS_DIR}/{examen_id}/{ingestion_id}.{ext}`, parse immédiatement
+   (synchrone — pas de file d'attente à ce stade), crée l'`Ingestion` en
+   statut `PREVISUALISATION` avec `apercu_donnees` (lignes + erreurs par
+   ligne). Rejette les extensions incompatibles avec le `type_fichier`
+   déclaré et les fichiers dépassant `MAX_UPLOAD_SIZE_MB` (défaut 20 Mo).
+2. `GET /api/v1/admin/ingestions/{id}` : aperçu complet pour relecture.
+3. `PATCH /api/v1/admin/ingestions/{id}` : remplace `apercu_donnees` par la
+   version corrigée par l'admin (uniquement si statut `PREVISUALISATION`).
+4. `POST /api/v1/admin/ingestions/{id}/publish` : **bloqué si une seule ligne
+   porte encore une erreur** (validation humaine obligatoire) — crée les
+   `Resultat` (avec `donnees_brutes` = ligne brute d'origine, pour l'audit),
+   passe l'ingestion en `PUBLIEE`.
+5. `POST /api/v1/admin/ingestions/{id}/reject` : écarte l'ingestion sans
+   créer de résultats.
+
+Note : publier une ingestion ne rend pas les résultats visibles côté public
+si l'examen parent est encore en `DRAFT` — les deux publications (ingestion
+et examen) sont des étapes distinctes, contrôlées séparément.
+
 ## Ce qui reste à faire (Phase 1)
 
-Voir le suivi de tâches en session. Prochaines étapes : pipeline d'ingestion
-(parsers PDF/Excel/OCR + upload → prévisualisation → correction →
-publication), routes publiques avec cache Redis et rate limiting, frontend
-minimal.
+Voir le suivi de tâches en session. Prochaines étapes : routes publiques avec
+cache Redis et rate limiting, frontend minimal (consultation + admin.html).

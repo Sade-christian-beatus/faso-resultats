@@ -8,6 +8,8 @@ from app.config import get_settings
 from app.core.rate_limit import limiter
 from app.routes import health
 from app.routes.admin import auth as admin_auth
+from app.routes.admin import exams as admin_exams
+from app.routes.admin import ingestions as admin_ingestions
 
 settings = get_settings()
 
@@ -31,3 +33,5 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(admin_auth.router)
+app.include_router(admin_exams.router)
+app.include_router(admin_ingestions.router)
