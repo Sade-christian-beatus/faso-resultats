@@ -295,30 +295,35 @@ internet avant mise en production.
 
 ## Validation Docker Compose
 
-Un vrai `docker compose up --build` a été tenté (pas seulement testé service
-par service en local) pour valider l'empaquetage complet. Résultat mitigé :
+`docker compose up --build` a été validé de bout en bout, en deux temps :
 
-- **`docker compose config`** : réussi — le fichier est valide, l'interpolation
-  des variables d'environnement, les volumes, les healthchecks et les
-  dépendances entre services (`depends_on: condition: service_healthy`)
-  sont corrects.
-- **`docker compose up --build`** : **bloqué par la politique réseau de cet
-  environnement de développement**, pas par un défaut du projet — le
-  téléchargement de toute image Docker Hub (`postgres:15-alpine`,
-  `redis:7-alpine`, `nginx:alpine`, et même `python:3.11-slim` utilisée par le
-  `Dockerfile` backend) échoue avec un rejet côté proxy réseau sur
-  `production.cloudfront.docker.com`. Confirmé sur plusieurs images
-  différentes → blocage de politique, pas un incident isolé.
-- **Ce qui a été validé à la place**, en dehors de Docker, avec les vrais
-  services (PostgreSQL 16 et Redis réels, pas de mock) : migrations Alembic,
-  API complète (auth, ingestion, publication, recherche publique), cache,
-  rate limiting, et le frontend dans un vrai navigateur (Playwright) — voir
-  les sections précédentes. Le code applicatif est donc éprouvé ; seul
-  l'empaquetage Docker lui-même (construction d'image, réseau inter-conteneurs,
-  volumes montés) n'a pas pu être vérifié bout en bout ici.
-- **À faire** : lancer `docker compose up --build -d` dans un environnement
-  avec accès normal à Docker Hub (poste de dev, CI) pour valider
-  l'empaquetage final avant toute mise en production.
+- **Dans le sandbox de développement de cette session** : `docker compose
+  config` réussit (fichier valide — interpolation des variables
+  d'environnement, volumes, healthchecks, dépendances `service_healthy`
+  correctes), mais `docker compose up --build` était bloqué par la politique
+  réseau du sandbox (téléchargement de toute image Docker Hub refusé côté
+  proxy, confirmé sur plusieurs images différentes — incident de
+  l'environnement, pas du projet).
+- **Sur poste réel (Windows, Docker Desktop)** : validé intégralement le
+  2026-07-03 — `docker compose up --build -d` (4 conteneurs `Healthy`/
+  `Started`), `alembic upgrade head` (migrations appliquées), `python
+  seed.py` (admin par défaut créé), `GET /health` → `{"status":"ok"}`,
+  `GET /api/v1/public/exams` → `[]` (comportement attendu, aucun examen
+  publié). Deux vrais bugs d'intégration trouvés et corrigés au passage :
+  1. Le service `redis` publiait le port 6379 vers l'hôte alors que le
+     backend l'atteint via le réseau Docker interne — ça faisait échouer
+     tout le stack sur toute machine ayant déjà un process sur ce port
+     (`docker-compose.yml`, port retiré).
+  2. Un dossier local non suivi par git avait dérivé du dépôt réel
+     (fichiers assemblés à la main au fil des échanges plutôt que clonés),
+     ce qui a provoqué une erreur `psycopg2 is not async` en migration —
+     résolu par un clone git propre. Aucun bug de code réel ici, mais un
+     rappel que l'empaquetage Docker doit toujours être testé depuis un
+     clone propre du dépôt, jamais depuis une copie assemblée à la main.
+
+Le pipeline complet (base + cache + backend + frontend, construits et
+démarrés via Docker, migrations et seed appliqués, API qui répond) est donc
+confirmé fonctionnel de bout en bout.
 
 ## Ce qui reste à faire (Phase 1)
 
@@ -326,7 +331,6 @@ La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
 est fonctionnellement complète. Pistes restantes avant une vraie mise en
 production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- Valider le rendu visuel du frontend dans un navigateur avec accès internet.
-- Valider `docker compose up --build` de bout en bout dans un environnement
-  avec accès à Docker Hub (voir « Validation Docker Compose » ci-dessus).
+- Valider le rendu visuel du frontend (couleurs/espacements Tailwind) dans un
+  navigateur avec accès internet — la logique est vérifiée, pas l'apparence.
 - `docs/APDP.md` (référencé dans CLAUDE.md, pas encore écrit).
