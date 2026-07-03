@@ -5,9 +5,15 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.core.rate_limit import limiter
 from app.database import get_db
 from app.main import app
 from app.models.base import Base
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter() -> None:
+    limiter.reset()
 
 
 @pytest.fixture

@@ -118,10 +118,30 @@ Index : `(examen_id, statut)` — envoi en masse.
   CI. Les contraintes NOT NULL sont bien vérifiées par SQLite ; les contraintes
   FK ne le sont pas par défaut (non activées), donc les tests ciblent les
   colonnes NOT NULL plutôt que la seule présence de la FK.
+- **`bcrypt` épinglé à 4.0.1** : `passlib` 1.7.4 lit `bcrypt.__about__.__version__`,
+  supprimé dans `bcrypt` 4.1+. Épingler évite un warning au démarrage ; le hash
+  bcrypt lui-même n'est pas affecté par cette version.
+
+## Auth admin (JWT)
+
+- `POST /api/v1/admin/login` : `{email, password}` → `{access_token, token_type}`.
+  Rate-limité (`RATE_LIMIT_LOGIN`, défaut 5/minute par IP) via slowapi, pour
+  limiter le brute force. Réponse 401 générique ("Email ou mot de passe
+  incorrect") que l'email existe ou non, pour ne pas permettre l'énumération
+  de comptes.
+- Token JWT (`python-jose`, HS256) : `sub` = id admin, expiration configurable
+  (`JWT_EXPIRE_MINUTES`, défaut 60 min).
+- `app/core/deps.get_current_admin` : dépendance FastAPI (`HTTPBearer`) à
+  injecter dans toute future route `/api/v1/admin/*` pour exiger un token
+  valide et un compte actif.
+- `GET /api/v1/admin/me` : exemple de route protégée, renvoie le profil de
+  l'admin authentifié (jamais le hash du mot de passe).
+- `backend/seed.py` : crée l'admin par défaut (`admin@faso-resultats.bf` /
+  `ChangeMe123!`, à changer avant mise en production), idempotent.
 
 ## Ce qui reste à faire (Phase 1)
 
-Voir le suivi de tâches en session. Prochaines étapes : auth admin JWT,
-pipeline d'ingestion (parsers PDF/Excel/OCR + upload → prévisualisation →
-correction → publication), routes publiques avec cache Redis et rate limiting,
-frontend minimal.
+Voir le suivi de tâches en session. Prochaines étapes : pipeline d'ingestion
+(parsers PDF/Excel/OCR + upload → prévisualisation → correction →
+publication), routes publiques avec cache Redis et rate limiting, frontend
+minimal.
