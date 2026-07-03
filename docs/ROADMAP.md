@@ -13,9 +13,12 @@ rendu visuel) — voir `docs/ARCHITECTURE.md`. PR #2 en cours de relecture.
 **Décisions de cadrage actées le 2026-07-03** (voir aussi `CLAUDE.md` §
 Historique des décisions) :
 - SMS et USSD : **Orange Business** (API Bulk SMS), file de tâches **RQ**.
+- Préinscription SMS : **le candidat s'inscrit lui-même** sur le site
+  public (numéro de PV + téléphone + case de consentement), avant la
+  publication des résultats.
 - Mobile : **Flutter**.
 - Espace établissement : **table normalisée** + **auto-inscription avec
-  vérification**.
+  vérification automatique** contre une liste officielle d'établissements.
 - API B2B : confirmée, à construire.
 - **Guide d'orientation : supprimé du périmètre du projet.**
 - **Expansion sous-régionale UEMOA : supprimée du périmètre du projet.**
@@ -52,11 +55,13 @@ La table `notifications_preinscription` est en place depuis la Phase 1
 `envoye_at`) mais n'est reliée à aucune route — c'est une réservation de
 schéma, pas une fonctionnalité.
 
-### Reste à trancher avant de démarrer
-**Où se fait la préinscription ?** Sur `index.html` (candidat coche une
-case avant la publication) ou uniquement via un import admin en masse
-(numéros collectés hors-ligne) ? Change complètement l'UI à prévoir —
-seule question de cadrage encore ouverte pour cette phase.
+### Préinscription — auto-inscription sur le site public
+
+Le candidat s'inscrit lui-même, avant la publication des résultats, via un
+formulaire sur `index.html` : numéro de PV + numéro de téléphone + case de
+consentement (non pré-cochée, conforme APDP). Pas d'import admin en masse
+prévu pour ce flux — toutes les questions de cadrage de cette phase sont
+désormais tranchées.
 
 ### Étapes techniques
 1. `app/services/sms/orange_business.py` : client pour l'API Bulk SMS
@@ -68,7 +73,9 @@ seule question de cadrage encore ouverte pour cette phase.
    séparé dans `docker-compose.yml` (nouveau service `worker`, même image
    backend, `command: rq worker`).
 3. `POST /api/v1/public/preinscriptions` : le candidat s'inscrit avec son
-   numéro de PV + téléphone + consentement, avant la publication.
+   numéro de PV + téléphone + consentement, avant la publication. Nécessite
+   un formulaire dédié sur `index.html` (nouveau, en plus du formulaire de
+   recherche existant) et sa logique JS associée.
 4. Déclenchement à la publication : quand `POST
    /api/v1/admin/exams/{id}/publish` passe un examen en `PUBLISHED`, une
    tâche RQ est enfilée par préinscription `EN_ATTENTE` de cet examen
@@ -108,7 +115,7 @@ seule question de cadrage encore ouverte pour cette phase.
   review) — première publication à anticiper en avance (délais de
   validation Google variables).
 
-### Espace établissement — table normalisée + auto-inscription avec vérification
+### Espace établissement — table normalisée + vérification automatique
 
 Nécessite une refonte partielle du modèle de données : aujourd'hui,
 `etablissement` sur `Resultat` est un simple champ texte libre extrait du
@@ -119,13 +126,15 @@ fichier source, pas une entité normalisée.
 2. Nouveau type de compte (au-delà du seul `Admin` actuel), avec des
    permissions restreintes à son propre établissement — vue agrégée en
    lecture seule des résultats de leurs élèves.
-3. **Flux d'auto-inscription avec vérification** : un établissement crée
-   son compte lui-même, mais celui-ci reste inactif jusqu'à vérification.
-   ⚠️ Mécanisme de vérification à définir précisément — pistes : validation
-   manuelle par un admin OCECOS/DGEC (simple mais lent à grande échelle),
-   ou correspondance automatique contre une liste officielle
-   d'établissements si elle existe (rapide mais dépend de la disponibilité
-   d'un tel référentiel). À trancher avant de coder cette partie.
+3. **Flux d'auto-inscription, vérification automatique** : un
+   établissement crée son compte lui-même ; le nom déclaré est comparé
+   automatiquement à une liste officielle d'établissements, le compte
+   n'est activé qu'en cas de correspondance. ⚠️ **Prérequis à confirmer
+   avant de coder** : disposer de cette liste officielle des
+   établissements burkinabè (probablement auprès du Ministère de
+   l'Éducation) — sans elle, la vérification automatique n'est pas
+   possible et il faudrait retomber sur une validation manuelle en
+   attendant.
 4. Réconciliation entre le texte libre historique (`Resultat.etablissement`)
    et la nouvelle table normalisée — les fichiers PV n'utilisent pas
    forcément une orthographe/un code établissement cohérent d'un import à

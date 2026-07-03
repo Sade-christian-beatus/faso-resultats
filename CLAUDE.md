@@ -258,10 +258,14 @@ Après chaque étape majeure, produire un résumé structuré :
   constatés.
 - **2026-07-03 — Choix techniques des phases 2-4 actés** : SMS et USSD via
   Orange Business (API Bulk SMS), file de tâches RQ (s'appuie sur Redis,
-  déjà dans la stack, plus léger que Celery pour ce volume), app mobile en
-  Flutter (Android + iOS depuis la même base), espace établissement avec
-  table normalisée et auto-inscription (mécanisme de vérification encore
-  à définir précisément). Détail complet dans `docs/ROADMAP.md`.
+  déjà dans la stack, plus léger que Celery pour ce volume), préinscription
+  SMS en auto-inscription sur le site public (candidat saisit lui-même son
+  numéro de PV + téléphone + consentement), app mobile en Flutter (Android
+  + iOS depuis la même base), espace établissement avec table normalisée
+  et vérification automatique contre une liste officielle d'établissements
+  (⚠️ nécessite d'obtenir cette liste, probablement auprès du Ministère de
+  l'Éducation — prérequis non encore confirmé). Détail complet dans
+  `docs/ROADMAP.md`.
 - **2026-07-03 — Guide d'orientation et expansion UEMOA supprimés du
   projet.** Faso Résultats reste un produit mono-pays (Burkina Faso) de
   façon permanente. Simplifie durablement le modèle de données (pas besoin
