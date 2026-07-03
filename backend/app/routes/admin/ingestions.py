@@ -1,0 +1,212 @@
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import func
+
+from app.config import get_settings
+from app.core.deps import get_current_admin
+from app.database import get_db
+from app.models import Admin, Examen, Ingestion, StatutIngestion, TypeFichier
+from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
+from app.services.ingestion.dispatch import parser_fichier
+from app.services.ingestion.publication import construire_resultats
+
+router = APIRouter(
+    prefix="/api/v1/admin/ingestions",
+    tags=["admin-ingestions"],
+    dependencies=[Depends(get_current_admin)],
+)
+settings = get_settings()
+
+_EXTENSIONS_AUTORISEES = {
+    TypeFichier.EXCEL: {".xlsx", ".xls"},
+    TypeFichier.PDF: {".pdf"},
+    TypeFichier.PDF_OCR: {".pdf"},
+}
+
+
+async def _get_ingestion_ou_404(ingestion_id: uuid.UUID, db: AsyncSession) -> Ingestion:
+    ingestion = await db.get(Ingestion, ingestion_id)
+    if ingestion is None:
+        raise HTTPException(status_code=404, detail="Ingestion introuvable")
+    return ingestion
+
+
+def _vers_preview(ingestion: Ingestion) -> IngestionPreviewOut:
+    return IngestionPreviewOut(
+        **IngestionOut.model_validate(ingestion).model_dump(),
+        lignes=[LigneApercu(**ligne) for ligne in ingestion.apercu_donnees],
+    )
+
+
+@router.post(
+    "",
+    response_model=IngestionPreviewOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Uploader un fichier de résultats",
+    description="Upload puis parsing immédiat (aperçu). Rien n'est publié tant que "
+    "POST /publish n'est pas appelé explicitement.",
+)
+async def upload_ingestion(
+    examen_id: uuid.UUID = Form(...),
+    type_fichier: TypeFichier = Form(...),
+    file: UploadFile = File(...),
+    current_admin: Admin = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> IngestionPreviewOut:
+    examen = await db.get(Examen, examen_id)
+    if examen is None:
+        raise HTTPException(status_code=404, detail="Examen introuvable")
+
+    extension = Path(file.filename or "").suffix.lower()
+    if extension not in _EXTENSIONS_AUTORISEES[type_fichier]:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Extension '{extension}' incompatible avec le type de fichier "
+                f"{type_fichier.value}"
+            ),
+        )
+
+    contenu = await file.read()
+    taille_max = settings.max_upload_size_mb * 1024 * 1024
+    if len(contenu) > taille_max:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Fichier trop volumineux (max {settings.max_upload_size_mb} Mo)",
+        )
+
+    ingestion_id = uuid.uuid4()
+    dossier_examen = Path(settings.uploads_dir) / str(examen_id)
+    dossier_examen.mkdir(parents=True, exist_ok=True)
+    chemin_fichier = dossier_examen / f"{ingestion_id}{extension}"
+    chemin_fichier.write_bytes(contenu)
+
+    resultat_parsing = parser_fichier(chemin_fichier, type_fichier)
+
+    ingestion = Ingestion(
+        id=ingestion_id,
+        examen_id=examen_id,
+        admin_id=current_admin.id,
+        nom_fichier=file.filename or chemin_fichier.name,
+        chemin_fichier=str(chemin_fichier),
+        type_fichier=type_fichier,
+        statut=StatutIngestion.PREVISUALISATION,
+        nombre_lignes_detectees=resultat_parsing.nombre_lignes,
+        nombre_erreurs=resultat_parsing.nombre_erreurs,
+        apercu_donnees=[ligne.as_dict() for ligne in resultat_parsing.lignes],
+    )
+    db.add(ingestion)
+    await db.commit()
+    await db.refresh(ingestion)
+    return _vers_preview(ingestion)
+
+
+@router.get(
+    "",
+    response_model=list[IngestionOut],
+    summary="Lister les ingestions",
+    description="Vue admin de toutes les ingestions, filtrable par examen.",
+)
+async def list_ingestions(
+    examen_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db)
+) -> list[Ingestion]:
+    query = select(Ingestion).order_by(Ingestion.created_at.desc())
+    if examen_id is not None:
+        query = query.where(Ingestion.examen_id == examen_id)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+@router.get(
+    "/{ingestion_id}",
+    response_model=IngestionPreviewOut,
+    summary="Détail d'une ingestion",
+    description="Renvoie l'ingestion avec l'aperçu complet des lignes extraites, pour "
+    "prévisualisation et correction.",
+)
+async def get_ingestion(
+    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> IngestionPreviewOut:
+    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    return _vers_preview(ingestion)
+
+
+@router.patch(
+    "/{ingestion_id}",
+    response_model=IngestionPreviewOut,
+    summary="Corriger les lignes d'une ingestion",
+    description="Remplace l'aperçu des lignes par la version corrigée manuellement par "
+    "l'admin. Uniquement possible tant que l'ingestion n'est pas publiée ni rejetée.",
+)
+async def correct_ingestion(
+    ingestion_id: uuid.UUID, payload: CorrectionRequest, db: AsyncSession = Depends(get_db)
+) -> IngestionPreviewOut:
+    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    if ingestion.statut != StatutIngestion.PREVISUALISATION:
+        raise HTTPException(
+            status_code=409,
+            detail="Cette ingestion n'est plus modifiable (déjà publiée ou rejetée)",
+        )
+
+    ingestion.apercu_donnees = [ligne.model_dump() for ligne in payload.lignes]
+    ingestion.nombre_lignes_detectees = len(payload.lignes)
+    ingestion.nombre_erreurs = sum(1 for ligne in payload.lignes if ligne.erreurs)
+    await db.commit()
+    await db.refresh(ingestion)
+    return _vers_preview(ingestion)
+
+
+@router.post(
+    "/{ingestion_id}/publish",
+    response_model=IngestionOut,
+    summary="Publier une ingestion",
+    description="Transforme l'aperçu validé en résultats officiels. Bloqué si des lignes "
+    "portent encore des erreurs (validation humaine obligatoire avant publication).",
+)
+async def publish_ingestion(
+    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> Ingestion:
+    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    if ingestion.statut != StatutIngestion.PREVISUALISATION:
+        raise HTTPException(
+            status_code=409, detail="Cette ingestion n'est pas en attente de publication"
+        )
+    if ingestion.nombre_erreurs > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Des lignes contiennent encore des erreurs : corrigez-les avant de publier",
+        )
+    if not ingestion.apercu_donnees:
+        raise HTTPException(status_code=400, detail="Aucune ligne à publier")
+
+    for resultat in construire_resultats(ingestion):
+        db.add(resultat)
+
+    ingestion.statut = StatutIngestion.PUBLIEE
+    ingestion.publiee_at = func.now()
+    await db.commit()
+    await db.refresh(ingestion)
+    return ingestion
+
+
+@router.post(
+    "/{ingestion_id}/reject",
+    response_model=IngestionOut,
+    summary="Rejeter une ingestion",
+    description="Écarte l'ingestion sans créer de résultats (ex : mauvais fichier importé).",
+)
+async def reject_ingestion(
+    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+) -> Ingestion:
+    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    if ingestion.statut != StatutIngestion.PREVISUALISATION:
+        raise HTTPException(status_code=409, detail="Cette ingestion n'est pas en attente")
+
+    ingestion.statut = StatutIngestion.REJETEE
+    await db.commit()
+    await db.refresh(ingestion)
+    return ingestion

@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -49,6 +50,12 @@ class Ingestion(TimestampMixin, Base):
     nombre_lignes_detectees: Mapped[int] = mapped_column(Integer, default=0)
     nombre_erreurs: Mapped[int] = mapped_column(Integer, default=0)
     publiee_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Aperçu des lignes extraites, en attente de correction/publication.
+    # Chaque élément : {"ligne": int, "donnees": {...}, "brut": {...}, "erreurs": [...]}
+    apercu_donnees: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), default=list
+    )
 
     examen: Mapped["Examen"] = relationship(back_populates="ingestions")
     resultats: Mapped[list["Resultat"]] = relationship(back_populates="ingestion")

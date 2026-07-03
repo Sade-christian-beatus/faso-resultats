@@ -1,0 +1,71 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faso Résultats — Consultation</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div class="max-w-xl mx-auto px-4 py-10">
+    <header class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-emerald-700">Faso Résultats</h1>
+      <p class="text-slate-600 mt-1">
+        Consultez les résultats des examens et concours du Burkina Faso.
+      </p>
+    </header>
+
+    <main class="bg-white rounded-lg shadow p-6">
+      <form id="form-recherche" class="space-y-4">
+        <div>
+          <label for="select-examen" class="block text-sm font-medium mb-1">Examen</label>
+          <select
+            id="select-examen"
+            required
+            class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Chargement des examens…</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="input-numero-pv" class="block text-sm font-medium mb-1">
+            Numéro de PV
+          </label>
+          <input
+            id="input-numero-pv"
+            type="text"
+            required
+            placeholder="Ex : 001234"
+            class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
+        <div>
+          <label for="input-jury" class="block text-sm font-medium mb-1">
+            Jury / centre <span class="text-slate-400 font-normal">(optionnel)</span>
+          </label>
+          <input
+            id="input-jury"
+            type="text"
+            placeholder="Ex : Ouagadougou 1"
+            class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-emerald-700 text-white font-medium rounded px-4 py-2 hover:bg-emerald-800 transition"
+        >
+          Consulter
+        </button>
+      </form>
+
+      <div id="zone-message" class="mt-6"></div>
+      <div id="zone-resultats" class="mt-6 space-y-4"></div>
+    </main>
+
+    <footer class="text-center text-xs text-slate-400 mt-8">
+      Plateforme officielle de consultation des résultats — Burkina Faso
+    </footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/public.js"></script>
+</body>

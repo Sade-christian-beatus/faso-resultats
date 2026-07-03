@@ -1,0 +1,159 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faso Résultats — Administration</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Filet de sécurité si le CDN Tailwind est lent/indisponible (3G) : sans lui, la classe
+     "hidden" ne fait rien et connexion + tableau de bord s'afficheraient en même temps. -->
+<style>.hidden { display: none !important; }</style>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-xl font-bold text-emerald-700">Faso Résultats — Administration</h1>
+      <button
+        id="btn-deconnexion"
+        class="text-sm text-slate-500 hover:text-red-600 hidden"
+      >
+        Se déconnecter
+      </button>
+    </header>
+
+    <!-- Connexion -->
+    <section id="section-connexion" class="bg-white rounded-lg shadow p-6 max-w-sm mx-auto">
+      <h2 class="font-semibold mb-4">Connexion</h2>
+      <form id="form-connexion" class="space-y-3">
+        <input
+          id="input-email"
+          type="email"
+          required
+          placeholder="Email"
+          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        <input
+          id="input-password"
+          type="password"
+          required
+          placeholder="Mot de passe"
+          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        <button
+          type="submit"
+          class="w-full bg-emerald-700 text-white font-medium rounded px-4 py-2 hover:bg-emerald-800 transition"
+        >
+          Se connecter
+        </button>
+      </form>
+      <p id="message-connexion" class="text-sm text-red-600 mt-3"></p>
+    </section>
+
+    <!-- Tableau de bord admin -->
+    <section id="section-admin" class="hidden space-y-6">
+      <!-- Examens -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="font-semibold mb-4">Examens</h2>
+        <form id="form-examen" class="flex flex-wrap gap-2 mb-4">
+          <select id="input-type-examen" class="border border-slate-300 rounded px-2 py-2">
+            <option value="CEP">CEP</option>
+            <option value="BEPC">BEPC</option>
+            <option value="BAC">BAC</option>
+            <option value="CONCOURS_DIRECT">Concours direct</option>
+          </select>
+          <input
+            id="input-annee"
+            type="number"
+            required
+            placeholder="Année"
+            class="border border-slate-300 rounded px-2 py-2 w-24"
+          />
+          <input
+            id="input-libelle"
+            type="text"
+            required
+            placeholder="Libellé (ex : BAC 2026 - Session normale)"
+            class="border border-slate-300 rounded px-2 py-2 flex-1 min-w-[200px]"
+          />
+          <button
+            type="submit"
+            class="bg-emerald-700 text-white rounded px-4 py-2 hover:bg-emerald-800"
+          >
+            Créer
+          </button>
+        </form>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b">
+              <th class="py-2">Examen</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="corps-table-examens"></tbody>
+        </table>
+      </div>
+
+      <!-- Import -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="font-semibold mb-4">Importer un fichier de résultats</h2>
+        <form id="form-import" class="flex flex-wrap gap-2 items-center">
+          <select id="select-examen-import" class="border border-slate-300 rounded px-2 py-2 flex-1 min-w-[200px]"></select>
+          <select id="select-type-fichier" class="border border-slate-300 rounded px-2 py-2">
+            <option value="EXCEL">Excel (.xlsx)</option>
+            <option value="PDF">PDF natif</option>
+            <option value="PDF_OCR">PDF scanné (OCR)</option>
+          </select>
+          <input id="input-fichier" type="file" required class="text-sm" />
+          <button
+            type="submit"
+            class="bg-emerald-700 text-white rounded px-4 py-2 hover:bg-emerald-800"
+          >
+            Importer
+          </button>
+        </form>
+        <p id="message-import" class="text-sm text-red-600 mt-3"></p>
+      </div>
+
+      <!-- Aperçu / correction -->
+      <div id="section-apercu" class="bg-white rounded-lg shadow p-6 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold">
+            Aperçu de l'import — <span id="apercu-statut" class="text-slate-500 font-normal"></span>
+          </h2>
+          <div class="space-x-2">
+            <button id="btn-enregistrer-corrections" class="text-sm bg-slate-600 text-white rounded px-3 py-1.5 hover:bg-slate-700">
+              Enregistrer les corrections
+            </button>
+            <button id="btn-publier" class="text-sm bg-emerald-700 text-white rounded px-3 py-1.5 hover:bg-emerald-800">
+              Publier
+            </button>
+            <button id="btn-rejeter" class="text-sm bg-red-600 text-white rounded px-3 py-1.5 hover:bg-red-700">
+              Rejeter
+            </button>
+          </div>
+        </div>
+        <p class="text-sm text-slate-500 mb-3">
+          Toute ligne en erreur doit être corrigée avant de pouvoir publier.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b">
+                <th class="py-2 pr-2">Ligne</th>
+                <th class="pr-2">N° PV</th>
+                <th class="pr-2">Jury</th>
+                <th class="pr-2">Nom</th>
+                <th class="pr-2">Prénom</th>
+                <th class="pr-2">Décision</th>
+                <th class="pr-2">Moyenne</th>
+                <th>Erreurs</th>
+              </tr>
+            </thead>
+            <tbody id="corps-table-apercu"></tbody>
+          </table>
+        </div>
+        <p id="message-apercu" class="text-sm mt-3"></p>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>

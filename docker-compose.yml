@@ -22,8 +22,12 @@ services:
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # Pas de port publié vers l'hôte : le backend l'atteint via le réseau
+    # docker interne (redis:6379, voir REDIS_URL dans .env). Décommenter la
+    # ligne ci-dessous seulement pour du débogage avec redis-cli/RedisInsight
+    # depuis la machine hôte.
+    # ports:
+    #   - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

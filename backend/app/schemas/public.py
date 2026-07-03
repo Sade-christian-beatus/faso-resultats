@@ -1,0 +1,26 @@
+import uuid
+
+from pydantic import BaseModel
+
+from app.models import TypeExamen
+
+
+class ExamenPublicOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    type_examen: TypeExamen
+    annee: int
+    libelle: str
+
+
+class ResultatPublicOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    numero_pv: str
+    jury: str
+    nom: str
+    prenom: str
+    decision: str
+    moyenne: float | None
+    etablissement: str | None
