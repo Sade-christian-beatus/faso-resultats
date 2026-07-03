@@ -174,10 +174,11 @@ ces décisions sont prises.
 | Phase | Contenu | Statut |
 |-------|---------|--------|
 | **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
-| **Phase 2** | Intégration SMS (Orange, Moov, Telecel), notifications proactives | 🔒 À venir |
-| **Phase 3** | App mobile Android (Flutter ou React Native), espace établissement | 🔒 À venir |
-| **Phase 4** | USSD, app iOS, API B2B, guide d'orientation | 🔒 À venir |
-| **Phase 5** | Expansion sous-régionale UEMOA | 🔒 À venir |
+| **Phase 2** | Intégration SMS (Orange Business, Bulk SMS) + RQ, notifications proactives | 🔒 À venir |
+| **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🔒 À venir |
+| **Phase 4** | USSD (Orange Business), API B2B | 🔒 À venir |
+
+**Hors périmètre (décision du 2026-07-03) :** guide d'orientation et expansion sous-régionale UEMOA — supprimés du projet. Faso Résultats reste scopé au Burkina Faso de façon permanente.
 
 **Phase 1 terminée.** Ne pas démarrer la Phase 2 (SMS) ou une phase suivante sauf demande explicite — l'architecture laisse déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
 
@@ -255,6 +256,16 @@ Après chaque étape majeure, produire un résumé structuré :
   échelle (ex. jour de proclamation du BAC) : envisager une seconde donnée
   de vérification (date de naissance) ou un captcha si des abus sont
   constatés.
+- **2026-07-03 — Choix techniques des phases 2-4 actés** : SMS et USSD via
+  Orange Business (API Bulk SMS), file de tâches RQ (s'appuie sur Redis,
+  déjà dans la stack, plus léger que Celery pour ce volume), app mobile en
+  Flutter (Android + iOS depuis la même base), espace établissement avec
+  table normalisée et auto-inscription (mécanisme de vérification encore
+  à définir précisément). Détail complet dans `docs/ROADMAP.md`.
+- **2026-07-03 — Guide d'orientation et expansion UEMOA supprimés du
+  projet.** Faso Résultats reste un produit mono-pays (Burkina Faso) de
+  façon permanente. Simplifie durablement le modèle de données (pas besoin
+  de généraliser `TypeExamen` ni d'ajouter un champ `pays` à `Examen`).
 
 ---
 
