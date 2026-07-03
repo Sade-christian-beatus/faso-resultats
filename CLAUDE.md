@@ -169,13 +169,13 @@ Tables principales : `examens`, `resultats`, `ingestions`, `admins`, `notificati
 
 | Phase | Contenu | Statut |
 |-------|---------|--------|
-| **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ⏳ En cours |
+| **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
 | **Phase 2** | Intégration SMS (Orange, Moov, Telecel), notifications proactives | 🔒 À venir |
 | **Phase 3** | App mobile Android (Flutter ou React Native), espace établissement | 🔒 À venir |
 | **Phase 4** | USSD, app iOS, API B2B, guide d'orientation | 🔒 À venir |
 | **Phase 5** | Expansion sous-régionale UEMOA | 🔒 À venir |
 
-**Session en cours : Phase 1.** Ne pas anticiper les phases suivantes sauf si demandé explicitement, mais laisser les portes ouvertes dans l'architecture.
+**Phase 1 terminée.** Ne pas démarrer la Phase 2 (SMS) ou une phase suivante sauf demande explicite — l'architecture laisse déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
 
 ---
 

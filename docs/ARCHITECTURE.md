@@ -1,8 +1,8 @@
 # Architecture — Faso Résultats
 
 > Maintenu à jour à chaque évolution du schéma ou de la structure applicative.
-> Dernière mise à jour : Phase 1 complète (fondations, auth, ingestion, API
-> publique, frontend minimal).
+> Dernière mise à jour : Phase 1 complète et validée de bout en bout
+> (fondations, auth, ingestion, API publique, frontend, Docker Compose réel).
 
 ## Structure du dépôt
 
@@ -285,13 +285,14 @@ conditions réelles de navigateur :
    a été ajouté pour que cet état reste correct indépendamment du CDN — la
    mise en forme visuelle, elle, reste dégradée sans Tailwind.
 
-### Non vérifié
+### Rendu visuel
 
-Le rendu visuel réel (couleurs, espacements Tailwind) n'a pas pu être
-observé dans cet environnement de développement, dont le réseau bloque
-`cdn.tailwindcss.com` — seule la structure/logique fonctionnelle a été
-vérifiée (via Playwright, sans CSS). À vérifier dans un navigateur avec accès
-internet avant mise en production.
+La logique/structure a été vérifiée via Playwright dans le sandbox de
+développement (réseau sans accès à `cdn.tailwindcss.com`, donc sans CSS).
+Le rendu visuel réel (couleurs, espacements Tailwind) a été confirmé
+ensuite sur poste réel avec accès internet, sur `index.html` et
+`admin.html` (mise en forme correcte, pas de superposition connexion/
+tableau de bord).
 
 ## Validation Docker Compose
 
@@ -328,9 +329,7 @@ confirmé fonctionnel de bout en bout.
 ## Ce qui reste à faire (Phase 1)
 
 La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
-est fonctionnellement complète. Pistes restantes avant une vraie mise en
-production :
+est complète et validée de bout en bout (code + Docker Compose + rendu
+visuel). Pistes restantes avant une vraie mise en production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- Valider le rendu visuel du frontend (couleurs/espacements Tailwind) dans un
-  navigateur avec accès internet — la logique est vérifiée, pas l'apparence.
 - `docs/APDP.md` (référencé dans CLAUDE.md, pas encore écrit).
