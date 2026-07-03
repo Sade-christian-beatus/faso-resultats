@@ -167,6 +167,10 @@ Tables principales : `examens`, `resultats`, `ingestions`, `admins`, `notificati
 
 ## Roadmap projet (rappel des phases)
 
+**Voir `docs/ROADMAP.md` pour le détail de chaque phase** (décisions à
+trancher, étapes techniques, risques) — à maintenir à jour à mesure que
+ces décisions sont prises.
+
 | Phase | Contenu | Statut |
 |-------|---------|--------|
 | **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
