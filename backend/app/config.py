@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://faso:faso_secret@db:5432/faso_resultats"
 
     redis_url: str = "redis://redis:6379/0"
+    cache_ttl_seconds: int = 300
 
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 from app.config import get_settings
+from app.core.cache import cache_clear
 from app.core.rate_limit import limiter
 from app.core.security import hash_password
 from app.database import get_db
@@ -17,6 +18,11 @@ from app.models.base import Base
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter() -> None:
     limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+async def _clear_cache() -> None:
+    await cache_clear()
 
 
 @pytest.fixture(autouse=True)

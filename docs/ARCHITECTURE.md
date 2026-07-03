@@ -207,7 +207,43 @@ Note : publier une ingestion ne rend pas les résultats visibles côté public
 si l'examen parent est encore en `DRAFT` — les deux publications (ingestion
 et examen) sont des étapes distinctes, contrôlées séparément.
 
+## Routes publiques (`app/routes/public/results.py`)
+
+- `GET /api/v1/public/exams` : examens en statut `PUBLISHED` uniquement.
+- `GET /api/v1/public/results?examen_id=&numero_pv=&jury=` : recherche par
+  numéro de PV (le `jury` est optionnel, utile pour désambiguïser — c'est
+  exactement l'index composite `(examen_id, numero_pv, jury)`). 404 si aucun
+  résultat, ou si l'examen n'est pas `PUBLISHED` (même si l'ingestion l'a
+  déjà été).
+- **Champs sensibles non exposés** : `date_naissance` et `lieu_naissance` sont
+  volontairement absents de `ResultatPublicOut`, par principe de minimisation
+  des données (APDP) — le candidat n'a pas besoin de se les voir confirmer
+  pour retrouver son résultat. ⚠️ Décision prise sans validation produit
+  explicite ; à confirmer.
+- **Anti-scraping non traité à ce stade** : la recherche ne demande que
+  `numero_pv` (+ `jury`), sans second facteur (ex. date de naissance). Le
+  rate limiting (30 req/min/IP par défaut) limite le débit mais n'empêche pas
+  un scraping lent et distribué. À réévaluer si le produit expose un jour les
+  résultats à plus grande échelle.
+
+### Cache (`app/core/cache.py`)
+
+- Redis (`REDIS_URL`) avec repli automatique en mémoire process si Redis est
+  injoignable (`RedisError`/`OSError` interceptées), conformément à CLAUDE.md.
+- TTL configurable (`CACHE_TTL_SECONDS`, défaut 300s) sur `/exams` et chaque
+  requête `/results` (clé incluant `examen_id`+`numero_pv`+`jury`).
+- **Client Redis "loop-aware"** : recréé automatiquement si l'event loop
+  asyncio courant change (`_get_redis_client()`). En production il n'y a
+  qu'une seule loop (celle d'uvicorn), donc le client est créé une fois pour
+  toute la durée du process. Cette précaution évite un piège classique
+  Redis-async + pytest (chaque test peut tourner sur une nouvelle event loop,
+  ce qui casse un client créé une fois au niveau module).
+- Mesuré en local (Postgres + Redis réels, hors conditions de prod) :
+  ~7ms en cache froid, ~2ms en cache chaud sur `/results` — largement sous
+  la cible de 200ms de CLAUDE.md, mais à re-mesurer une fois hébergé sur
+  l'infrastructure burkinabè cible.
+
 ## Ce qui reste à faire (Phase 1)
 
-Voir le suivi de tâches en session. Prochaines étapes : routes publiques avec
-cache Redis et rate limiting, frontend minimal (consultation + admin.html).
+Voir le suivi de tâches en session. Prochaine étape : frontend minimal
+(consultation + admin.html).
