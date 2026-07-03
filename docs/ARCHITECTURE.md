@@ -1,7 +1,8 @@
 # Architecture — Faso Résultats
 
 > Maintenu à jour à chaque évolution du schéma ou de la structure applicative.
-> Dernière mise à jour : Phase 1 — squelette backend.
+> Dernière mise à jour : Phase 1 complète (fondations, auth, ingestion, API
+> publique, frontend minimal).
 
 ## Structure du dépôt
 
@@ -13,15 +14,19 @@ faso-resultats/
 │   │   ├── config.py        Settings (pydantic-settings, lues depuis .env)
 │   │   ├── database.py      Engine + session SQLAlchemy async, dépendance get_db
 │   │   ├── models/          Modèles SQLAlchemy 2.0 (Mapped / mapped_column)
-│   │   ├── schemas/         Schémas Pydantic (requêtes/réponses) — à venir
+│   │   ├── schemas/         Schémas Pydantic (requêtes/réponses)
 │   │   ├── routes/          Routers FastAPI (public/, admin/, health)
-│   │   ├── services/        Logique métier, testable sans DB — à venir
-│   │   └── core/            Sécurité, cache — à venir
+│   │   ├── services/        Logique métier, testable sans DB (parsers d'ingestion)
+│   │   └── core/            Sécurité (JWT/bcrypt), cache, rate limiting
 │   ├── alembic/              Migrations
 │   ├── tests/                Tests pytest
+│   ├── seed.py                Peuple l'admin par défaut
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/public/          HTML/CSS/JS vanilla, servi par nginx
+├── frontend/public/          HTML/CSS/JS vanilla + Tailwind CDN, servi par nginx
+│   ├── index.html             Consultation publique
+│   ├── admin.html              Interface admin (login, examens, import)
+│   └── js/                    api.js (fetch wrapper), public.js, admin.js
 ├── docs/                     Documentation technique
 └── docker-compose.yml
 ```
@@ -243,7 +248,59 @@ et examen) sont des étapes distinctes, contrôlées séparément.
   la cible de 200ms de CLAUDE.md, mais à re-mesurer une fois hébergé sur
   l'infrastructure burkinabè cible.
 
+## Frontend (`frontend/public/`)
+
+HTML/CSS/JS vanilla + Tailwind via CDN (`<script src="https://cdn.tailwindcss.com">`),
+conformément à la stack verrouillée. Aucun bundler, aucune dépendance npm.
+
+- **`index.html` + `js/public.js`** : consultation publique. Charge la liste
+  des examens publiés (`/api/v1/public/exams`), recherche un résultat par
+  numéro de PV (+ jury optionnel), affiche la décision/moyenne/établissement.
+- **`admin.html` + `js/admin.js`** : connexion (JWT stocké en
+  `sessionStorage`, jamais en `localStorage`, pour limiter la durée de vie
+  du token à l'onglet), création/publication d'examens, upload de fichier,
+  aperçu éditable ligne par ligne (inputs liés à `apercu_donnees`),
+  enregistrement des corrections (`PATCH`), publication/rejet.
+- **`js/api.js`** : wrapper `fetch` commun, détecte l'environnement de dev
+  (`localhost`/`127.0.0.1`) pour pointer vers `http://<hôte>:8000` ; en
+  production, `API_BASE` reste vide (même origine attendue derrière un
+  reverse proxy — à confirmer selon l'hébergement final).
+
+### Bugs trouvés et corrigés en testant dans un vrai navigateur (Playwright)
+
+Les tests `curl` et `httpx` ne déclenchent jamais de préflight CORS ni
+n'exécutent de JavaScript — ces deux bugs n'étaient donc visibles qu'en
+conditions réelles de navigateur :
+
+1. **CORS bloquait `PATCH`** : `CORSMiddleware` n'autorisait que
+   `GET/POST/PUT/DELETE`, donc *toute* correction d'ingestion échouait
+   silencieusement dans un navigateur (le préflight `OPTIONS` échouait).
+   Corrigé dans `app/main.py` + test de non-régression (`tests/test_cors.py`).
+2. **`moyenne` vide envoyait `""` au lieu de `null`** dans
+   `lireCorrectionsDepuisTable()` (`admin.js`), ce qui faisait planter
+   l'insertion PostgreSQL (`NUMERIC(4,2)` refuse une chaîne vide) au moment
+   de la publication. Corrigé.
+3. **`.hidden` de Tailwind dépend entièrement du CDN** : si le CDN est lent
+   ou indisponible (réaliste en 3G), la classe `hidden` ne fait plus rien et
+   le formulaire de connexion et le tableau de bord admin s'affichent
+   simultanément. Un filet de sécurité CSS inline (`<style>.hidden{display:none}</style>`)
+   a été ajouté pour que cet état reste correct indépendamment du CDN — la
+   mise en forme visuelle, elle, reste dégradée sans Tailwind.
+
+### Non vérifié
+
+Le rendu visuel réel (couleurs, espacements Tailwind) n'a pas pu être
+observé dans cet environnement de développement, dont le réseau bloque
+`cdn.tailwindcss.com` — seule la structure/logique fonctionnelle a été
+vérifiée (via Playwright, sans CSS). À vérifier dans un navigateur avec accès
+internet avant mise en production.
+
 ## Ce qui reste à faire (Phase 1)
 
-Voir le suivi de tâches en session. Prochaine étape : frontend minimal
-(consultation + admin.html).
+La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
+est fonctionnellement complète. Pistes restantes avant une vraie mise en
+production :
+- Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
+- Valider le rendu visuel du frontend dans un navigateur avec accès internet.
+- Trancher les points ouverts APDP/anti-scraping notés plus haut.
+- `docs/APDP.md` (référencé dans CLAUDE.md, pas encore écrit).
