@@ -19,7 +19,7 @@ Historique des décisions) :
 - Mobile : **Flutter**.
 - Espace établissement : **table normalisée** + **auto-inscription avec
   vérification automatique** contre une liste officielle d'établissements.
-- API B2B : confirmée, à construire.
+- API B2B : confirmée, **payante** (grille tarifaire à définir).
 - **Guide d'orientation : supprimé du périmètre du projet.**
 - **Expansion sous-régionale UEMOA : supprimée du périmètre du projet.**
   Faso Résultats reste un produit mono-pays (Burkina Faso) de façon
@@ -129,12 +129,22 @@ fichier source, pas une entité normalisée.
 3. **Flux d'auto-inscription, vérification automatique** : un
    établissement crée son compte lui-même ; le nom déclaré est comparé
    automatiquement à une liste officielle d'établissements, le compte
-   n'est activé qu'en cas de correspondance. ⚠️ **Prérequis à confirmer
-   avant de coder** : disposer de cette liste officielle des
-   établissements burkinabè (probablement auprès du Ministère de
-   l'Éducation) — sans elle, la vérification automatique n'est pas
-   possible et il faudrait retomber sur une validation manuelle en
-   attendant.
+   n'est activé qu'en cas de correspondance. **Prérequis partiellement
+   comblé le 2026-07-03** : liste officielle reçue (« II-3 — Liste
+   nominative des établissements post-primaires et secondaires
+   d'enseignement général privés reconnus », 17 pages, colonnes
+   Région/Nom/Provinces/Communes/Secteur). ⚠️ Deux limites à noter avant
+   de coder dessus :
+   - Cette liste ne couvre que les établissements **privés** — les
+     établissements publics (probablement majoritaires côté CEP/BEPC/BAC)
+     ne sont pas dans ce document. Une liste complémentaire sera
+     nécessaire.
+   - La liste contient de vraies anomalies de saisie (des noms
+     d'établissement coupés sur deux lignes numérotées consécutives,
+     ex. lignes 523/524 : « ...française) » / « ...arabe) » qui sont
+     manifestement la suite d'un seul nom) — la logique de correspondance
+     automatique devra tolérer ce genre de coupure plutôt que supposer
+     une ligne = un établissement propre.
 4. Réconciliation entre le texte libre historique (`Resultat.etablissement`)
    et la nouvelle table normalisée — les fichiers PV n'utilisent pas
    forcément une orthographe/un code établissement cohérent d'un import à
@@ -174,9 +184,10 @@ médias, ONG) avec :
   est déjà extensible dans ce sens).
 - Documentation publique (FastAPI génère déjà `/docs` — à restreindre ou
   dupliquer en version publique selon ce qui doit rester interne).
-- **Reste à trancher :** modèle économique (gratuit avec quota, payant,
-  convention par partenaire) — question commerciale, à répondre avant de
-  concevoir la table de quotas/facturation.
+- **Modèle économique : payant.** Reste à définir la grille tarifaire
+  exacte (par requête, par quota mensuel, convention forfaitaire) au
+  moment de concevoir la table de facturation — pas bloquant pour le
+  cadrage technique.
 
 ---
 
