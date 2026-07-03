@@ -211,9 +211,13 @@ médias, ONG) avec :
 
 Ces points ne bloquent aucune phase mais devraient progresser en continu :
 
-1. **Calibrage des parsers PDF natif et OCR** sur de vrais spécimens
-   OCECOS/DGEC — identifié comme limitation connue depuis la Phase 1,
-   aucun vrai document disponible pour le moment.
+1. **Calibrage des parsers sur de vrais documents.** Le parser Excel a été
+   calibré le 2026-07-03 sur un vrai PV de concours direct (Assistants des
+   Douanes), révélant 3 lacunes corrigées depuis (décision par défaut,
+   colonne nom+prénom combinée, champ N°CNIB) — voir
+   `docs/ARCHITECTURE.md` § Calibrage. **Les parsers PDF natif et OCR
+   restent non calibrés** — aucun spécimen PDF/scanné réel disponible pour
+   le moment (le document reçu a été retranscrit en `.xlsx` pour le test).
 2. **Validation juridique de `docs/APDP.md`** — plusieurs points (base
    légale, responsable de traitement, durée de conservation) explicitement
    marqués comme non tranchés dans le document.

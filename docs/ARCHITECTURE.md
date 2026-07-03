@@ -85,7 +85,8 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | numero_pv / jury | string | |
 | nom / prenom / date_naissance / lieu_naissance | | données sensibles — jamais loguées |
 | etablissement | string nullable | |
-| decision | string | ex. `ADMIS`, `AJOURNE` |
+| numero_cnib | string(20) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
 | donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
 
@@ -188,6 +189,45 @@ manuelle possible → publication explicite**, conformément à CLAUDE.md.
 - `dispatch.py` : sélectionne le bon parser selon `TypeFichier`.
 - `publication.py` : transforme l'aperçu validé (`Ingestion.apercu_donnees`)
   en lignes `Resultat` prêtes à insérer.
+
+### Calibrage sur un vrai document de concours (2026-07-03)
+
+Un vrai PV de concours direct (Assistants des Douanes, admissibilité aux
+épreuves sportives) a permis de tester le parser Excel sur une structure
+réelle, très différente d'un examen scolaire (CEP/BEPC/BAC) : colonnes
+`N°`, `NOM ET PRENOM(s)`, `RECEPISSE-CODE-CENTRE`, `N°CNIB`, `DATE NAIS.`
+(dates à année sur 2 chiffres, ex. `15/02/01`), `CENTRE`. Avant calibrage,
+le parser rejetait entièrement ce type de document (`numero_pv`, `nom`,
+`prenom`, `decision` tous signalés manquants). Trois évolutions livrées en
+conséquence :
+
+1. **`decision_par_defaut`** : nouveau paramètre optionnel de l'upload
+   (`app/services/ingestion/normalizer.normaliser_ligne`, thread jusqu'à
+   `POST /api/v1/admin/ingestions`). Pour les documents sans colonne
+   décision par ligne (une liste d'admissibilité vaut pour tout le
+   document), l'admin choisit une décision à l'upload, appliquée à toute
+   ligne sans décision propre — la décision par ligne, quand elle existe,
+   prime toujours.
+2. **Colonne nom+prénom combinée** : nouvel alias `nom_prenom` reconnu
+   (« NOM ET PRENOM(s) » et variantes). **Pas de découpage automatique**
+   (risque d'erreur sur les noms composés burkinabè) — le nom complet est
+   importé tel quel dans `nom`, `prenom` reste vide et donc signalé en
+   erreur, pour que l'admin le sépare manuellement dans l'écran de
+   correction existant (aucune UI supplémentaire nécessaire).
+3. **`numero_cnib`** : nouveau champ optionnel sur `Resultat` (alias
+   reconnus : « N°CNIB », « CNIB »). Absent de l'API publique, même
+   sensibilité que `date_naissance`/`lieu_naissance`.
+
+Au passage, `_FORMATS_DATE` accepte désormais aussi les années sur 2
+chiffres (`%d/%m/%y`), format courant sur ce type de document.
+
+Aliases supplémentaires reconnus pour `numero_pv` (« récépissé-code-centre »,
+« récépissé ») et `date_naissance` (« date nais. »).
+
+Le PDF natif et l'OCR restent non calibrés (voir plus haut) — cette
+calibration n'a porté que sur le parser Excel, le document fourni étant au
+format image/PDF mais reconstruit en `.xlsx` pour le test (même structure
+de colonnes).
 
 ### Flux admin (`app/routes/admin/ingestions.py`)
 

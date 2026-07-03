@@ -101,6 +101,12 @@
             <option value="PDF_OCR">PDF scanné (OCR)</option>
           </select>
           <input id="input-fichier" type="file" required class="text-sm" />
+          <input
+            id="input-decision-defaut"
+            type="text"
+            placeholder="Décision par défaut (optionnel, ex. ADMISSIBLE)"
+            class="border border-slate-300 rounded px-2 py-2 min-w-[220px]"
+          />
           <button
             type="submit"
             class="bg-emerald-700 text-white rounded px-4 py-2 hover:bg-emerald-800"
@@ -108,6 +114,11 @@
             Importer
           </button>
         </form>
+        <p class="text-xs text-slate-500 mt-2">
+          La décision par défaut s'applique aux lignes sans colonne décision propre
+          dans le fichier (ex. une liste d'admissibilité à un concours, où la
+          décision vaut pour tout le document).
+        </p>
         <p id="message-import" class="text-sm text-red-600 mt-3"></p>
       </div>
 
@@ -143,6 +154,7 @@
                 <th class="pr-2">Prénom</th>
                 <th class="pr-2">Décision</th>
                 <th class="pr-2">Moyenne</th>
+                <th class="pr-2">N°CNIB</th>
                 <th>Erreurs</th>
               </tr>
             </thead>

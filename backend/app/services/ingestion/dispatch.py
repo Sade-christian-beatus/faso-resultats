@@ -13,5 +13,9 @@ _PARSEURS = {
 }
 
 
-def parser_fichier(chemin_fichier: str | Path, type_fichier: TypeFichier) -> ResultatExtraction:
-    return _PARSEURS[type_fichier](chemin_fichier)
+def parser_fichier(
+    chemin_fichier: str | Path,
+    type_fichier: TypeFichier,
+    decision_par_defaut: str | None = None,
+) -> ResultatExtraction:
+    return _PARSEURS[type_fichier](chemin_fichier, decision_par_defaut)

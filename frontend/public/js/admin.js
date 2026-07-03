@@ -132,10 +132,15 @@ document.getElementById("form-import").addEventListener("submit", async (event) 
   const messageEl = document.getElementById("message-import");
   messageEl.textContent = "";
 
+  const decisionParDefaut = document.getElementById("input-decision-defaut").value.trim();
+
   const formData = new FormData();
   formData.set("examen_id", document.getElementById("select-examen-import").value);
   formData.set("type_fichier", document.getElementById("select-type-fichier").value);
   formData.set("file", document.getElementById("input-fichier").files[0]);
+  if (decisionParDefaut) {
+    formData.set("decision_par_defaut", decisionParDefaut);
+  }
 
   try {
     const ingestion = await apiFetch("/api/v1/admin/ingestions", {
@@ -171,6 +176,7 @@ function renderApercu() {
         <td class="pr-2"><input data-index="${index}" data-champ="prenom" value="${ligne.donnees.prenom || ""}" class="border rounded px-1 py-0.5 w-28" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="decision" value="${ligne.donnees.decision || ""}" class="border rounded px-1 py-0.5 w-24" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="moyenne" value="${ligne.donnees.moyenne ?? ""}" class="border rounded px-1 py-0.5 w-16" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="numero_cnib" value="${ligne.donnees.numero_cnib || ""}" class="border rounded px-1 py-0.5 w-24" /></td>
         <td class="text-red-600 text-xs">${ligne.erreurs.join(", ")}</td>
       </tr>`
     )

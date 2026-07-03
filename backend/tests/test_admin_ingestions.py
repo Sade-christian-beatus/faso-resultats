@@ -239,3 +239,74 @@ async def test_get_ingestion_introuvable(client: AsyncClient, admin_headers: dic
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_concours_direct_avec_decision_par_defaut_et_correction(
+    client: AsyncClient, admin_headers: dict, db_session: AsyncSession
+) -> None:
+    """Bout en bout sur la structure réelle d'un concours direct (Assistants des
+    Douanes) : nom+prénom combinés, decision_par_defaut, N°CNIB."""
+    examen_response = await client.post(
+        "/api/v1/admin/exams",
+        json={
+            "type_examen": "CONCOURS_DIRECT",
+            "annee": 2026,
+            "libelle": "Assistants des Douanes 2026",
+        },
+        headers=admin_headers,
+    )
+    examen_id = examen_response.json()["id"]
+
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(
+        ["N°", "NOM ET PRENOM(s)", "RECEPISSE-CODE-CENTRE", "N°CNIB", "DATE NAIS.", "CENTRE"]
+    )
+    feuille.append([23, "BAYALA JEAN-CLAUDE", "005924-002-06", "B14863543", "15/02/01", "Koudo"])
+    buffer = io.BytesIO()
+    classeur.save(buffer)
+
+    upload = await client.post(
+        "/api/v1/admin/ingestions",
+        data={
+            "examen_id": examen_id,
+            "type_fichier": "EXCEL",
+            "decision_par_defaut": "ADMISSIBLE",
+        },
+        files={
+            "file": (
+                "douanes.xlsx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        headers=admin_headers,
+    )
+    ingestion = upload.json()
+    assert ingestion["nombre_erreurs"] == 1  # prenom manquant, à corriger
+
+    ligne = ingestion["lignes"][0]
+    assert ligne["donnees"]["decision"] == "ADMISSIBLE"
+    assert ligne["donnees"]["numero_cnib"] == "B14863543"
+
+    ligne["donnees"]["nom"] = "BAYALA"
+    ligne["donnees"]["prenom"] = "JEAN-CLAUDE"
+    ligne["erreurs"] = []
+    correction = await client.patch(
+        f"/api/v1/admin/ingestions/{ingestion['id']}",
+        json={"lignes": [ligne]},
+        headers=admin_headers,
+    )
+    assert correction.json()["nombre_erreurs"] == 0
+
+    publish = await client.post(
+        f"/api/v1/admin/ingestions/{ingestion['id']}/publish", headers=admin_headers
+    )
+    assert publish.status_code == 200
+
+    resultat = (await db_session.execute(select(Resultat))).scalar_one()
+    assert resultat.numero_cnib == "B14863543"
+    assert resultat.decision == "ADMISSIBLE"
+    assert resultat.nom == "BAYALA"
+    assert resultat.prenom == "JEAN-CLAUDE"

@@ -104,3 +104,55 @@ def test_normaliser_ligne_parse_moyenne_avec_virgule() -> None:
     resultat = normaliser_ligne(ligne, mapping)
 
     assert resultat.donnees["moyenne"] == 13.45
+
+
+def test_mapping_colonnes_reconnait_les_en_tetes_concours_direct() -> None:
+    """Calibrage sur un vrai document de concours direct (liste d'admissibilité
+    Assistants des Douanes, OCECOS/AGRE) : en-têtes très différentes d'un examen
+    scolaire classique."""
+    mapping = construire_mapping_colonnes(
+        ["N°", "NOM ET PRENOM(s)", "RECEPISSE-CODE-CENTRE", "N°CNIB", "DATE NAIS.", "CENTRE"]
+    )
+
+    assert mapping["NOM ET PRENOM(s)"] == "nom_prenom"
+    assert mapping["RECEPISSE-CODE-CENTRE"] == "numero_pv"
+    assert mapping["N°CNIB"] == "numero_cnib"
+    assert mapping["DATE NAIS."] == "date_naissance"
+    assert mapping["CENTRE"] == "jury"
+
+
+def test_normaliser_ligne_colonne_nom_prenom_combinee_reste_a_corriger() -> None:
+    """Import brut (pas de découpage automatique) : le nom complet va dans "nom",
+    "prenom" reste vide et donc signalé en erreur pour correction manuelle."""
+    mapping = construire_mapping_colonnes(["NOM ET PRENOM(s)", "RECEPISSE-CODE-CENTRE", "CENTRE"])
+    ligne = {
+        "NOM ET PRENOM(s)": "BAYALA JEAN-CLAUDE",
+        "RECEPISSE-CODE-CENTRE": "005924-002-06",
+        "CENTRE": "Koudo",
+    }
+
+    resultat = normaliser_ligne(ligne, mapping, decision_par_defaut="ADMISSIBLE")
+
+    assert resultat.donnees["nom"] == "BAYALA JEAN-CLAUDE"
+    assert resultat.donnees["prenom"] == ""
+    assert "prenom manquant" in resultat.erreurs
+
+
+def test_normaliser_ligne_decision_par_defaut_appliquee_si_absente() -> None:
+    mapping = construire_mapping_colonnes(["numero_pv", "jury", "nom", "prenom"])
+    ligne = {"numero_pv": "1", "jury": "Koudo", "nom": "N", "prenom": "P"}
+
+    resultat = normaliser_ligne(ligne, mapping, decision_par_defaut="admissible")
+
+    assert resultat.donnees["decision"] == "ADMISSIBLE"
+    assert "decision manquant" not in resultat.erreurs
+
+
+def test_normaliser_ligne_decision_par_defaut_ignoree_si_colonne_presente() -> None:
+    """La décision par ligne prime toujours sur la décision par défaut du fichier."""
+    mapping = construire_mapping_colonnes(["numero_pv", "jury", "nom", "prenom", "decision"])
+    ligne = {"numero_pv": "1", "jury": "J", "nom": "N", "prenom": "P", "decision": "AJOURNE"}
+
+    resultat = normaliser_ligne(ligne, mapping, decision_par_defaut="ADMISSIBLE")
+
+    assert resultat.donnees["decision"] == "AJOURNE"
