@@ -56,6 +56,12 @@ class Ingestion(TimestampMixin, Base):
     apercu_donnees: Mapped[list] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), default=list
     )
+    # Messages au niveau du fichier entier (pas d'une ligne précise), ex. colonnes non
+    # reconnues ou fichier vide — pour que l'admin comprenne pourquoi peu/pas de lignes
+    # ont été extraites sans avoir à nous solliciter.
+    erreurs_fichier: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), default=list
+    )
 
     examen: Mapped["Examen"] = relationship(back_populates="ingestions")
     resultats: Mapped[list["Resultat"]] = relationship(back_populates="ingestion")

@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pdfplumber
 
-from app.services.ingestion.normalizer import construire_mapping_colonnes, normaliser_ligne
+from app.services.ingestion.normalizer import (
+    colonnes_non_reconnues,
+    construire_mapping_colonnes,
+    message_colonnes_non_reconnues,
+    normaliser_ligne,
+)
 from app.services.ingestion.types import LigneExtraite, ResultatExtraction
 
 
@@ -45,4 +50,6 @@ def parser_pdf(
     if mapping_colonnes is None:
         return ResultatExtraction(lignes=[], erreurs_fichier=["Aucun tableau détecté dans le PDF"])
 
-    return ResultatExtraction(lignes=lignes)
+    non_reconnues = colonnes_non_reconnues(entetes, mapping_colonnes)
+    erreurs_fichier = [message_colonnes_non_reconnues(non_reconnues)] if non_reconnues else []
+    return ResultatExtraction(lignes=lignes, erreurs_fichier=erreurs_fichier)

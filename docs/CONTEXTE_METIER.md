@@ -1,7 +1,8 @@
-# NOTE DE MISE À JOUR — Contexte projet Faso Résultats
+# Contexte métier — Faso Résultats
 
-> À intégrer au projet dans `docs/CONTEXTE_METIER.md`.
-> Cette note affine le périmètre fonctionnel et les priorités du projet en tenant compte de nouvelles informations sur (1) le paysage concurrentiel et (2) la cartographie complète des examens et concours au Burkina Faso.
+> Document de référence sur le positionnement du projet : paysage concurrentiel
+> (plateformes gouvernementales existantes) et cartographie complète des examens
+> et concours au Burkina Faso. À maintenir à jour à mesure que ce contexte évolue.
 
 ---
 
@@ -376,4 +377,4 @@ Ces éléments ne sont pas prioritaires pour la première session de dev, mais �
 
 ---
 
-*Fin de la note de mise à jour — version 1.0.*
+*Version 1.0 — 2026-07-04.*

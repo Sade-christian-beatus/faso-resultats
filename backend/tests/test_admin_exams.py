@@ -51,3 +51,55 @@ async def test_list_exams(client: AsyncClient, admin_headers: dict) -> None:
 
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_create_exam_champs_par_defaut_non_invasifs(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """Les nouveaux champs de cartographie (categorie, source_donnees...) ne doivent
+    pas être requis à la création : une charge utile minimale doit toujours marcher."""
+    response = await client.post(
+        "/api/v1/admin/exams",
+        json={"type_examen": "BAC", "annee": 2026, "libelle": "BAC 2026"},
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["categorie"] is None
+    assert body["source_donnees"] == "FILE_IMPORT"
+    assert body["partenariat_officiel"] is False
+    assert body["phases_publication"] == []
+
+
+@pytest.mark.asyncio
+async def test_create_exam_avec_la_taxonomie_etendue(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """La taxonomie étendue (concours paramilitaires, catégories de concours direct...)
+    est utilisable en plus des valeurs historiques (BAC, CONCOURS_DIRECT)."""
+    response = await client.post(
+        "/api/v1/admin/exams",
+        json={
+            "type_examen": "ARMEE",
+            "annee": 2026,
+            "libelle": "Concours Armée 2026",
+            "categorie": "CONCOURS_PARAMILITAIRE",
+            "ministere_tutelle": "Ministère de la Défense",
+            "source_donnees": "PRESS_MONITORING",
+            "phases_publication": ["EPREUVES_SPORTIVES", "ADMISSIBILITE", "ADMISSION_DEFINITIVE"],
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["type_examen"] == "ARMEE"
+    assert body["categorie"] == "CONCOURS_PARAMILITAIRE"
+    assert body["source_donnees"] == "PRESS_MONITORING"
+    assert body["phases_publication"] == [
+        "EPREUVES_SPORTIVES",
+        "ADMISSIBILITE",
+        "ADMISSION_DEFINITIVE",
+    ]

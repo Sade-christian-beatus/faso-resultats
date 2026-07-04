@@ -2,6 +2,7 @@ import openpyxl
 import pytest
 
 from app.services.ingestion.excel_parser import parser_excel
+from app.services.ingestion.normalizer import message_colonnes_non_reconnues
 
 
 @pytest.fixture
@@ -58,6 +59,19 @@ def test_parser_excel_signale_ligne_incomplete(fichier_excel) -> None:
 
     assert resultat.nombre_erreurs == 1
     assert "nom manquant" in resultat.lignes[0].erreurs
+
+
+def test_parser_excel_signale_les_colonnes_non_reconnues(tmp_path) -> None:
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(["Numéro PV", "Jury", "Nom", "Prénom", "Décision", "Adresse"])
+    feuille.append(["001", "Ouaga 1", "Traore", "Awa", "Admis", "Secteur 15"])
+    chemin = tmp_path / "resultats.xlsx"
+    classeur.save(chemin)
+
+    resultat = parser_excel(str(chemin))
+
+    assert resultat.erreurs_fichier == [message_colonnes_non_reconnues(["Adresse"])]
 
 
 def test_parser_excel_fichier_vide(tmp_path) -> None:

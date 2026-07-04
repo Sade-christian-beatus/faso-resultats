@@ -215,9 +215,18 @@ Ces points ne bloquent aucune phase mais devraient progresser en continu :
    calibré le 2026-07-03 sur un vrai PV de concours direct (Assistants des
    Douanes), révélant 3 lacunes corrigées depuis (décision par défaut,
    colonne nom+prénom combinée, champ N°CNIB) — voir
-   `docs/ARCHITECTURE.md` § Calibrage. **Les parsers PDF natif et OCR
-   restent non calibrés** — aucun spécimen PDF/scanné réel disponible pour
-   le moment (le document reçu a été retranscrit en `.xlsx` pour le test).
+   `docs/ARCHITECTURE.md` § Calibrage. Le parser **PDF natif** a été testé
+   le 2026-07-04 contre un vrai PDF gouvernemental (liste des
+   établissements, 62 pages) : robustesse de l'extraction confirmée (pas de
+   crash, pas de perte de ligne, mauvais format correctement rejeté), et
+   une corruption de texte source rarissime (1 ligne/2029) documentée comme
+   couverte par la relecture humaine obligatoire plutôt que par un
+   correctif automatique. Ce document n'étant pas un PV de résultats, la
+   calibration champ-par-champ (mapping des colonnes d'examen) reste à
+   faire sur un vrai PV au format PDF natif. **L'OCR reste non calibré** —
+   aucun spécimen de PV scanné/photo n'est disponible actuellement (celui
+   partagé le 2026-07-03 n'a pas été conservé après compactage de la
+   conversation) ; à refaire dès qu'un nouveau spécimen sera fourni.
 2. **Validation juridique de `docs/APDP.md`** — plusieurs points (base
    légale, responsable de traitement, durée de conservation) explicitement
    marqués comme non tranchés dans le document.

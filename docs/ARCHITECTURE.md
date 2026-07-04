@@ -16,11 +16,15 @@ faso-resultats/
 │   │   ├── models/          Modèles SQLAlchemy 2.0 (Mapped / mapped_column)
 │   │   ├── schemas/         Schémas Pydantic (requêtes/réponses)
 │   │   ├── routes/          Routers FastAPI (public/, admin/, health)
-│   │   ├── services/        Logique métier, testable sans DB (parsers d'ingestion)
+│   │   ├── services/        Logique métier, testable sans DB
+│   │   │   ├── ingestion/    Parsers Excel/PDF/OCR, normalisation, publication
+│   │   │   ├── parsers/      Détection de type PDF + parser scan Fonction publique
+│   │   │   └── sources/      Abstraction ResultsSource (voir § Sources de données)
+│   │   ├── data/reference/   Référentiels statiques (ministères de tutelle...)
 │   │   └── core/            Sécurité (JWT/bcrypt), cache, rate limiting
 │   ├── alembic/              Migrations
 │   ├── tests/                Tests pytest
-│   ├── seed.py                Peuple l'admin par défaut
+│   ├── seed.py                Peuple l'admin par défaut + examens d'exemple
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/public/          HTML/CSS/JS vanilla + Tailwind CDN, servi par nginx
@@ -39,10 +43,16 @@ Un examen ou concours pour une année donnée (ex : "BAC 2026 - Session normale"
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
-| type_examen | enum (`CEP`, `BEPC`, `BAC`, `CONCOURS_DIRECT`) | |
+| type_examen | enum `TypeExamen`, voir taxonomie complète en § Sources de données | `BAC` et `CONCOURS_DIRECT` conservés (non-breaking) en plus des variantes précises (`BAC_GENERAL`...) |
 | annee | int | |
 | libelle | string | |
 | statut | enum (`DRAFT`, `PUBLISHED`, `ARCHIVED`) | défaut `DRAFT` — jamais visible côté public tant que non `PUBLISHED` |
+| categorie | enum `CategorieExamen` nullable | `EXAMEN_SCOLAIRE` / `CONCOURS_DIRECT` / `CONCOURS_PROFESSIONNEL` / `CONCOURS_PARAMILITAIRE` |
+| serie | string nullable | ex. série du BAC (A, C, D...) ou corps d'un concours |
+| ministere_tutelle | string nullable | traçabilité de l'organisme responsable ; voir aussi `app/data/reference/organismes.py` |
+| source_donnees | enum `SourceDonnees`, défaut `FILE_IMPORT` | d'où proviennent les résultats — voir § Sources de données |
+| partenariat_officiel | bool, défaut `False` | reconnaissance officielle par convention signée |
+| phases_publication | jsonb (liste), défaut `[]` | phases attendues pour ce type d'examen — voir § Phases de publication |
 | created_at / updated_at | timestamptz | |
 
 Index : `(statut, annee)` — filtrage des examens publiés récents.
@@ -72,6 +82,8 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | type_fichier | enum (`PDF`, `EXCEL`, `PDF_OCR`) | |
 | statut | enum (`EN_ATTENTE`, `PREVISUALISATION`, `VALIDEE`, `PUBLIEE`, `REJETEE`) | reflète le flux upload → prévisualisation → correction → publication |
 | nombre_lignes_detectees / nombre_erreurs | int | |
+| apercu_donnees | jsonb | lignes extraites en attente de correction/publication |
+| erreurs_fichier | jsonb (liste de string) | messages au niveau du fichier entier (colonnes non reconnues, fichier vide...), pas d'une ligne précise |
 | publiee_at | timestamptz nullable | |
 
 ### `resultats`
@@ -86,11 +98,19 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | nom / prenom / date_naissance / lieu_naissance | | données sensibles — jamais loguées |
 | etablissement | string nullable | |
 | numero_cnib | string(20) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_recepisse / code_concours / code_centre / rang_numerique / rang_affiche | nullable | spécifiques aux communiqués scannés de la Fonction publique (voir § Parser scan Fonction publique) ; vides pour les autres types d'examens. `numero_recepisse` duplique `numero_pv` plutôt que de le remplacer, pour ne pas casser la recherche publique existante |
 | decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
+| phase | enum `PhasePublication`, défaut `RESULTAT_UNIQUE` | voir § Phases de publication |
+| date_publication_phase | timestamptz nullable | |
+| phase_suivante_attendue | enum `PhasePublication` nullable | |
 | donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
 
-Index : `(examen_id, numero_pv, jury)` — requête principale de consultation.
+Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation, un
+candidat pouvant désormais avoir plusieurs `Resultat` pour un même examen (un par
+phase). Il s'agit d'un index de performance, pas d'une contrainte d'unicité — rien
+n'empêche au niveau base deux lignes strictement identiques ; la déduplication reste
+une responsabilité applicative si besoin.
 
 ### `notifications_preinscription`
 Préinscription à la notification SMS (fonctionnalité Phase 2, table créée dès
@@ -107,6 +127,70 @@ Phase 1 pour ne pas devoir réécrire le schéma plus tard).
 | envoye_at | timestamptz nullable | |
 
 Index : `(examen_id, statut)` — envoi en masse.
+
+## Sources de données (`app/services/sources/`)
+
+Contexte complet : `docs/CONTEXTE_METIER.md` § 4.2. Abstraction `ResultsSource`
+(`base.py`) unifiant la récupération des résultats depuis n'importe quel canal de
+publication gouvernemental existant, avec une seule méthode `fetch_results(examen_id,
+**kwargs) -> list[LigneExtraite]` :
+
+- **`FileImportSource`** (implémentée) — délègue à
+  `app.services.ingestion.dispatch.parser_fichier`, déjà utilisé directement par
+  `POST /api/v1/admin/ingestions`. Seule source réellement utilisée en Phase 1 : c'est
+  le cœur stratégique du projet, puisqu'à l'exception du CEP (couvert par SIGEC-CEP),
+  **aucun** examen ni concours du Burkina Faso ne dispose aujourd'hui d'une
+  consultation individuelle par numéro de PV — tout reste au format PDF/communiqué
+  téléchargeable. La qualité et la vitesse de ce pipeline sont l'avantage compétitif
+  principal.
+- **`SigecApiSource`, `GouvPdfMonitorSource`, `FacebookMonitorSource`,
+  `PressMonitoringSource`** (`stubs.py`) — classes documentées mais **non
+  implémentées** : chacune lève `NotImplementedError` avec une explication de ce qui
+  bloque (partenariat à conclure, validation juridique du scraping, évaluation Graph
+  API Facebook, absence de canal numérique pour Armée/Gendarmerie). Formalisent
+  l'extensibilité future sans contraindre l'architecture ni être activées sans
+  décision explicite.
+
+### Cartographie des plateformes gouvernementales existantes (juillet 2026)
+
+Référence pour comprendre le positionnement du produit — détail complet dans
+`docs/CONTEXTE_METIER.md` § 1-2 :
+
+| Examen / concours | Plateforme actuelle | Consultation individuelle ? |
+|---|---|---|
+| CEP | SIGEC-CEP (`resultats.examens.gov.bf`) | ✅ Oui — seul segment couvert |
+| BEPC / BAC | `education.gov.bf` (annonces) + affichage physique | ❌ Non |
+| Concours directs Fonction publique | PDF sur `fonction-publique.gov.bf` | ❌ Non |
+| Douanes / GSP / Eaux et Forêts | PDF sur `fonction-publique.gov.bf` | ❌ Non |
+| Police Nationale | `securite.gov.bf` + Facebook (msecubf) | ❌ Non |
+| Armée / Gendarmerie | RTB, Sidwaya, affichage physique en camps | ❌ Non (aucun canal en ligne) |
+
+`econcours.gov.bf` et `econcours-pro.gov.bf` gèrent uniquement les **inscriptions**
+aux concours, jamais la publication des résultats — à ne pas confondre avec une
+plateforme concurrente de consultation.
+
+## Phases de publication (concours paramilitaires)
+
+Contexte complet : `docs/CONTEXTE_METIER.md` § 2.4. Contrairement aux examens
+scolaires (résultat unique : admis/ajourné), les concours paramilitaires se déroulent
+en **3 phases successives**, chacune publiée séparément :
+
+1. `EPREUVES_SPORTIVES` — aptes à composer aux épreuves écrites
+2. `ADMISSIBILITE` — retenus pour la visite médicale d'incorporation
+3. `ADMISSION_DEFINITIVE` — liste finale, sous réserve d'enquête de moralité
+
+Un même candidat peut donc avoir **plusieurs lignes `Resultat`** pour un même examen
+(une par phase), avec des décisions différentes à chaque étape — il peut apparaître
+« apte » en phase 1 et ne plus figurer en phase 2 (échec à l'écrit). `Resultat.phase`
+distingue ces lignes ; `phase_suivante_attendue` indique à l'utilisateur la prochaine
+étape s'il y en a une. `Examen.phases_publication` liste les phases prévues pour ce
+type d'examen (`RESULTAT_UNIQUE` par défaut pour tout le reste, y compris `SECOND_TOUR`
+pour un BEPC/BAC en seconde session).
+
+⚠️ Le frontend n'affiche pas encore d'indicateur de phase ni de sélecteur d'examen à
+deux niveaux (catégorie puis type précis) — améliorations UX documentées comme
+« bonus, non prioritaires » dans `docs/CONTEXTE_METIER.md` § 7, à traiter avec le
+reste du travail esthétique.
 
 ## Décisions techniques
 
@@ -228,6 +312,177 @@ Le PDF natif et l'OCR restent non calibrés (voir plus haut) — cette
 calibration n'a porté que sur le parser Excel, le document fourni étant au
 format image/PDF mais reconstruit en `.xlsx` pour le test (même structure
 de colonnes).
+
+### Calibrage du parser PDF natif sur un vrai document (2026-07-04)
+
+Test de `pdf_parser.py` contre la liste officielle des établissements
+privés reçue le 2026-07-03 (62 pages, 2029 lignes, tableau natif
+`N°/REGION/NOM DE L'ETABLISSEMENT/PROVINCES/COMMUNES/SECTEUR`). Ce
+document n'est pas un PV de résultats — ses colonnes ne correspondent à
+aucun alias métier — mais c'est un vrai PDF gouvernemental multi-pages, ce
+qui permet de tester la robustesse de l'extraction elle-même :
+
+- **Aucun crash, aucune ligne perdue** sur les 62 pages : `pdfplumber`
+  détecte correctement un tableau par page et notre logique de mapping
+  d'en-tête (calculé une seule fois sur la première page, réutilisé
+  ensuite) gère bien la continuité du tableau sans dupliquer l'en-tête.
+- **Document au mauvais format correctement rejeté** : les 2029 lignes
+  sont toutes signalées en erreur (`numero_pv`/`nom`/`prenom`/`decision`
+  manquants), donc la publication resterait bloquée — comportement
+  attendu si un admin importe le mauvais fichier par erreur.
+- **Corruption de texte source, 1 ligne sur 2029** : la ligne 34 de la
+  page 2 contient un nom d'établissement dont les caractères sont
+  entremêlés au niveau du flux PDF lui-même (`LCYOCLELEE GPER IPVREI...`
+  au lieu d'un nom lisible) — confirmé en testant aussi bien l'extraction
+  par défaut que la stratégie `vertical_strategy="text"`, et en lisant le
+  texte brut de la page : la corruption est déjà présente dans le contenu
+  du PDF, pas introduite par notre parsing. Cause probable : une correction
+  manuelle faite dans le document source (texte superposé à l'ancien).
+  Une détection automatique de ce cas précis a été testée par curiosité
+  (heuristique sur le nombre de mots courts) mais produit des faux
+  positifs et rate le vrai cas — pas assez fiable pour un seul cas sur
+  2029 lignes, donc pas retenue (inutile d'ajouter de la complexité pour
+  un problème que la relecture manuelle obligatoire avant publication
+  couvre déjà). Conclusion : la validation humaine systématique reste la
+  bonne protection contre ce type de corruption, pas un correctif
+  automatique.
+
+**L'OCR reste non calibré** : aucun spécimen de PV scanné n'est disponible
+dans cette session (les images partagées le 2026-07-03 n'ont pas été
+conservées après compactage de la conversation). À calibrer dès qu'un vrai
+PV scanné/photo sera à nouveau fourni.
+
+### Calibrage OCR sur une reconstitution fidèle (2026-07-04)
+
+Les photos du PV « Assistants des Douanes » repartagées dans la conversation
+n'ont, comme les fois précédentes, pas été conservées sur disque après
+compactage — impossible de les relire directement avec `pytesseract`.
+Reconstitution à l'identique (même en-têtes, mêmes colonnes, mêmes lignes,
+police monospace) rendue en image puis dégradée (légère rotation, flou,
+bruit, compression JPEG) pour simuler une vraie photo, et passée dans le
+véritable pipeline OCR (`tesseract` installé pour l'occasion). Trois défauts
+réels trouvés et corrigés dans `ocr_parser.py` :
+
+1. **Mode de segmentation Tesseract par défaut (PSM 3) mélange les colonnes**
+   sur un tableau large : le texte ressort regroupé par bloc détecté (tous
+   les N°, puis tous les noms, puis tous les récépissés...) au lieu de ligne
+   par ligne. **Corrigé** en forçant `--psm 6` (bloc de texte uniforme), qui
+   restitue l'ordre naturel des lignes.
+2. **L'en-tête n'est pas forcément la première ligne de texte** : les
+   documents officiels ont presque toujours un titre au-dessus (ex.
+   « ASSISTANTS DES DOUANES/HOMMES », « ADMISSIBLES »), ce que confirme aussi
+   bien ce PV que la liste des établissements. `lignes_depuis_texte`
+   supposait `lignes_texte[0]` = en-tête. **Corrigé** avec
+   `_trouver_ligne_entete` : cherche la première ligne reconnaissant au
+   moins 2 colonnes métier, reste au comportement précédent quand l'en-tête
+   est bien en ligne 1 (aucune régression sur les tests existants).
+3. **⚠️ Non corrigé — nécessite une décision de conception avant de coder
+   davantage.** L'heuristique de découpage en colonnes (`\s{2,}` : au moins
+   2 espaces = séparateur) ne fonctionne pas de façon fiable sur du texte
+   réellement sorti de Tesseract : le rendu en chaîne ne préserve pas les
+   espacements visuels de façon cohérente (une même largeur d'écart entre
+   deux colonnes peut ressortir en 1 espace à un endroit et en plusieurs à
+   un autre). Sur la reconstitution testée, même après les deux corrections
+   ci-dessus, aucune ligne ne se mappe correctement aux champs métier via
+   cette heuristique. `pytesseract.image_to_data(...)` (positions en pixels
+   de chaque mot, via `Output.DICT`) donne des coordonnées fiables et
+   permettrait un vrai découpage en colonnes par position — mais c'est un
+   changement d'architecture pour `lignes_depuis_texte` (qui prend
+   aujourd'hui une chaîne de texte, pas des positions de mots), pas une
+   simple correction. **Décision à prendre avant de poursuivre** : soit
+   investir dans ce découpage par position (plus fiable, plus de code),
+   soit accepter que l'OCR se limite à extraire le texte brut sans tenter de
+   mapper les colonnes automatiquement (l'admin ressaisit manuellement —
+   moins d'automatisation mais rien de plus fragile que ce qui existe déjà).
+
+### Faciliter la publication pour les administrations (2026-07-04)
+
+Trois évolutions livrées pour que les administrations (OCECOS, DGEC,
+Fonction publique) publient plus vite et avec moins d'allers-retours avec
+nous à chaque nouveau format de document :
+
+1. **Modèle Excel téléchargeable** (`GET /api/v1/admin/ingestions/template`,
+   `app/services/ingestion/template.py`) : classeur `.xlsx` généré à la
+   volée avec les en-têtes exactes reconnues par le parser (Numéro PV,
+   Jury, Nom, Prénom, Date de naissance, Décision, Moyenne, Établissement,
+   N°CNIB) plus une ligne d'exemple. Bouton « Télécharger le modèle Excel »
+   dans la section Import de l'admin. Garantit un parsing fiable dès le
+   premier essai pour une administration qui n'a pas encore de fichier dans
+   un format compatible, sans attendre une calibration de notre part.
+2. **Colonnes non reconnues signalées explicitement.** Jusqu'ici,
+   `erreurs_fichier` (calculé par les parsers pour "Fichier vide", "Aucun
+   tableau détecté"...) n'était jamais exposé par l'API — un admin dont le
+   fichier avait par exemple une colonne "Décision" mal nommée voyait juste
+   "decision manquant" sur chaque ligne, sans indice sur la cause. Ajout de
+   `colonnes_non_reconnues()` / `message_colonnes_non_reconnues()`
+   (`normalizer.py`), utilisées par les 3 parsers, et d'une colonne
+   `erreurs_fichier` sur `Ingestion` (migration `a3f8c1d92b47`) exposée dans
+   `IngestionOut`. Affiché dans l'aperçu admin (bandeau ambre) : "Colonnes
+   non reconnues, ignorées : X, Y." — l'admin peut renommer sa colonne et
+   réessayer seul, sans nous solliciter.
+3. **Option "PDF scanné (OCR)" désactivée dans le formulaire d'import**,
+   avec info-bulle expliquant que le découpage en colonnes n'est pas encore
+   fiable (voir calibrage OCR ci-dessus). Évite qu'un admin publie des
+   données mal alignées en pensant le chemin fiable ; l'API backend
+   continue d'accepter `PDF_OCR` techniquement, seule l'UI décourage son
+   usage pour l'instant.
+
+### Parser des communiqués scannés de la Fonction publique (2026-07-04)
+
+Contexte détaillé dans `docs/CONTEXTE_METIER_maj.md` et
+`docs/PARSER_PDF_FONCTION_PUBLIQUE.md` : les communiqués publiés sur
+`fonction-publique.gov.bf` (concours directs) sont systématiquement des
+**scans sans couche texte** (HP Scan, PaperStream), avec un format à 4
+colonnes très stable (`RANG° | NOM ET PRÉNOM(s) | RÉCÉPISSÉ-CODE-CENTRE +
+N°CNIB | DATE NAISS.`), très différent du tableau générique attendu par
+`ocr_parser.py`. `docs/parser_poc.py` (fourni séparément, validé à 100% sur
+2 PDF officiels 2025 : 7/7 et 120/120 résultats) a servi de base :
+
+- **`app/services/parsers/pdf_type_detector.py`** — `detecter_type_pdf()`
+  utilise `pdffonts` (poppler-utils, déjà dans le Dockerfile) : une sortie
+  de 2 lignes ou moins (aucune police détectée) signale un scan.
+- **`app/services/parsers/scan_pdf_parser.py`** — `parser_pdf_scan()`,
+  adapté du POC pour s'intégrer au pipeline existant : réutilise
+  `pdf2image` + `pytesseract` (`--psm 6`, cohérent avec le calibrage OCR
+  ci-dessus) au lieu des appels `subprocess` bruts du POC, et produit des
+  `LigneExtraite`/`ResultatExtraction` (types communs à tous les parsers)
+  plutôt que les dataclasses `MetadonneesPdf`/`Resultat` du POC, pour
+  passer par le même flux upload → aperçu → correction → publication.
+  Détecte automatiquement la décision (`ADMISSIBLE`/`ADMIS`) depuis le
+  titre du communiqué (repli sur `decision_par_defaut` si indétectable),
+  et signale un écart dans `erreurs_fichier` si le nombre de lignes
+  extraites ne correspond pas au total déclaré en pied de page (contrôle
+  qualité principal recommandé par la spec).
+- **Détection automatique dans `dispatch.py`** : `TypeFichier.PDF` route
+  désormais vers `detecter_type_pdf()` puis vers `parser_pdf` (natif) ou
+  `parser_pdf_scan` (scan) selon le résultat — l'admin choisit juste
+  « PDF », sans avoir besoin de savoir à l'avance si le fichier est un
+  scan (renommé dans `admin.html` : « PDF (texte ou scanné, détecté
+  automatiquement) »).
+- **Modèle `Resultat`** (migration `c7e2a4f91d05`) : nouveaux champs
+  nullables `numero_recepisse`, `code_concours`, `code_centre`,
+  `rang_numerique`, `rang_affiche` (voir tableau `resultats` ci-dessus).
+
+**Écarts assumés par rapport à la spec fournie**, documentés ici pour
+traçabilité :
+- **Pas de renommage de `numero_pv` en `numero_recepisse`** (proposé en
+  §8 point 8 de la spec) : changement invasif (API publique, frontend,
+  tous les tests) non demandé explicitement cette session. `numero_pv`
+  reste le champ utilisé par la recherche publique ; `numero_recepisse`
+  stocke la même valeur sous le nom officiel du document, en plus.
+- **Pas de `donnees_brutes_ligne` dédié** : la ligne OCR brute est stockée
+  dans le `donnees_brutes` JSONB déjà existant (`{"ligne_ocr": "..."}`),
+  cohérent avec la traçabilité déjà en place pour tous les autres parsers,
+  plutôt qu'une colonne spécifique à ce seul parser.
+- **Pas de `native_pdf_parser.py` ni d'abstraction `FileImportSource`**
+  (proposés en §8 points 5-6 de la spec) : dupliqueraient respectivement
+  `app/services/ingestion/pdf_parser.py` et `dispatch.py`, qui remplissent
+  déjà ce rôle.
+- **La refonte plus large de `CONTEXTE_METIER_maj.md`** (nouvel enum
+  `TypeExamen` complet, `PhasePublication`, abstraction `ResultsSource`,
+  modèles `Corps`/`Centre`/`Concours`, seed, README) n'a **pas** été
+  entreprise cette session — hors périmètre de cette demande précise, à
+  traiter séparément si demandé explicitement.
 
 ### Flux admin (`app/routes/admin/ingestions.py`)
 

@@ -3,10 +3,27 @@ import io
 import openpyxl
 import pytest
 from httpx import AsyncClient
+from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Resultat
+
+_FONT = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 20)
+
+
+def _construire_pdf_scan_fonction_publique(chemin) -> None:
+    image = Image.new("RGB", (1400, 200), "white")
+    dessin = ImageDraw.Draw(image)
+    dessin.text((30, 20), "ADMISSIBLES", font=_FONT, fill="black")
+    dessin.text(
+        (30, 60),
+        "1° BAYALA JEAN-CLAUDE 000015-120-03 B14863543 15/02/01",
+        font=_FONT,
+        fill="black",
+    )
+    dessin.text((30, 100), "Arrete la presente liste a 1 admissible.", font=_FONT, fill="black")
+    image.save(str(chemin), "PDF")
 
 
 def _construire_xlsx(lignes: list[list]) -> bytes:
@@ -205,6 +222,63 @@ async def test_ingestions_require_auth(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_signale_les_colonnes_non_reconnues(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    examen_id = await _creer_examen(client, admin_headers)
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(["Numéro PV", "Jury", "Nom", "Prénom", "Décision", "Adresse"])
+    feuille.append(["001", "Ouaga 1", "Traore", "Awa", "Admis", "Secteur 15"])
+    buffer = io.BytesIO()
+    classeur.save(buffer)
+
+    response = await client.post(
+        "/api/v1/admin/ingestions",
+        data={"examen_id": examen_id, "type_fichier": "EXCEL"},
+        files={
+            "file": (
+                "resultats.xlsx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        headers=admin_headers,
+    )
+
+    body = response.json()
+    assert body["nombre_erreurs"] == 0
+    assert "Adresse" in body["erreurs_fichier"][0]
+
+
+@pytest.mark.asyncio
+async def test_download_template_requires_auth(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/admin/ingestions/template")
+
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_download_template_renvoie_un_classeur_excel(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    response = await client.get("/api/v1/admin/ingestions/template", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert (
+        response.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert "attachment" in response.headers["content-disposition"]
+
+    classeur = openpyxl.load_workbook(io.BytesIO(response.content))
+    feuille = classeur.active
+    entetes = [cellule.value for cellule in feuille[1]]
+    assert "Numéro PV" in entetes
+    assert "Nom" in entetes
+
+
+@pytest.mark.asyncio
 async def test_list_ingestions_filtered_by_examen(client: AsyncClient, admin_headers: dict) -> None:
     examen_id = await _creer_examen(client, admin_headers)
     autre_examen_id = await _creer_examen(client, admin_headers)
@@ -310,3 +384,65 @@ async def test_upload_concours_direct_avec_decision_par_defaut_et_correction(
     assert resultat.decision == "ADMISSIBLE"
     assert resultat.nom == "BAYALA"
     assert resultat.prenom == "JEAN-CLAUDE"
+
+
+@pytest.mark.asyncio
+async def test_upload_communique_scanne_fonction_publique_bout_en_bout(
+    client: AsyncClient, admin_headers: dict, db_session: AsyncSession, tmp_path
+) -> None:
+    """Bout en bout sur un communiqué scanné de la Fonction publique : upload en type
+    PDF (sans préciser qu'il s'agit d'un scan — détection automatique), extraction
+    rang/récépissé/code concours/code centre/CNIB, correction du prénom, publication."""
+    examen_response = await client.post(
+        "/api/v1/admin/exams",
+        json={
+            "type_examen": "CONCOURS_DIRECT",
+            "annee": 2026,
+            "libelle": "Chirurgiens-Dentistes 2026",
+        },
+        headers=admin_headers,
+    )
+    examen_id = examen_response.json()["id"]
+
+    chemin_pdf = tmp_path / "communique.pdf"
+    _construire_pdf_scan_fonction_publique(chemin_pdf)
+
+    upload = await client.post(
+        "/api/v1/admin/ingestions",
+        data={"examen_id": examen_id, "type_fichier": "PDF"},
+        files={"file": ("communique.pdf", chemin_pdf.read_bytes(), "application/pdf")},
+        headers=admin_headers,
+    )
+    ingestion = upload.json()
+    assert ingestion["nombre_erreurs"] == 1  # prenom manquant, à corriger
+
+    ligne = ingestion["lignes"][0]
+    assert ligne["donnees"]["numero_recepisse"] == "000015"
+    assert ligne["donnees"]["code_concours"] == "120"
+    assert ligne["donnees"]["code_centre"] == "03"
+    assert ligne["donnees"]["rang_numerique"] == 1
+    assert ligne["donnees"]["decision"] == "ADMISSIBLE"
+
+    ligne["donnees"]["nom"] = "BAYALA"
+    ligne["donnees"]["prenom"] = "JEAN-CLAUDE"
+    ligne["erreurs"] = []
+    correction = await client.patch(
+        f"/api/v1/admin/ingestions/{ingestion['id']}",
+        json={"lignes": [ligne]},
+        headers=admin_headers,
+    )
+    assert correction.json()["nombre_erreurs"] == 0
+
+    publish = await client.post(
+        f"/api/v1/admin/ingestions/{ingestion['id']}/publish", headers=admin_headers
+    )
+    assert publish.status_code == 200
+
+    resultat = (await db_session.execute(select(Resultat))).scalar_one()
+    assert resultat.numero_pv == "000015"
+    assert resultat.numero_recepisse == "000015"
+    assert resultat.code_concours == "120"
+    assert resultat.code_centre == "03"
+    assert resultat.rang_numerique == 1
+    assert resultat.rang_affiche == "1°"
+    assert resultat.numero_cnib == "B14863543"

@@ -1,6 +1,14 @@
 # Faso Résultats
 
-Plateforme de consultation de résultats d'examens nationaux du Burkina Faso (CEP, BEPC, BAC, concours de la Fonction publique).
+Une couche complémentaire d'accès aux résultats d'examens et concours, couvrant le
+BEPC, le BAC, les examens professionnels et les concours administratifs et
+paramilitaires non desservis par les plateformes officielles existantes, avec les
+canaux SMS et mobile que celles-ci ne proposent pas. Compatible en partenariat avec
+SIGEC pour le CEP.
+
+Voir `docs/CONTEXTE_METIER.md` pour la cartographie complète du paysage
+concurrentiel (plateformes gouvernementales existantes) et des examens/concours
+couverts.
 
 ## Démarrage rapide (Docker)
 

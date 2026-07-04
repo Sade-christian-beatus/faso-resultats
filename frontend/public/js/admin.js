@@ -127,6 +127,20 @@ document.getElementById("form-examen").addEventListener("submit", async (event) 
 
 // --- Import ---
 
+document.getElementById("lien-modele-excel").addEventListener("click", async (event) => {
+  event.preventDefault();
+  const reponse = await fetch(`${API_BASE}/api/v1/admin/ingestions/template`, {
+    headers: enTeteAuth(),
+  });
+  if (!reponse.ok) return;
+  const blob = await reponse.blob();
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(blob);
+  lien.download = "modele-import-resultats.xlsx";
+  lien.click();
+  URL.revokeObjectURL(lien.href);
+});
+
 document.getElementById("form-import").addEventListener("submit", async (event) => {
   event.preventDefault();
   const messageEl = document.getElementById("message-import");
@@ -163,6 +177,14 @@ function renderApercu() {
   document.getElementById("section-apercu").classList.remove("hidden");
   document.getElementById("apercu-statut").textContent =
     `${ingestion.statut} — ${ingestion.nombre_lignes_detectees} ligne(s), ${ingestion.nombre_erreurs} erreur(s)`;
+
+  const erreursFichierEl = document.getElementById("apercu-erreurs-fichier");
+  if (ingestion.erreurs_fichier && ingestion.erreurs_fichier.length) {
+    erreursFichierEl.textContent = ingestion.erreurs_fichier.join(" ");
+    erreursFichierEl.classList.remove("hidden");
+  } else {
+    erreursFichierEl.classList.add("hidden");
+  }
 
   const corps = document.getElementById("corps-table-apercu");
   corps.innerHTML = ingestion.lignes
@@ -203,40 +225,53 @@ function lireCorrectionsDepuisTable() {
   return lignes;
 }
 
-document.getElementById("btn-enregistrer-corrections").addEventListener("click", async () => {
+document.getElementById("btn-publier").addEventListener("click", async () => {
   const messageEl = document.getElementById("message-apercu");
   const lignes = lireCorrectionsDepuisTable();
   try {
-    const ingestion = await apiFetch(`/api/v1/admin/ingestions/${etat.ingestionCourante.id}`, {
+    etat.ingestionCourante = await apiFetch(`/api/v1/admin/ingestions/${etat.ingestionCourante.id}`, {
       method: "PATCH",
       headers: { ...enTeteAuth(), "Content-Type": "application/json" },
       body: JSON.stringify({ lignes }),
     });
-    etat.ingestionCourante = ingestion;
     renderApercu();
-    messageEl.className = "text-sm mt-3 text-emerald-700";
-    messageEl.textContent = "Corrections enregistrées.";
+
+    etat.ingestionCourante = await apiFetch(
+      `/api/v1/admin/ingestions/${etat.ingestionCourante.id}/publish`,
+      { method: "POST", headers: enTeteAuth() }
+    );
+    document.getElementById("apercu-statut").textContent = etat.ingestionCourante.statut;
+    await afficherMessagePublicationTerminee(messageEl);
   } catch (erreur) {
     messageEl.className = "text-sm mt-3 text-red-600";
     messageEl.textContent = erreur.message;
   }
 });
 
-document.getElementById("btn-publier").addEventListener("click", async () => {
-  const messageEl = document.getElementById("message-apercu");
-  try {
-    etat.ingestionCourante = await apiFetch(
-      `/api/v1/admin/ingestions/${etat.ingestionCourante.id}/publish`,
-      { method: "POST", headers: enTeteAuth() }
-    );
-    messageEl.className = "text-sm mt-3 text-emerald-700";
-    messageEl.textContent = "Ingestion publiée. Pensez à publier l'examen s'il est encore en brouillon.";
-    document.getElementById("apercu-statut").textContent = etat.ingestionCourante.statut;
-  } catch (erreur) {
-    messageEl.className = "text-sm mt-3 text-red-600";
-    messageEl.textContent = erreur.message;
+async function afficherMessagePublicationTerminee(messageEl) {
+  await chargerExamens();
+  const examen = etat.examens.find((e) => e.id === etat.ingestionCourante.examen_id);
+  messageEl.className = "text-sm mt-3 text-emerald-700";
+
+  if (examen && examen.statut === "DRAFT") {
+    messageEl.innerHTML = `
+      Résultats enregistrés. Ils resteront invisibles du public tant que l'examen n'est
+      pas publié.
+      <button id="btn-publier-examen-maintenant" class="ml-1 underline hover:text-emerald-900">
+        Publier l'examen maintenant
+      </button>`;
+    document.getElementById("btn-publier-examen-maintenant").addEventListener("click", async () => {
+      await apiFetch(`/api/v1/admin/exams/${examen.id}/publish`, {
+        method: "POST",
+        headers: enTeteAuth(),
+      });
+      await chargerExamens();
+      messageEl.textContent = "Résultats et examen publiés : consultables publiquement.";
+    });
+  } else {
+    messageEl.textContent = "Résultats publiés et consultables publiquement.";
   }
-});
+}
 
 document.getElementById("btn-rejeter").addEventListener("click", async () => {
   await apiFetch(`/api/v1/admin/ingestions/${etat.ingestionCourante.id}/reject`, {

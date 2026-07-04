@@ -2,7 +2,12 @@ from pathlib import Path
 
 import openpyxl
 
-from app.services.ingestion.normalizer import construire_mapping_colonnes, normaliser_ligne
+from app.services.ingestion.normalizer import (
+    colonnes_non_reconnues,
+    construire_mapping_colonnes,
+    message_colonnes_non_reconnues,
+    normaliser_ligne,
+)
 from app.services.ingestion.types import LigneExtraite, ResultatExtraction, valeur_json_safe
 
 
@@ -40,4 +45,6 @@ def parser_excel(
             )
         )
 
-    return ResultatExtraction(lignes=lignes)
+    non_reconnues = colonnes_non_reconnues(entetes_str, mapping_colonnes)
+    erreurs_fichier = [message_colonnes_non_reconnues(non_reconnues)] if non_reconnues else []
+    return ResultatExtraction(lignes=lignes, erreurs_fichier=erreurs_fichier)
