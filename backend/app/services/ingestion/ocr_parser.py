@@ -8,9 +8,21 @@ en deux temps :
 - `lignes_depuis_texte` : découpage du texte brut en lignes/colonnes, fonction
   pure testable sans dépendance externe.
 
-⚠️ Cette heuristique (colonnes séparées par ≥2 espaces) est un premier jet :
-elle doit être calibrée sur de vrais PV scannés OCECOS/DGEC dès qu'ils seront
-disponibles.
+Calibré le 2026-07-04 sur une reconstitution fidèle d'un vrai PV scanné
+(Assistants des Douanes) — voir `docs/ARCHITECTURE.md` § Calibrage OCR :
+- `--psm 6` est indispensable : le mode par défaut de Tesseract (segmentation
+  automatique de page) regroupe le texte par bloc/colonne détecté plutôt que
+  ligne par ligne sur un tableau large, ce qui mélangeait entièrement les
+  colonnes (tous les N°, puis tous les noms, puis tous les récépissés...).
+- L'en-tête du tableau n'est pas forcément la première ligne de texte : les
+  documents officiels ont presque toujours un titre au-dessus ("ASSISTANTS
+  DES DOUANES/HOMMES", "ADMISSIBLES") — `_trouver_ligne_entete` cherche la
+  première ligne qui reconnaît au moins 2 colonnes métier plutôt que de
+  supposer que c'est la ligne 1.
+
+⚠️ Calibré sur un seul document reconstitué : l'heuristique (colonnes
+séparées par ≥2 espaces) reste un premier jet à confirmer sur un vrai PV
+scanné/photographié (fichier original, pas une reconstitution).
 """
 
 import re
@@ -25,6 +37,7 @@ from app.services.ingestion.normalizer import construire_mapping_colonnes, norma
 from app.services.ingestion.types import LigneExtraite, ResultatExtraction
 
 _SEPARATEUR_COLONNES = re.compile(r"\s{2,}")
+_MINIMUM_COLONNES_RECONNUES = 2
 
 
 def _pretraiter_image(image_pil) -> np.ndarray:
@@ -36,8 +49,22 @@ def _pretraiter_image(image_pil) -> np.ndarray:
 
 def extraire_texte_ocr(chemin_fichier: str | Path) -> str:
     pages = convert_from_path(str(chemin_fichier))
-    textes = [pytesseract.image_to_string(_pretraiter_image(page), lang="fra") for page in pages]
+    textes = [
+        pytesseract.image_to_string(_pretraiter_image(page), lang="fra", config="--psm 6")
+        for page in pages
+    ]
     return "\n".join(textes)
+
+
+def _trouver_ligne_entete(lignes_texte: list[str]) -> int:
+    """Cherche la première ligne qui reconnaît au moins 2 colonnes métier, pour ignorer
+    les titres/sous-titres qui précèdent presque toujours l'en-tête sur les documents
+    officiels (ex. "ASSISTANTS DES DOUANES/HOMMES", "ADMISSIBLES")."""
+    for index, ligne in enumerate(lignes_texte):
+        candidats = _SEPARATEUR_COLONNES.split(ligne.strip())
+        if len(construire_mapping_colonnes(candidats)) >= _MINIMUM_COLONNES_RECONNUES:
+            return index
+    return 0
 
 
 def lignes_depuis_texte(texte: str, decision_par_defaut: str | None = None) -> ResultatExtraction:
@@ -45,11 +72,12 @@ def lignes_depuis_texte(texte: str, decision_par_defaut: str | None = None) -> R
     if not lignes_texte:
         return ResultatExtraction(lignes=[], erreurs_fichier=["Aucun texte détecté par l'OCR"])
 
-    entetes = _SEPARATEUR_COLONNES.split(lignes_texte[0].strip())
+    index_entete = _trouver_ligne_entete(lignes_texte)
+    entetes = _SEPARATEUR_COLONNES.split(lignes_texte[index_entete].strip())
     mapping_colonnes = construire_mapping_colonnes(entetes)
 
     lignes: list[LigneExtraite] = []
-    for numero_ligne, ligne_texte in enumerate(lignes_texte[1:], start=2):
+    for numero_ligne, ligne_texte in enumerate(lignes_texte[index_entete + 1 :], start=2):
         valeurs = _SEPARATEUR_COLONNES.split(ligne_texte.strip())
         ligne_brute = dict(zip(entetes, valeurs, strict=False))
         resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)

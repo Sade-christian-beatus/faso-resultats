@@ -268,6 +268,49 @@ dans cette session (les images partagées le 2026-07-03 n'ont pas été
 conservées après compactage de la conversation). À calibrer dès qu'un vrai
 PV scanné/photo sera à nouveau fourni.
 
+### Calibrage OCR sur une reconstitution fidèle (2026-07-04)
+
+Les photos du PV « Assistants des Douanes » repartagées dans la conversation
+n'ont, comme les fois précédentes, pas été conservées sur disque après
+compactage — impossible de les relire directement avec `pytesseract`.
+Reconstitution à l'identique (même en-têtes, mêmes colonnes, mêmes lignes,
+police monospace) rendue en image puis dégradée (légère rotation, flou,
+bruit, compression JPEG) pour simuler une vraie photo, et passée dans le
+véritable pipeline OCR (`tesseract` installé pour l'occasion). Trois défauts
+réels trouvés et corrigés dans `ocr_parser.py` :
+
+1. **Mode de segmentation Tesseract par défaut (PSM 3) mélange les colonnes**
+   sur un tableau large : le texte ressort regroupé par bloc détecté (tous
+   les N°, puis tous les noms, puis tous les récépissés...) au lieu de ligne
+   par ligne. **Corrigé** en forçant `--psm 6` (bloc de texte uniforme), qui
+   restitue l'ordre naturel des lignes.
+2. **L'en-tête n'est pas forcément la première ligne de texte** : les
+   documents officiels ont presque toujours un titre au-dessus (ex.
+   « ASSISTANTS DES DOUANES/HOMMES », « ADMISSIBLES »), ce que confirme aussi
+   bien ce PV que la liste des établissements. `lignes_depuis_texte`
+   supposait `lignes_texte[0]` = en-tête. **Corrigé** avec
+   `_trouver_ligne_entete` : cherche la première ligne reconnaissant au
+   moins 2 colonnes métier, reste au comportement précédent quand l'en-tête
+   est bien en ligne 1 (aucune régression sur les tests existants).
+3. **⚠️ Non corrigé — nécessite une décision de conception avant de coder
+   davantage.** L'heuristique de découpage en colonnes (`\s{2,}` : au moins
+   2 espaces = séparateur) ne fonctionne pas de façon fiable sur du texte
+   réellement sorti de Tesseract : le rendu en chaîne ne préserve pas les
+   espacements visuels de façon cohérente (une même largeur d'écart entre
+   deux colonnes peut ressortir en 1 espace à un endroit et en plusieurs à
+   un autre). Sur la reconstitution testée, même après les deux corrections
+   ci-dessus, aucune ligne ne se mappe correctement aux champs métier via
+   cette heuristique. `pytesseract.image_to_data(...)` (positions en pixels
+   de chaque mot, via `Output.DICT`) donne des coordonnées fiables et
+   permettrait un vrai découpage en colonnes par position — mais c'est un
+   changement d'architecture pour `lignes_depuis_texte` (qui prend
+   aujourd'hui une chaîne de texte, pas des positions de mots), pas une
+   simple correction. **Décision à prendre avant de poursuivre** : soit
+   investir dans ce découpage par position (plus fiable, plus de code),
+   soit accepter que l'OCR se limite à extraire le texte brut sans tenter de
+   mapper les colonnes automatiquement (l'admin ressaisit manuellement —
+   moins d'automatisation mais rien de plus fragile que ce qui existe déjà).
+
 ### Flux admin (`app/routes/admin/ingestions.py`)
 
 1. `POST /api/v1/admin/ingestions` (multipart : `file`, `examen_id`,
