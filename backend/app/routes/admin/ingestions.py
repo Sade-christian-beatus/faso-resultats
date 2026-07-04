@@ -170,7 +170,10 @@ async def correct_ingestion(
     response_model=IngestionOut,
     summary="Publier une ingestion",
     description="Transforme l'aperçu validé en résultats officiels. Bloqué si des lignes "
-    "portent encore des erreurs (validation humaine obligatoire avant publication).",
+    "portent encore des erreurs (validation humaine obligatoire avant publication). "
+    "Les résultats restent invisibles côté public tant que l'examen associé n'est pas "
+    "lui-même publié (permet de préparer plusieurs jurys avant une mise en ligne "
+    "coordonnée, ex. jour de proclamation du BAC).",
 )
 async def publish_ingestion(
     ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
