@@ -16,11 +16,15 @@ faso-resultats/
 │   │   ├── models/          Modèles SQLAlchemy 2.0 (Mapped / mapped_column)
 │   │   ├── schemas/         Schémas Pydantic (requêtes/réponses)
 │   │   ├── routes/          Routers FastAPI (public/, admin/, health)
-│   │   ├── services/        Logique métier, testable sans DB (parsers d'ingestion)
+│   │   ├── services/        Logique métier, testable sans DB
+│   │   │   ├── ingestion/    Parsers Excel/PDF/OCR, normalisation, publication
+│   │   │   ├── parsers/      Détection de type PDF + parser scan Fonction publique
+│   │   │   └── sources/      Abstraction ResultsSource (voir § Sources de données)
+│   │   ├── data/reference/   Référentiels statiques (ministères de tutelle...)
 │   │   └── core/            Sécurité (JWT/bcrypt), cache, rate limiting
 │   ├── alembic/              Migrations
 │   ├── tests/                Tests pytest
-│   ├── seed.py                Peuple l'admin par défaut
+│   ├── seed.py                Peuple l'admin par défaut + examens d'exemple
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/public/          HTML/CSS/JS vanilla + Tailwind CDN, servi par nginx
@@ -39,10 +43,16 @@ Un examen ou concours pour une année donnée (ex : "BAC 2026 - Session normale"
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
-| type_examen | enum (`CEP`, `BEPC`, `BAC`, `CONCOURS_DIRECT`) | |
+| type_examen | enum `TypeExamen`, voir taxonomie complète en § Sources de données | `BAC` et `CONCOURS_DIRECT` conservés (non-breaking) en plus des variantes précises (`BAC_GENERAL`...) |
 | annee | int | |
 | libelle | string | |
 | statut | enum (`DRAFT`, `PUBLISHED`, `ARCHIVED`) | défaut `DRAFT` — jamais visible côté public tant que non `PUBLISHED` |
+| categorie | enum `CategorieExamen` nullable | `EXAMEN_SCOLAIRE` / `CONCOURS_DIRECT` / `CONCOURS_PROFESSIONNEL` / `CONCOURS_PARAMILITAIRE` |
+| serie | string nullable | ex. série du BAC (A, C, D...) ou corps d'un concours |
+| ministere_tutelle | string nullable | traçabilité de l'organisme responsable ; voir aussi `app/data/reference/organismes.py` |
+| source_donnees | enum `SourceDonnees`, défaut `FILE_IMPORT` | d'où proviennent les résultats — voir § Sources de données |
+| partenariat_officiel | bool, défaut `False` | reconnaissance officielle par convention signée |
+| phases_publication | jsonb (liste), défaut `[]` | phases attendues pour ce type d'examen — voir § Phases de publication |
 | created_at / updated_at | timestamptz | |
 
 Index : `(statut, annee)` — filtrage des examens publiés récents.
@@ -91,9 +101,16 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | numero_recepisse / code_concours / code_centre / rang_numerique / rang_affiche | nullable | spécifiques aux communiqués scannés de la Fonction publique (voir § Parser scan Fonction publique) ; vides pour les autres types d'examens. `numero_recepisse` duplique `numero_pv` plutôt que de le remplacer, pour ne pas casser la recherche publique existante |
 | decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
+| phase | enum `PhasePublication`, défaut `RESULTAT_UNIQUE` | voir § Phases de publication |
+| date_publication_phase | timestamptz nullable | |
+| phase_suivante_attendue | enum `PhasePublication` nullable | |
 | donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
 
-Index : `(examen_id, numero_pv, jury)` — requête principale de consultation.
+Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation, un
+candidat pouvant désormais avoir plusieurs `Resultat` pour un même examen (un par
+phase). Il s'agit d'un index de performance, pas d'une contrainte d'unicité — rien
+n'empêche au niveau base deux lignes strictement identiques ; la déduplication reste
+une responsabilité applicative si besoin.
 
 ### `notifications_preinscription`
 Préinscription à la notification SMS (fonctionnalité Phase 2, table créée dès
@@ -110,6 +127,70 @@ Phase 1 pour ne pas devoir réécrire le schéma plus tard).
 | envoye_at | timestamptz nullable | |
 
 Index : `(examen_id, statut)` — envoi en masse.
+
+## Sources de données (`app/services/sources/`)
+
+Contexte complet : `docs/CONTEXTE_METIER.md` § 4.2. Abstraction `ResultsSource`
+(`base.py`) unifiant la récupération des résultats depuis n'importe quel canal de
+publication gouvernemental existant, avec une seule méthode `fetch_results(examen_id,
+**kwargs) -> list[LigneExtraite]` :
+
+- **`FileImportSource`** (implémentée) — délègue à
+  `app.services.ingestion.dispatch.parser_fichier`, déjà utilisé directement par
+  `POST /api/v1/admin/ingestions`. Seule source réellement utilisée en Phase 1 : c'est
+  le cœur stratégique du projet, puisqu'à l'exception du CEP (couvert par SIGEC-CEP),
+  **aucun** examen ni concours du Burkina Faso ne dispose aujourd'hui d'une
+  consultation individuelle par numéro de PV — tout reste au format PDF/communiqué
+  téléchargeable. La qualité et la vitesse de ce pipeline sont l'avantage compétitif
+  principal.
+- **`SigecApiSource`, `GouvPdfMonitorSource`, `FacebookMonitorSource`,
+  `PressMonitoringSource`** (`stubs.py`) — classes documentées mais **non
+  implémentées** : chacune lève `NotImplementedError` avec une explication de ce qui
+  bloque (partenariat à conclure, validation juridique du scraping, évaluation Graph
+  API Facebook, absence de canal numérique pour Armée/Gendarmerie). Formalisent
+  l'extensibilité future sans contraindre l'architecture ni être activées sans
+  décision explicite.
+
+### Cartographie des plateformes gouvernementales existantes (juillet 2026)
+
+Référence pour comprendre le positionnement du produit — détail complet dans
+`docs/CONTEXTE_METIER.md` § 1-2 :
+
+| Examen / concours | Plateforme actuelle | Consultation individuelle ? |
+|---|---|---|
+| CEP | SIGEC-CEP (`resultats.examens.gov.bf`) | ✅ Oui — seul segment couvert |
+| BEPC / BAC | `education.gov.bf` (annonces) + affichage physique | ❌ Non |
+| Concours directs Fonction publique | PDF sur `fonction-publique.gov.bf` | ❌ Non |
+| Douanes / GSP / Eaux et Forêts | PDF sur `fonction-publique.gov.bf` | ❌ Non |
+| Police Nationale | `securite.gov.bf` + Facebook (msecubf) | ❌ Non |
+| Armée / Gendarmerie | RTB, Sidwaya, affichage physique en camps | ❌ Non (aucun canal en ligne) |
+
+`econcours.gov.bf` et `econcours-pro.gov.bf` gèrent uniquement les **inscriptions**
+aux concours, jamais la publication des résultats — à ne pas confondre avec une
+plateforme concurrente de consultation.
+
+## Phases de publication (concours paramilitaires)
+
+Contexte complet : `docs/CONTEXTE_METIER.md` § 2.4. Contrairement aux examens
+scolaires (résultat unique : admis/ajourné), les concours paramilitaires se déroulent
+en **3 phases successives**, chacune publiée séparément :
+
+1. `EPREUVES_SPORTIVES` — aptes à composer aux épreuves écrites
+2. `ADMISSIBILITE` — retenus pour la visite médicale d'incorporation
+3. `ADMISSION_DEFINITIVE` — liste finale, sous réserve d'enquête de moralité
+
+Un même candidat peut donc avoir **plusieurs lignes `Resultat`** pour un même examen
+(une par phase), avec des décisions différentes à chaque étape — il peut apparaître
+« apte » en phase 1 et ne plus figurer en phase 2 (échec à l'écrit). `Resultat.phase`
+distingue ces lignes ; `phase_suivante_attendue` indique à l'utilisateur la prochaine
+étape s'il y en a une. `Examen.phases_publication` liste les phases prévues pour ce
+type d'examen (`RESULTAT_UNIQUE` par défaut pour tout le reste, y compris `SECOND_TOUR`
+pour un BEPC/BAC en seconde session).
+
+⚠️ Le frontend n'affiche pas encore d'indicateur de phase ni de sélecteur d'examen à
+deux niveaux (catégorie puis type précis) — améliorations UX documentées comme
+« bonus, non prioritaires » dans `docs/CONTEXTE_METIER.md` § 7, à traiter avec le
+reste du travail esthétique.
 
 ## Décisions techniques
 

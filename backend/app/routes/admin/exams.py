@@ -25,7 +25,17 @@ router = APIRouter(
     "pas publié explicitement).",
 )
 async def create_exam(payload: ExamenCreate, db: AsyncSession = Depends(get_db)) -> Examen:
-    examen = Examen(type_examen=payload.type_examen, annee=payload.annee, libelle=payload.libelle)
+    examen = Examen(
+        type_examen=payload.type_examen,
+        annee=payload.annee,
+        libelle=payload.libelle,
+        categorie=payload.categorie,
+        serie=payload.serie,
+        ministere_tutelle=payload.ministere_tutelle,
+        source_donnees=payload.source_donnees,
+        partenariat_officiel=payload.partenariat_officiel,
+        phases_publication=payload.phases_publication,
+    )
     db.add(examen)
     await db.commit()
     await db.refresh(examen)
