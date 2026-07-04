@@ -11,12 +11,18 @@ const LIBELLES_EXAMEN = {
   CONCOURS_DIRECT: "Concours direct",
 };
 
+const ICONE_ERREUR = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>`;
+const ICONE_CHARGEMENT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-9-9" /></svg>`;
+
 function afficherMessage(texte, type = "erreur") {
-  const couleurs =
+  const styles =
     type === "erreur"
-      ? "bg-red-50 text-red-700 border-red-200"
-      : "bg-slate-50 text-slate-600 border-slate-200";
-  zoneMessage.innerHTML = `<p class="border rounded px-3 py-2 text-sm ${couleurs}">${texte}</p>`;
+      ? { fond: "bg-red-50 text-red-700 border-red-200", icone: ICONE_ERREUR }
+      : { fond: "bg-slate-50 text-slate-600 border-slate-200", icone: ICONE_CHARGEMENT };
+  zoneMessage.innerHTML = `
+    <p class="flex items-center gap-2 border rounded-lg px-3 py-2.5 text-sm ${styles.fond}">
+      ${styles.icone}<span>${texte}</span>
+    </p>`;
 }
 
 function viderMessage() {
@@ -26,7 +32,7 @@ function viderMessage() {
 function renderExamensDisponibles(examens) {
   if (examens.length === 0) {
     zoneExamensDisponibles.innerHTML =
-      '<p class="text-sm text-slate-500">Aucun résultat publié pour le moment.</p>';
+      '<p class="text-sm text-slate-400">Aucun résultat publié pour le moment.</p>';
     return;
   }
 
@@ -40,8 +46,8 @@ function renderExamensDisponibles(examens) {
   zoneExamensDisponibles.innerHTML = [...parType.entries()]
     .map(
       ([libelleType, listeExamens]) => `
-      <div>
-        <h3 class="text-sm font-semibold text-emerald-700 mb-2">${libelleType}</h3>
+      <div class="border-l-2 border-emerald-200 pl-3">
+        <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">${libelleType}</h3>
         <div class="flex flex-wrap gap-2">
           ${listeExamens
             .map(
@@ -49,7 +55,7 @@ function renderExamensDisponibles(examens) {
             <button
               type="button"
               data-examen-id="${examen.id}"
-              class="btn-choisir-examen text-sm border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-full px-3 py-1 hover:bg-emerald-100"
+              class="btn-choisir-examen text-sm border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-full px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-300 active:scale-[0.98] transition"
             >${examen.annee} — ${examen.libelle}</button>`
             )
             .join("")}
@@ -92,24 +98,27 @@ async function chargerExamens() {
   }
 }
 
+const STYLE_DECISION = {
+  ADMIS: { badge: "bg-emerald-600 text-white", bordure: "border-emerald-500" },
+  ADMISSIBLE: { badge: "bg-sky-600 text-white", bordure: "border-sky-500" },
+};
+const STYLE_DECISION_DEFAUT = { badge: "bg-amber-500 text-white", bordure: "border-amber-400" };
+
 function afficherResultats(resultats) {
   zoneResultats.innerHTML = resultats
-    .map(
-      (r) => `
-      <div class="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
-        <p class="text-lg font-semibold">${r.nom} ${r.prenom}</p>
-        <p class="text-sm text-slate-600">PV n° ${r.numero_pv} — ${r.jury}</p>
-        <p class="mt-2">
-          <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-            r.decision === "ADMIS"
-              ? "bg-emerald-600 text-white"
-              : "bg-amber-500 text-white"
-          }">${r.decision}</span>
+    .map((r) => {
+      const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
+      return `
+      <div class="carte-resultat border-l-4 ${style.bordure} bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
+        <p class="text-lg font-semibold text-slate-900">${r.nom} ${r.prenom}</p>
+        <p class="text-sm text-slate-500">PV n° ${r.numero_pv} — ${r.jury}</p>
+        <p class="mt-2.5">
+          <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${style.badge}">${r.decision}</span>
           ${r.moyenne !== null ? `<span class="ml-2 text-sm text-slate-600">Moyenne : ${r.moyenne}</span>` : ""}
         </p>
-        ${r.etablissement ? `<p class="text-sm text-slate-500 mt-1">${r.etablissement}</p>` : ""}
-      </div>`
-    )
+        ${r.etablissement ? `<p class="text-sm text-slate-500 mt-1.5">${r.etablissement}</p>` : ""}
+      </div>`;
+    })
     .join("");
 }
 

@@ -71,17 +71,17 @@ function renderExamens() {
   corps.innerHTML = etat.examens
     .map(
       (e) => `
-      <tr class="border-b last:border-0">
-        <td class="py-2">${LIBELLES_EXAMEN[e.type_examen] || e.type_examen} ${e.annee} — ${e.libelle}</td>
+      <tr class="border-b border-slate-100 last:border-0 transition">
+        <td class="py-2.5">${LIBELLES_EXAMEN[e.type_examen] || e.type_examen} ${e.annee} — ${e.libelle}</td>
         <td>
-          <span class="px-2 py-0.5 rounded text-xs font-semibold ${
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
             e.statut === "PUBLISHED" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
           }">${e.statut}</span>
         </td>
         <td class="text-right">
           ${
             e.statut === "DRAFT"
-              ? `<button data-id="${e.id}" class="btn-publier-examen text-xs text-emerald-700 hover:underline">Publier</button>`
+              ? `<button data-id="${e.id}" class="btn-publier-examen text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline transition">Publier</button>`
               : ""
           }
         </td>
@@ -187,19 +187,21 @@ function renderApercu() {
   }
 
   const corps = document.getElementById("corps-table-apercu");
+  const classeChamp =
+    "border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition";
   corps.innerHTML = ingestion.lignes
     .map(
       (ligne, index) => `
-      <tr class="border-b last:border-0 ${ligne.erreurs.length ? "bg-red-50" : ""}">
-        <td class="py-1 pr-2">${ligne.ligne}</td>
-        <td class="pr-2"><input data-index="${index}" data-champ="numero_pv" value="${ligne.donnees.numero_pv || ""}" class="border rounded px-1 py-0.5 w-24" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="jury" value="${ligne.donnees.jury || ""}" class="border rounded px-1 py-0.5 w-28" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="nom" value="${ligne.donnees.nom || ""}" class="border rounded px-1 py-0.5 w-28" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="prenom" value="${ligne.donnees.prenom || ""}" class="border rounded px-1 py-0.5 w-28" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="decision" value="${ligne.donnees.decision || ""}" class="border rounded px-1 py-0.5 w-24" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="moyenne" value="${ligne.donnees.moyenne ?? ""}" class="border rounded px-1 py-0.5 w-16" /></td>
-        <td class="pr-2"><input data-index="${index}" data-champ="numero_cnib" value="${ligne.donnees.numero_cnib || ""}" class="border rounded px-1 py-0.5 w-24" /></td>
-        <td class="text-red-600 text-xs">${ligne.erreurs.join(", ")}</td>
+      <tr class="border-b border-slate-100 last:border-0 transition ${ligne.erreurs.length ? "bg-red-50/70" : ""}">
+        <td class="py-1.5 pr-2 pl-3 text-slate-500">${ligne.ligne}</td>
+        <td class="pr-2"><input data-index="${index}" data-champ="numero_pv" value="${ligne.donnees.numero_pv || ""}" class="${classeChamp} w-24" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="jury" value="${ligne.donnees.jury || ""}" class="${classeChamp} w-28" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="nom" value="${ligne.donnees.nom || ""}" class="${classeChamp} w-28" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="prenom" value="${ligne.donnees.prenom || ""}" class="${classeChamp} w-28" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="decision" value="${ligne.donnees.decision || ""}" class="${classeChamp} w-24" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="moyenne" value="${ligne.donnees.moyenne ?? ""}" class="${classeChamp} w-16" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="numero_cnib" value="${ligne.donnees.numero_cnib || ""}" class="${classeChamp} w-24" /></td>
+        <td class="text-red-600 text-xs pr-2">${ligne.erreurs.join(", ")}</td>
       </tr>`
     )
     .join("");

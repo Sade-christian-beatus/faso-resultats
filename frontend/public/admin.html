@@ -4,40 +4,61 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Filet de sécurité si le CDN Tailwind est lent/indisponible (3G) : sans lui, la classe
      "hidden" ne fait rien et connexion + tableau de bord s'afficheraient en même temps. -->
-<style>.hidden { display: none !important; }</style>
+<style>
+  .hidden { display: none !important; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .barre-drapeau {
+    height: 4px;
+    background: linear-gradient(90deg, #009e49 0%, #009e49 33%, #fcd116 33%, #fcd116 66%, #ef3340 66%, #ef3340 100%);
+  }
+  #corps-table-examens tr:hover, #corps-table-apercu tr:hover { background-color: #f8fafc; }
+</style>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div class="barre-drapeau"></div>
+
   <div class="max-w-4xl mx-auto px-4 py-8">
     <header class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-bold text-emerald-700">Faso Résultats — Administration</h1>
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 12l2 2 4-4" />
+            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-emerald-800 leading-tight">Faso Résultats</h1>
+          <p class="text-xs text-slate-500">Espace administration</p>
+        </div>
+      </div>
       <button
         id="btn-deconnexion"
-        class="text-sm text-slate-500 hover:text-red-600 hidden"
+        class="text-sm text-slate-500 hover:text-red-600 transition hidden"
       >
         Se déconnecter
       </button>
     </header>
 
     <!-- Connexion -->
-    <section id="section-connexion" class="bg-white rounded-lg shadow p-6 max-w-sm mx-auto">
-      <h2 class="font-semibold mb-4">Connexion</h2>
+    <section id="section-connexion" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 max-w-sm mx-auto">
+      <h2 class="font-semibold text-slate-800 mb-4">Connexion</h2>
       <form id="form-connexion" class="space-y-3">
         <input
           id="input-email"
           type="email"
           required
           placeholder="Email"
-          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
         />
         <input
           id="input-password"
           type="password"
           required
           placeholder="Mot de passe"
-          class="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
         />
         <button
           type="submit"
-          class="w-full bg-emerald-700 text-white font-medium rounded px-4 py-2 hover:bg-emerald-800 transition"
+          class="w-full bg-emerald-700 text-white font-medium rounded-lg px-4 py-2.5 hover:bg-emerald-800 active:bg-emerald-900 transition shadow-sm"
         >
           Se connecter
         </button>
@@ -48,10 +69,16 @@
     <!-- Tableau de bord admin -->
     <section id="section-admin" class="hidden space-y-6">
       <!-- Examens -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="font-semibold mb-4">Examens</h2>
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <h2 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          Examens
+        </h2>
         <form id="form-examen" class="flex flex-wrap gap-2 mb-4">
-          <select id="input-type-examen" class="border border-slate-300 rounded px-2 py-2">
+          <select id="input-type-examen" class="border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="CEP">CEP</option>
             <option value="BEPC">BEPC</option>
             <option value="BAC">BAC</option>
@@ -62,25 +89,25 @@
             type="number"
             required
             placeholder="Année"
-            class="border border-slate-300 rounded px-2 py-2 w-24"
+            class="border border-slate-300 rounded-lg px-2 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <input
             id="input-libelle"
             type="text"
             required
             placeholder="Libellé (ex : BAC 2026 - Session normale)"
-            class="border border-slate-300 rounded px-2 py-2 flex-1 min-w-[200px]"
+            class="border border-slate-300 rounded-lg px-2 py-2 flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
             type="submit"
-            class="bg-emerald-700 text-white rounded px-4 py-2 hover:bg-emerald-800"
+            class="bg-emerald-700 text-white rounded-lg px-4 py-2 hover:bg-emerald-800 active:bg-emerald-900 transition"
           >
             Créer
           </button>
         </form>
         <table class="w-full text-sm">
           <thead>
-            <tr class="text-left text-slate-500 border-b">
+            <tr class="text-left text-slate-500 border-b border-slate-200">
               <th class="py-2">Examen</th>
               <th>Statut</th>
               <th></th>
@@ -91,18 +118,24 @@
       </div>
 
       <!-- Import -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="font-semibold">Importer un fichier de résultats</h2>
+          <h2 class="font-semibold text-slate-800 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="M17 8l-5-5-5 5M12 3v12" />
+            </svg>
+            Importer un fichier de résultats
+          </h2>
           <a
             id="lien-modele-excel"
             href="#"
-            class="text-sm text-emerald-700 hover:underline"
+            class="text-sm text-emerald-700 hover:underline hover:text-emerald-800"
           >Télécharger le modèle Excel</a>
         </div>
         <form id="form-import" class="flex flex-wrap gap-2 items-center">
-          <select id="select-examen-import" class="border border-slate-300 rounded px-2 py-2 flex-1 min-w-[200px]"></select>
-          <select id="select-type-fichier" class="border border-slate-300 rounded px-2 py-2">
+          <select id="select-examen-import" class="border border-slate-300 rounded-lg px-2 py-2 flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+          <select id="select-type-fichier" class="border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="EXCEL">Excel (.xlsx)</option>
             <option value="PDF">PDF (texte ou scanné, détecté automatiquement)</option>
             <option value="PDF_OCR" disabled title="Pas encore fiable : le découpage en colonnes du texte reconnu ne fonctionne pas correctement sur un vrai document scanné.">PDF scanné (OCR) — bientôt disponible</option>
@@ -112,11 +145,11 @@
             id="input-decision-defaut"
             type="text"
             placeholder="Décision par défaut (optionnel, ex. ADMISSIBLE)"
-            class="border border-slate-300 rounded px-2 py-2 min-w-[220px]"
+            class="border border-slate-300 rounded-lg px-2 py-2 min-w-[220px] focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
             type="submit"
-            class="bg-emerald-700 text-white rounded px-4 py-2 hover:bg-emerald-800"
+            class="bg-emerald-700 text-white rounded-lg px-4 py-2 hover:bg-emerald-800 active:bg-emerald-900 transition"
           >
             Importer
           </button>
@@ -131,21 +164,21 @@
       </div>
 
       <!-- Aperçu / correction -->
-      <div id="section-apercu" class="bg-white rounded-lg shadow p-6 hidden">
+      <div id="section-apercu" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 hidden">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="font-semibold">
+          <h2 class="font-semibold text-slate-800">
             Aperçu de l'import — <span id="apercu-statut" class="text-slate-500 font-normal"></span>
           </h2>
           <div class="space-x-2">
-            <button id="btn-publier" class="text-sm bg-emerald-700 text-white rounded px-3 py-1.5 hover:bg-emerald-800">
+            <button id="btn-publier" class="text-sm bg-emerald-700 text-white rounded-lg px-3 py-1.5 hover:bg-emerald-800 active:bg-emerald-900 transition">
               Enregistrer et publier
             </button>
-            <button id="btn-rejeter" class="text-sm bg-red-600 text-white rounded px-3 py-1.5 hover:bg-red-700">
+            <button id="btn-rejeter" class="text-sm bg-red-600 text-white rounded-lg px-3 py-1.5 hover:bg-red-700 active:bg-red-800 transition">
               Rejeter
             </button>
           </div>
         </div>
-        <p id="apercu-erreurs-fichier" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-3 hidden"></p>
+        <p id="apercu-erreurs-fichier" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hidden"></p>
         <p class="text-sm text-slate-500 mb-3">
           Corrigez directement les champs ci-dessous si besoin, puis cliquez sur
           « Enregistrer et publier » : vos corrections sont sauvegardées et les résultats
@@ -153,11 +186,11 @@
           pouvoir publier. Les résultats ne seront visibles du public qu'une fois l'examen
           lui-même publié (utile pour préparer plusieurs jurys avant une mise en ligne groupée).
         </p>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-lg border border-slate-100">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-slate-500 border-b">
-                <th class="py-2 pr-2">Ligne</th>
+              <tr class="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
+                <th class="py-2 pr-2 pl-3">Ligne</th>
                 <th class="pr-2">N° PV</th>
                 <th class="pr-2">Jury</th>
                 <th class="pr-2">Nom</th>
