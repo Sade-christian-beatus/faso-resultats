@@ -1,5 +1,7 @@
 from app.services.ingestion.normalizer import (
+    colonnes_non_reconnues,
     construire_mapping_colonnes,
+    message_colonnes_non_reconnues,
     normaliser_entete,
     normaliser_ligne,
 )
@@ -23,6 +25,26 @@ def test_construire_mapping_colonnes_reconnait_les_alias() -> None:
         "Prénom": "prenom",
         "Décision": "decision",
     }
+
+
+def test_colonnes_non_reconnues_retourne_les_entetes_ignorees() -> None:
+    entetes = ["N° PV", "Centre", "Nom", "Prénom", "Décision", "Colonne inconnue"]
+    mapping = construire_mapping_colonnes(entetes)
+
+    assert colonnes_non_reconnues(entetes, mapping) == ["Colonne inconnue"]
+
+
+def test_colonnes_non_reconnues_ignore_les_entetes_vides() -> None:
+    entetes = ["Nom", "", "Prénom"]
+    mapping = construire_mapping_colonnes(entetes)
+
+    assert colonnes_non_reconnues(entetes, mapping) == []
+
+
+def test_message_colonnes_non_reconnues_liste_les_noms() -> None:
+    message = message_colonnes_non_reconnues(["Adresse", "Téléphone"])
+
+    assert "Adresse, Téléphone" in message
 
 
 def test_normaliser_ligne_complete_sans_erreur() -> None:

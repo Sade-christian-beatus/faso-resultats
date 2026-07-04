@@ -92,13 +92,20 @@
 
       <!-- Import -->
       <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="font-semibold mb-4">Importer un fichier de résultats</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold">Importer un fichier de résultats</h2>
+          <a
+            id="lien-modele-excel"
+            href="#"
+            class="text-sm text-emerald-700 hover:underline"
+          >Télécharger le modèle Excel</a>
+        </div>
         <form id="form-import" class="flex flex-wrap gap-2 items-center">
           <select id="select-examen-import" class="border border-slate-300 rounded px-2 py-2 flex-1 min-w-[200px]"></select>
           <select id="select-type-fichier" class="border border-slate-300 rounded px-2 py-2">
             <option value="EXCEL">Excel (.xlsx)</option>
             <option value="PDF">PDF natif</option>
-            <option value="PDF_OCR">PDF scanné (OCR)</option>
+            <option value="PDF_OCR" disabled title="Pas encore fiable : le découpage en colonnes du texte reconnu ne fonctionne pas correctement sur un vrai document scanné.">PDF scanné (OCR) — bientôt disponible</option>
           </select>
           <input id="input-fichier" type="file" required class="text-sm" />
           <input
@@ -117,7 +124,8 @@
         <p class="text-xs text-slate-500 mt-2">
           La décision par défaut s'applique aux lignes sans colonne décision propre
           dans le fichier (ex. une liste d'admissibilité à un concours, où la
-          décision vaut pour tout le document).
+          décision vaut pour tout le document). Pas de fichier compatible ? Partez du
+          modèle Excel ci-dessus.
         </p>
         <p id="message-import" class="text-sm text-red-600 mt-3"></p>
       </div>
@@ -137,6 +145,7 @@
             </button>
           </div>
         </div>
+        <p id="apercu-erreurs-fichier" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-3 hidden"></p>
         <p class="text-sm text-slate-500 mb-3">
           Corrigez directement les champs ci-dessous si besoin, puis cliquez sur
           « Enregistrer et publier » : vos corrections sont sauvegardées et les résultats

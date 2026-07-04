@@ -72,6 +72,8 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | type_fichier | enum (`PDF`, `EXCEL`, `PDF_OCR`) | |
 | statut | enum (`EN_ATTENTE`, `PREVISUALISATION`, `VALIDEE`, `PUBLIEE`, `REJETEE`) | reflète le flux upload → prévisualisation → correction → publication |
 | nombre_lignes_detectees / nombre_erreurs | int | |
+| apercu_donnees | jsonb | lignes extraites en attente de correction/publication |
+| erreurs_fichier | jsonb (liste de string) | messages au niveau du fichier entier (colonnes non reconnues, fichier vide...), pas d'une ligne précise |
 | publiee_at | timestamptz nullable | |
 
 ### `resultats`
@@ -310,6 +312,38 @@ réels trouvés et corrigés dans `ocr_parser.py` :
    soit accepter que l'OCR se limite à extraire le texte brut sans tenter de
    mapper les colonnes automatiquement (l'admin ressaisit manuellement —
    moins d'automatisation mais rien de plus fragile que ce qui existe déjà).
+
+### Faciliter la publication pour les administrations (2026-07-04)
+
+Trois évolutions livrées pour que les administrations (OCECOS, DGEC,
+Fonction publique) publient plus vite et avec moins d'allers-retours avec
+nous à chaque nouveau format de document :
+
+1. **Modèle Excel téléchargeable** (`GET /api/v1/admin/ingestions/template`,
+   `app/services/ingestion/template.py`) : classeur `.xlsx` généré à la
+   volée avec les en-têtes exactes reconnues par le parser (Numéro PV,
+   Jury, Nom, Prénom, Date de naissance, Décision, Moyenne, Établissement,
+   N°CNIB) plus une ligne d'exemple. Bouton « Télécharger le modèle Excel »
+   dans la section Import de l'admin. Garantit un parsing fiable dès le
+   premier essai pour une administration qui n'a pas encore de fichier dans
+   un format compatible, sans attendre une calibration de notre part.
+2. **Colonnes non reconnues signalées explicitement.** Jusqu'ici,
+   `erreurs_fichier` (calculé par les parsers pour "Fichier vide", "Aucun
+   tableau détecté"...) n'était jamais exposé par l'API — un admin dont le
+   fichier avait par exemple une colonne "Décision" mal nommée voyait juste
+   "decision manquant" sur chaque ligne, sans indice sur la cause. Ajout de
+   `colonnes_non_reconnues()` / `message_colonnes_non_reconnues()`
+   (`normalizer.py`), utilisées par les 3 parsers, et d'une colonne
+   `erreurs_fichier` sur `Ingestion` (migration `a3f8c1d92b47`) exposée dans
+   `IngestionOut`. Affiché dans l'aperçu admin (bandeau ambre) : "Colonnes
+   non reconnues, ignorées : X, Y." — l'admin peut renommer sa colonne et
+   réessayer seul, sans nous solliciter.
+3. **Option "PDF scanné (OCR)" désactivée dans le formulaire d'import**,
+   avec info-bulle expliquant que le découpage en colonnes n'est pas encore
+   fiable (voir calibrage OCR ci-dessus). Évite qu'un admin publie des
+   données mal alignées en pensant le chemin fiable ; l'API backend
+   continue d'accepter `PDF_OCR` techniquement, seule l'UI décourage son
+   usage pour l'instant.
 
 ### Flux admin (`app/routes/admin/ingestions.py`)
 

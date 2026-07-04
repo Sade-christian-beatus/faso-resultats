@@ -68,6 +68,22 @@ def construire_mapping_colonnes(entetes_brutes: list[str]) -> dict[str, str]:
     return mapping
 
 
+def colonnes_non_reconnues(
+    entetes_brutes: list[str], mapping_colonnes: dict[str, str]
+) -> list[str]:
+    """En-têtes présentes dans le fichier mais ignorées car aucun champ métier ne leur
+    correspond — pour permettre à l'admin de corriger lui-même le nommage de ses colonnes
+    plutôt que de nous demander une calibration à chaque nouveau format de document."""
+    return [entete for entete in entetes_brutes if entete and entete not in mapping_colonnes]
+
+
+def message_colonnes_non_reconnues(non_reconnues: list[str]) -> str:
+    return (
+        f"Colonnes non reconnues, ignorées : {', '.join(non_reconnues)}. "
+        "Si des données y sont attendues, vérifiez le nom de ces colonnes."
+    )
+
+
 def _parser_date(valeur: Any) -> tuple[date | None, str | None]:
     if valeur is None or valeur == "":
         return None, None

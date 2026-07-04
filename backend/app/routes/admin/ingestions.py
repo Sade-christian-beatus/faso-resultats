@@ -2,6 +2,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -13,6 +14,7 @@ from app.models import Admin, Examen, Ingestion, StatutIngestion, TypeFichier
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
 from app.services.ingestion.dispatch import parser_fichier
 from app.services.ingestion.publication import construire_resultats
+from app.services.ingestion.template import construire_modele_excel
 
 router = APIRouter(
     prefix="/api/v1/admin/ingestions",
@@ -102,12 +104,27 @@ async def upload_ingestion(
         statut=StatutIngestion.PREVISUALISATION,
         nombre_lignes_detectees=resultat_parsing.nombre_lignes,
         nombre_erreurs=resultat_parsing.nombre_erreurs,
+        erreurs_fichier=resultat_parsing.erreurs_fichier,
         apercu_donnees=[ligne.as_dict() for ligne in resultat_parsing.lignes],
     )
     db.add(ingestion)
     await db.commit()
     await db.refresh(ingestion)
     return _vers_preview(ingestion)
+
+
+@router.get(
+    "/template",
+    summary="Télécharger le modèle Excel d'import",
+    description="Fichier .xlsx avec les en-têtes exactes reconnues par le parser, pour "
+    "une administration qui n'a pas encore de fichier dans un format compatible.",
+)
+async def download_template() -> Response:
+    return Response(
+        content=construire_modele_excel(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modele-import-resultats.xlsx"},
+    )
 
 
 @router.get(

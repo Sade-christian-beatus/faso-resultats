@@ -25,6 +25,7 @@ class IngestionOut(BaseModel):
     statut: StatutIngestion
     nombre_lignes_detectees: int
     nombre_erreurs: int
+    erreurs_fichier: list[str] = []
     publiee_at: datetime | None
     created_at: datetime
 

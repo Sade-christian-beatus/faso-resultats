@@ -2,6 +2,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
+from app.services.ingestion.normalizer import message_colonnes_non_reconnues
 from app.services.ingestion.pdf_parser import parser_pdf
 
 
@@ -80,6 +81,19 @@ def test_parser_pdf_document_sans_tableau_signale_erreur_fichier(tmp_path) -> No
 
     assert resultat.lignes == []
     assert resultat.erreurs_fichier == ["Aucun tableau détecté dans le PDF"]
+
+
+def test_parser_pdf_signale_les_colonnes_non_reconnues(tmp_path) -> None:
+    chemin = tmp_path / "resultats.pdf"
+    _construire_pdf_tableau(
+        chemin,
+        ["Numero PV", "Jury", "Nom", "Prenom", "Decision", "Adresse"],
+        [["001", "Ouaga 1", "Traore", "Awa", "Admis", "Secteur 15"]],
+    )
+
+    resultat = parser_pdf(str(chemin))
+
+    assert resultat.erreurs_fichier == [message_colonnes_non_reconnues(["Adresse"])]
 
 
 def test_parser_pdf_document_type_incompatible_signale_toutes_les_lignes_en_erreur(

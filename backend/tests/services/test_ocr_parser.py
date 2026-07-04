@@ -1,3 +1,4 @@
+from app.services.ingestion.normalizer import message_colonnes_non_reconnues
 from app.services.ingestion.ocr_parser import lignes_depuis_texte
 
 
@@ -38,3 +39,14 @@ def test_lignes_depuis_texte_ignore_les_titres_avant_entete() -> None:
     assert resultat.nombre_lignes == 1
     assert resultat.lignes[0].donnees["numero_pv"] == "001"
     assert resultat.lignes[0].donnees["nom"] == "Traore"
+
+
+def test_lignes_depuis_texte_signale_les_colonnes_non_reconnues() -> None:
+    texte = (
+        "Numero PV  Jury  Nom  Prenom  Decision  Adresse\n"
+        "001  Ouaga 1  Traore  Awa  Admis  Secteur 15\n"
+    )
+
+    resultat = lignes_depuis_texte(texte)
+
+    assert resultat.erreurs_fichier == [message_colonnes_non_reconnues(["Adresse"])]

@@ -127,6 +127,20 @@ document.getElementById("form-examen").addEventListener("submit", async (event) 
 
 // --- Import ---
 
+document.getElementById("lien-modele-excel").addEventListener("click", async (event) => {
+  event.preventDefault();
+  const reponse = await fetch(`${API_BASE}/api/v1/admin/ingestions/template`, {
+    headers: enTeteAuth(),
+  });
+  if (!reponse.ok) return;
+  const blob = await reponse.blob();
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(blob);
+  lien.download = "modele-import-resultats.xlsx";
+  lien.click();
+  URL.revokeObjectURL(lien.href);
+});
+
 document.getElementById("form-import").addEventListener("submit", async (event) => {
   event.preventDefault();
   const messageEl = document.getElementById("message-import");
@@ -163,6 +177,14 @@ function renderApercu() {
   document.getElementById("section-apercu").classList.remove("hidden");
   document.getElementById("apercu-statut").textContent =
     `${ingestion.statut} — ${ingestion.nombre_lignes_detectees} ligne(s), ${ingestion.nombre_erreurs} erreur(s)`;
+
+  const erreursFichierEl = document.getElementById("apercu-erreurs-fichier");
+  if (ingestion.erreurs_fichier && ingestion.erreurs_fichier.length) {
+    erreursFichierEl.textContent = ingestion.erreurs_fichier.join(" ");
+    erreursFichierEl.classList.remove("hidden");
+  } else {
+    erreursFichierEl.classList.add("hidden");
+  }
 
   const corps = document.getElementById("corps-table-apercu");
   corps.innerHTML = ingestion.lignes

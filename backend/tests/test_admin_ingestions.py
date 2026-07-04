@@ -205,6 +205,63 @@ async def test_ingestions_require_auth(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_upload_signale_les_colonnes_non_reconnues(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    examen_id = await _creer_examen(client, admin_headers)
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(["Numéro PV", "Jury", "Nom", "Prénom", "Décision", "Adresse"])
+    feuille.append(["001", "Ouaga 1", "Traore", "Awa", "Admis", "Secteur 15"])
+    buffer = io.BytesIO()
+    classeur.save(buffer)
+
+    response = await client.post(
+        "/api/v1/admin/ingestions",
+        data={"examen_id": examen_id, "type_fichier": "EXCEL"},
+        files={
+            "file": (
+                "resultats.xlsx",
+                buffer.getvalue(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        headers=admin_headers,
+    )
+
+    body = response.json()
+    assert body["nombre_erreurs"] == 0
+    assert "Adresse" in body["erreurs_fichier"][0]
+
+
+@pytest.mark.asyncio
+async def test_download_template_requires_auth(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/admin/ingestions/template")
+
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_download_template_renvoie_un_classeur_excel(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    response = await client.get("/api/v1/admin/ingestions/template", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert (
+        response.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert "attachment" in response.headers["content-disposition"]
+
+    classeur = openpyxl.load_workbook(io.BytesIO(response.content))
+    feuille = classeur.active
+    entetes = [cellule.value for cellule in feuille[1]]
+    assert "Numéro PV" in entetes
+    assert "Nom" in entetes
+
+
+@pytest.mark.asyncio
 async def test_list_ingestions_filtered_by_examen(client: AsyncClient, admin_headers: dict) -> None:
     examen_id = await _creer_examen(client, admin_headers)
     autre_examen_id = await _creer_examen(client, admin_headers)
