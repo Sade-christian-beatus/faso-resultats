@@ -24,6 +24,7 @@ pytest-asyncio==0.25.0
 pytest-cov==6.0.0
 httpx==0.28.1
 aiosqlite==0.20.0
+reportlab==5.0.0
 
 # Qualité
 black==24.10.0

@@ -229,6 +229,45 @@ calibration n'a porté que sur le parser Excel, le document fourni étant au
 format image/PDF mais reconstruit en `.xlsx` pour le test (même structure
 de colonnes).
 
+### Calibrage du parser PDF natif sur un vrai document (2026-07-04)
+
+Test de `pdf_parser.py` contre la liste officielle des établissements
+privés reçue le 2026-07-03 (62 pages, 2029 lignes, tableau natif
+`N°/REGION/NOM DE L'ETABLISSEMENT/PROVINCES/COMMUNES/SECTEUR`). Ce
+document n'est pas un PV de résultats — ses colonnes ne correspondent à
+aucun alias métier — mais c'est un vrai PDF gouvernemental multi-pages, ce
+qui permet de tester la robustesse de l'extraction elle-même :
+
+- **Aucun crash, aucune ligne perdue** sur les 62 pages : `pdfplumber`
+  détecte correctement un tableau par page et notre logique de mapping
+  d'en-tête (calculé une seule fois sur la première page, réutilisé
+  ensuite) gère bien la continuité du tableau sans dupliquer l'en-tête.
+- **Document au mauvais format correctement rejeté** : les 2029 lignes
+  sont toutes signalées en erreur (`numero_pv`/`nom`/`prenom`/`decision`
+  manquants), donc la publication resterait bloquée — comportement
+  attendu si un admin importe le mauvais fichier par erreur.
+- **Corruption de texte source, 1 ligne sur 2029** : la ligne 34 de la
+  page 2 contient un nom d'établissement dont les caractères sont
+  entremêlés au niveau du flux PDF lui-même (`LCYOCLELEE GPER IPVREI...`
+  au lieu d'un nom lisible) — confirmé en testant aussi bien l'extraction
+  par défaut que la stratégie `vertical_strategy="text"`, et en lisant le
+  texte brut de la page : la corruption est déjà présente dans le contenu
+  du PDF, pas introduite par notre parsing. Cause probable : une correction
+  manuelle faite dans le document source (texte superposé à l'ancien).
+  Une détection automatique de ce cas précis a été testée par curiosité
+  (heuristique sur le nombre de mots courts) mais produit des faux
+  positifs et rate le vrai cas — pas assez fiable pour un seul cas sur
+  2029 lignes, donc pas retenue (inutile d'ajouter de la complexité pour
+  un problème que la relecture manuelle obligatoire avant publication
+  couvre déjà). Conclusion : la validation humaine systématique reste la
+  bonne protection contre ce type de corruption, pas un correctif
+  automatique.
+
+**L'OCR reste non calibré** : aucun spécimen de PV scanné n'est disponible
+dans cette session (les images partagées le 2026-07-03 n'ont pas été
+conservées après compactage de la conversation). À calibrer dès qu'un vrai
+PV scanné/photo sera à nouveau fourni.
+
 ### Flux admin (`app/routes/admin/ingestions.py`)
 
 1. `POST /api/v1/admin/ingestions` (multipart : `file`, `examen_id`,
