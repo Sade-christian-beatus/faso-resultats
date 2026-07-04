@@ -25,6 +25,7 @@ pytest-cov==6.0.0
 httpx==0.28.1
 aiosqlite==0.20.0
 reportlab==5.0.0
+pillow==12.3.0
 
 # Qualité
 black==24.10.0

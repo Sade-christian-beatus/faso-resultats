@@ -88,6 +88,7 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | nom / prenom / date_naissance / lieu_naissance | | données sensibles — jamais loguées |
 | etablissement | string nullable | |
 | numero_cnib | string(20) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_recepisse / code_concours / code_centre / rang_numerique / rang_affiche | nullable | spécifiques aux communiqués scannés de la Fonction publique (voir § Parser scan Fonction publique) ; vides pour les autres types d'examens. `numero_recepisse` duplique `numero_pv` plutôt que de le remplacer, pour ne pas casser la recherche publique existante |
 | decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
 | donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
@@ -344,6 +345,63 @@ nous à chaque nouveau format de document :
    données mal alignées en pensant le chemin fiable ; l'API backend
    continue d'accepter `PDF_OCR` techniquement, seule l'UI décourage son
    usage pour l'instant.
+
+### Parser des communiqués scannés de la Fonction publique (2026-07-04)
+
+Contexte détaillé dans `docs/CONTEXTE_METIER_maj.md` et
+`docs/PARSER_PDF_FONCTION_PUBLIQUE.md` : les communiqués publiés sur
+`fonction-publique.gov.bf` (concours directs) sont systématiquement des
+**scans sans couche texte** (HP Scan, PaperStream), avec un format à 4
+colonnes très stable (`RANG° | NOM ET PRÉNOM(s) | RÉCÉPISSÉ-CODE-CENTRE +
+N°CNIB | DATE NAISS.`), très différent du tableau générique attendu par
+`ocr_parser.py`. `docs/parser_poc.py` (fourni séparément, validé à 100% sur
+2 PDF officiels 2025 : 7/7 et 120/120 résultats) a servi de base :
+
+- **`app/services/parsers/pdf_type_detector.py`** — `detecter_type_pdf()`
+  utilise `pdffonts` (poppler-utils, déjà dans le Dockerfile) : une sortie
+  de 2 lignes ou moins (aucune police détectée) signale un scan.
+- **`app/services/parsers/scan_pdf_parser.py`** — `parser_pdf_scan()`,
+  adapté du POC pour s'intégrer au pipeline existant : réutilise
+  `pdf2image` + `pytesseract` (`--psm 6`, cohérent avec le calibrage OCR
+  ci-dessus) au lieu des appels `subprocess` bruts du POC, et produit des
+  `LigneExtraite`/`ResultatExtraction` (types communs à tous les parsers)
+  plutôt que les dataclasses `MetadonneesPdf`/`Resultat` du POC, pour
+  passer par le même flux upload → aperçu → correction → publication.
+  Détecte automatiquement la décision (`ADMISSIBLE`/`ADMIS`) depuis le
+  titre du communiqué (repli sur `decision_par_defaut` si indétectable),
+  et signale un écart dans `erreurs_fichier` si le nombre de lignes
+  extraites ne correspond pas au total déclaré en pied de page (contrôle
+  qualité principal recommandé par la spec).
+- **Détection automatique dans `dispatch.py`** : `TypeFichier.PDF` route
+  désormais vers `detecter_type_pdf()` puis vers `parser_pdf` (natif) ou
+  `parser_pdf_scan` (scan) selon le résultat — l'admin choisit juste
+  « PDF », sans avoir besoin de savoir à l'avance si le fichier est un
+  scan (renommé dans `admin.html` : « PDF (texte ou scanné, détecté
+  automatiquement) »).
+- **Modèle `Resultat`** (migration `c7e2a4f91d05`) : nouveaux champs
+  nullables `numero_recepisse`, `code_concours`, `code_centre`,
+  `rang_numerique`, `rang_affiche` (voir tableau `resultats` ci-dessus).
+
+**Écarts assumés par rapport à la spec fournie**, documentés ici pour
+traçabilité :
+- **Pas de renommage de `numero_pv` en `numero_recepisse`** (proposé en
+  §8 point 8 de la spec) : changement invasif (API publique, frontend,
+  tous les tests) non demandé explicitement cette session. `numero_pv`
+  reste le champ utilisé par la recherche publique ; `numero_recepisse`
+  stocke la même valeur sous le nom officiel du document, en plus.
+- **Pas de `donnees_brutes_ligne` dédié** : la ligne OCR brute est stockée
+  dans le `donnees_brutes` JSONB déjà existant (`{"ligne_ocr": "..."}`),
+  cohérent avec la traçabilité déjà en place pour tous les autres parsers,
+  plutôt qu'une colonne spécifique à ce seul parser.
+- **Pas de `native_pdf_parser.py` ni d'abstraction `FileImportSource`**
+  (proposés en §8 points 5-6 de la spec) : dupliqueraient respectivement
+  `app/services/ingestion/pdf_parser.py` et `dispatch.py`, qui remplissent
+  déjà ce rôle.
+- **La refonte plus large de `CONTEXTE_METIER_maj.md`** (nouvel enum
+  `TypeExamen` complet, `PhasePublication`, abstraction `ResultsSource`,
+  modèles `Corps`/`Centre`/`Concours`, seed, README) n'a **pas** été
+  entreprise cette session — hors périmètre de cette demande précise, à
+  traiter séparément si demandé explicitement.
 
 ### Flux admin (`app/routes/admin/ingestions.py`)
 
