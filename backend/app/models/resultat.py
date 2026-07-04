@@ -34,6 +34,8 @@ class Resultat(TimestampMixin, Base):
     date_naissance: Mapped[date | None] = mapped_column(Date, nullable=True)
     lieu_naissance: Mapped[str | None] = mapped_column(String(255), nullable=True)
     etablissement: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC.
+    numero_cnib: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     decision: Mapped[str] = mapped_column(String(50))
     moyenne: Mapped[float | None] = mapped_column(Numeric(4, 2), nullable=True)

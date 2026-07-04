@@ -13,18 +13,34 @@ CHAMPS_OBLIGATOIRES = ("numero_pv", "nom", "prenom", "jury", "decision")
 
 # Alias d'en-têtes tolérés par champ canonique (déjà normalisés : minuscules, sans accent).
 _ALIAS_ENTETES: dict[str, tuple[str, ...]] = {
-    "numero_pv": ("numero_pv", "numero pv", "num pv", "n pv", "matricule"),
+    "numero_pv": (
+        "numero_pv",
+        "numero pv",
+        "num pv",
+        "n pv",
+        "matricule",
+        "recepisse code centre",
+        "recepisse",
+    ),
     "jury": ("jury", "centre", "centre d examen", "centre examen"),
     "nom": ("nom",),
     "prenom": ("prenom", "prenoms"),
-    "date_naissance": ("date de naissance", "date_naissance", "ne le", "nee le"),
+    # Documents de concours direct : une seule colonne nom+prénom combinés. Pas de
+    # découpage automatique (risque d'erreur sur les noms composés) — le nom complet
+    # est importé tel quel dans "nom", ce qui laisse "prenom" vide et donc signalé en
+    # erreur, pour que l'admin le sépare manuellement dans l'écran de correction.
+    "nom_prenom": ("nom et prenom", "nom et prenom s", "nom et prenoms", "noms et prenoms"),
+    "date_naissance": ("date de naissance", "date_naissance", "date nais", "ne le", "nee le"),
     "lieu_naissance": ("lieu de naissance", "lieu_naissance"),
     "etablissement": ("etablissement", "ecole"),
     "decision": ("decision", "resultat", "mention"),
     "moyenne": ("moyenne", "moy"),
+    "numero_cnib": ("n cnib", "cnib", "numero cnib"),
 }
 
-_FORMATS_DATE = ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d")
+# Années à 2 chiffres en fin de liste (moins prioritaires) : format courant sur les
+# documents de concours (ex. "15/02/01"), calibré sur un vrai PV OCECOS/AGRE.
+_FORMATS_DATE = ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y", "%d-%m-%y")
 
 
 def _sans_accents(texte: str) -> str:
@@ -87,17 +103,29 @@ class ResultatNormalisation:
 
 
 def normaliser_ligne(
-    ligne_brute: dict[str, Any], mapping_colonnes: dict[str, str]
+    ligne_brute: dict[str, Any],
+    mapping_colonnes: dict[str, str],
+    decision_par_defaut: str | None = None,
 ) -> ResultatNormalisation:
     """Transforme une ligne brute (en-têtes du fichier -> valeurs) en champs canoniques
     prêts pour Resultat, en collectant les erreurs de validation plutôt qu'en levant une
     exception : chaque ligne en erreur reste visible pour correction manuelle.
+
+    `decision_par_defaut` : pour les fichiers sans colonne décision par ligne (ex. une
+    liste d'admissibilité à un concours, où la décision vaut pour tout le document) —
+    appliqué uniquement si la ligne n'a pas déjà sa propre décision.
     """
     valeurs: dict[str, Any] = {}
     for entete_brute, valeur in ligne_brute.items():
         champ = mapping_colonnes.get(entete_brute)
         if champ:
             valeurs[champ] = valeur.strip() if isinstance(valeur, str) else valeur
+
+    if not valeurs.get("nom") and valeurs.get("nom_prenom"):
+        valeurs["nom"] = valeurs["nom_prenom"]
+
+    if not valeurs.get("decision") and decision_par_defaut:
+        valeurs["decision"] = decision_par_defaut
 
     erreurs: list[str] = []
 
@@ -122,6 +150,7 @@ def normaliser_ligne(
         "date_naissance": date_naissance.isoformat() if date_naissance else None,
         "lieu_naissance": str(valeurs.get("lieu_naissance") or "").strip() or None,
         "etablissement": str(valeurs.get("etablissement") or "").strip() or None,
+        "numero_cnib": str(valeurs.get("numero_cnib") or "").strip() or None,
         "moyenne": moyenne,
     }
 

@@ -69,3 +69,32 @@ def test_parser_excel_fichier_vide(tmp_path) -> None:
 
     assert resultat.nombre_lignes == 0
     assert resultat.erreurs_fichier == ["Fichier vide"]
+
+
+def test_parser_excel_document_concours_direct_avec_decision_par_defaut(tmp_path) -> None:
+    """Reproduit la structure réelle d'une liste d'admissibilité à un concours
+    direct (Assistants des Douanes, OCECOS/AGRE) : nom+prénom combinés, pas de
+    colonne décision, un champ N°CNIB inconnu du modèle scolaire classique."""
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(
+        ["N°", "NOM ET PRENOM(s)", "RECEPISSE-CODE-CENTRE", "N°CNIB", "DATE NAIS.", "CENTRE"]
+    )
+    feuille.append([23, "BAYALA JEAN-CLAUDE", "005924-002-06", "B14863543", "15/02/01", "Koudo"])
+    chemin = tmp_path / "douanes.xlsx"
+    classeur.save(chemin)
+
+    resultat = parser_excel(str(chemin), decision_par_defaut="ADMISSIBLE")
+
+    assert resultat.nombre_lignes == 1
+    ligne = resultat.lignes[0]
+    assert ligne.donnees["numero_pv"] == "005924-002-06"
+    assert ligne.donnees["jury"] == "Koudo"
+    assert ligne.donnees["nom"] == "BAYALA JEAN-CLAUDE"
+    assert ligne.donnees["numero_cnib"] == "B14863543"
+    assert ligne.donnees["decision"] == "ADMISSIBLE"
+    # Année à 2 chiffres, format courant sur ce type de document.
+    assert ligne.donnees["date_naissance"] == "2001-02-15"
+    # Prénom non séparé automatiquement : reste à corriger manuellement.
+    assert "prenom manquant" in ligne.erreurs
+    assert not any("illisible" in erreur for erreur in ligne.erreurs)

@@ -54,6 +54,11 @@ async def upload_ingestion(
     examen_id: uuid.UUID = Form(...),
     type_fichier: TypeFichier = Form(...),
     file: UploadFile = File(...),
+    decision_par_defaut: str | None = Form(
+        None,
+        description="Appliquée à toute ligne sans décision propre (ex. listes "
+        "d'admissibilité à un concours, où la décision vaut pour tout le document).",
+    ),
     current_admin: Admin = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> IngestionPreviewOut:
@@ -85,7 +90,7 @@ async def upload_ingestion(
     chemin_fichier = dossier_examen / f"{ingestion_id}{extension}"
     chemin_fichier.write_bytes(contenu)
 
-    resultat_parsing = parser_fichier(chemin_fichier, type_fichier)
+    resultat_parsing = parser_fichier(chemin_fichier, type_fichier, decision_par_defaut)
 
     ingestion = Ingestion(
         id=ingestion_id,

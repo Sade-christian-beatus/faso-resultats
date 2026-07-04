@@ -40,7 +40,7 @@ def extraire_texte_ocr(chemin_fichier: str | Path) -> str:
     return "\n".join(textes)
 
 
-def lignes_depuis_texte(texte: str) -> ResultatExtraction:
+def lignes_depuis_texte(texte: str, decision_par_defaut: str | None = None) -> ResultatExtraction:
     lignes_texte = [ligne for ligne in texte.splitlines() if ligne.strip()]
     if not lignes_texte:
         return ResultatExtraction(lignes=[], erreurs_fichier=["Aucun texte détecté par l'OCR"])
@@ -52,7 +52,7 @@ def lignes_depuis_texte(texte: str) -> ResultatExtraction:
     for numero_ligne, ligne_texte in enumerate(lignes_texte[1:], start=2):
         valeurs = _SEPARATEUR_COLONNES.split(ligne_texte.strip())
         ligne_brute = dict(zip(entetes, valeurs, strict=False))
-        resultat = normaliser_ligne(ligne_brute, mapping_colonnes)
+        resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)
         lignes.append(
             LigneExtraite(
                 ligne=numero_ligne,
@@ -65,6 +65,8 @@ def lignes_depuis_texte(texte: str) -> ResultatExtraction:
     return ResultatExtraction(lignes=lignes)
 
 
-def parser_ocr(chemin_fichier: str | Path) -> ResultatExtraction:
+def parser_ocr(
+    chemin_fichier: str | Path, decision_par_defaut: str | None = None
+) -> ResultatExtraction:
     texte = extraire_texte_ocr(chemin_fichier)
-    return lignes_depuis_texte(texte)
+    return lignes_depuis_texte(texte, decision_par_defaut)

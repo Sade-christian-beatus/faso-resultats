@@ -6,7 +6,9 @@ from app.services.ingestion.normalizer import construire_mapping_colonnes, norma
 from app.services.ingestion.types import LigneExtraite, ResultatExtraction, valeur_json_safe
 
 
-def parser_excel(chemin_fichier: str | Path) -> ResultatExtraction:
+def parser_excel(
+    chemin_fichier: str | Path, decision_par_defaut: str | None = None
+) -> ResultatExtraction:
     """Lit la première feuille d'un classeur Excel : la première ligne est l'en-tête,
     chaque ligne suivante est un résultat candidat.
     """
@@ -28,7 +30,7 @@ def parser_excel(chemin_fichier: str | Path) -> ResultatExtraction:
             continue
 
         ligne_brute = dict(zip(entetes_str, valeurs, strict=False))
-        resultat = normaliser_ligne(ligne_brute, mapping_colonnes)
+        resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)
         lignes.append(
             LigneExtraite(
                 ligne=numero_ligne,

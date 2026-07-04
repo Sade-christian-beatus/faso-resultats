@@ -6,7 +6,9 @@ from app.services.ingestion.normalizer import construire_mapping_colonnes, norma
 from app.services.ingestion.types import LigneExtraite, ResultatExtraction
 
 
-def parser_pdf(chemin_fichier: str | Path) -> ResultatExtraction:
+def parser_pdf(
+    chemin_fichier: str | Path, decision_par_defaut: str | None = None
+) -> ResultatExtraction:
     """Extrait les tableaux d'un PDF natif (texte, non scanné) via pdfplumber.
     La première ligne détectée sur la première table est l'en-tête.
     """
@@ -29,7 +31,7 @@ def parser_pdf(chemin_fichier: str | Path) -> ResultatExtraction:
                     if all(v is None for v in ligne_brute_liste):
                         continue
                     ligne_brute = dict(zip(entetes, ligne_brute_liste, strict=False))
-                    resultat = normaliser_ligne(ligne_brute, mapping_colonnes)
+                    resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)
                     lignes.append(
                         LigneExtraite(
                             ligne=numero_ligne,

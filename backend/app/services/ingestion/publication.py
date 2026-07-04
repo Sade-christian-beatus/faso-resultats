@@ -26,6 +26,7 @@ def construire_resultats(ingestion: Ingestion) -> list[Resultat]:
                 date_naissance=date_naissance,
                 lieu_naissance=donnees.get("lieu_naissance"),
                 etablissement=donnees.get("etablissement"),
+                numero_cnib=donnees.get("numero_cnib"),
                 decision=donnees["decision"],
                 moyenne=donnees.get("moyenne"),
                 donnees_brutes=ligne["brut"],
