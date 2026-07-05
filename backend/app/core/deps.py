@@ -5,9 +5,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, decode_candidat_access_token
 from app.database import get_db
 from app.models import Administration, Utilisateur
+from app.models.profil_candidat import ProfilCandidat, StatutProfilCandidat
 
 _bearer_scheme = HTTPBearer()
 
@@ -57,3 +58,21 @@ async def get_current_administration(
     if administration is None:
         raise HTTPException(status_code=404, detail="Administration introuvable")
     return administration
+
+
+async def get_current_profil_candidat(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> ProfilCandidat:
+    """Authentification candidat, totalement distincte de `get_current_utilisateur` :
+    un token émis pour l'espace admin ne peut jamais authentifier une route candidat, et
+    inversement (audience JWT dédiée — voir docs/PROFIL_CANDIDAT_UNIFIE.md § 11)."""
+    try:
+        profil_id = uuid.UUID(decode_candidat_access_token(credentials.credentials))
+    except (JWTError, ValueError) as exc:
+        raise _CREDENTIALS_ERROR from exc
+
+    profil = await db.get(ProfilCandidat, profil_id)
+    if profil is None or profil.statut != StatutProfilCandidat.ACTIF:
+        raise _CREDENTIALS_ERROR
+    return profil

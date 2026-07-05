@@ -57,6 +57,14 @@ async def cache_set(cle: str, valeur: Any, ttl_secondes: int) -> None:
         _cache_memoire[cle] = (time.monotonic() + ttl_secondes, payload)
 
 
+async def cache_delete(cle: str) -> None:
+    _cache_memoire.pop(cle, None)
+    try:
+        await _get_redis_client().delete(cle)
+    except (redis.RedisError, OSError):
+        pass
+
+
 async def cache_clear() -> None:
     """Vide le cache (Redis + mémoire). Utilisé entre les tests pour éviter les fuites d'état."""
     _cache_memoire.clear()

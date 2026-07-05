@@ -10,11 +10,12 @@ fictifs. Le CEP est hors périmètre (couvert par SIGEC-CEP, voir docs/CONTEXTE_
 """
 
 import asyncio
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_deterministe, hash_password
 from app.database import AsyncSessionLocal
 from app.models import (
     Administration,
@@ -30,6 +31,9 @@ from app.models import (
     TypeFichier,
     Utilisateur,
 )
+from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
+from app.models.profil_candidat import ProfilCandidat
+from app.services.candidat.matching_service import MatchingService
 
 DEFAULT_PASSWORD = "ChangeMe123!"
 SUPER_ADMIN_EMAIL = "superadmin@faso-resultats.bf"
@@ -238,16 +242,127 @@ def _construire_examen_exemple(
                 "jury": "03",
                 "nom": "TRAORE",
                 "prenom": "Awa",
+                "numero_cnib": "B00000001",  # démonstration du matching rétroactif par CNIB
                 "decision": "ADMISSIBLE",
             },
         ]
     return examen, candidats
 
 
+_PROFILS_CANDIDATS_DEMO = [
+    ("B00000001", "TRAORE Awa", "2001-02-15", "+22670000001"),
+    ("B00000002", "KABORE Issa", "2002-06-20", "+22670000002"),
+    ("B00000003", "SANOU Richard", "2000-11-03", "+22670000003"),
+]
+
+
+async def seed_profils_candidats(db: AsyncSession) -> None:
+    """3 profils candidat fictifs (docs/PROFIL_CANDIDAT_UNIFIE.md) : un utilise le
+    matching rétroactif réel par CNIB (démonstration du scénario B, § 4.5), les autres
+    illustrent des candidatures ajoutées manuellement à d'autres stades de vérification."""
+    cnibs = [cnib for cnib, *_ in _PROFILS_CANDIDATS_DEMO]
+    result = await db.execute(
+        select(ProfilCandidat).where(
+            ProfilCandidat.numero_cnib_hash.in_(hash_deterministe(c) for c in cnibs)
+        )
+    )
+    if result.scalars().first() is not None:
+        print("Les profils candidats de démonstration existent déjà, rien à faire.")
+        return
+
+    profils = {}
+    for numero_cnib, nom_complet, date_naissance, telephone in _PROFILS_CANDIDATS_DEMO:
+        profil = ProfilCandidat(
+            numero_cnib=numero_cnib,
+            numero_cnib_hash=hash_deterministe(numero_cnib),
+            nom_complet=nom_complet,
+            date_naissance=date_naissance,
+            telephone=telephone,
+            telephone_hash=hash_deterministe(telephone),
+            telephone_verifie=True,
+            consentement_apdp_date=datetime.now(UTC),
+            consentement_apdp_version="v1",
+        )
+        db.add(profil)
+        profils[nom_complet] = profil
+    await db.flush()
+
+    # Démonstration réelle du scénario B (§ 4.5) : TRAORE Awa a un CNIB qui matche le
+    # résultat AGRE déjà publié (numero_recepisse 000042) — la candidature apparaît
+    # automatiquement, sans action du candidat.
+    await MatchingService(db).matcher_retroactif(profils["TRAORE Awa"])
+
+    async def _get(code: str, numero: str) -> tuple[Administration, Examen, Resultat]:
+        administration = (
+            await db.execute(select(Administration).where(Administration.code == code))
+        ).scalar_one()
+        resultat = (
+            await db.execute(
+                select(Resultat).where(
+                    Resultat.administration_id == administration.id,
+                    Resultat.numero_pv == numero,
+                )
+            )
+        ).scalar_one()
+        examen = await db.get(Examen, resultat.examen_id)
+        return administration, examen, resultat
+
+    # Candidatures illustratives ajoutées manuellement, à différents stades (les
+    # examens scolaires du seed ne portent pas de CNIB/date de naissance exploitables
+    # automatiquement — cf. docs/PROFIL_CANDIDAT_UNIFIE.md § 5, cas des administrations
+    # qui ne publient pas ces données).
+    administration_ocecos, _, resultat_kabore = await _get("ocecos", "000102")
+    db.add(
+        Candidature(
+            profil_candidat_id=profils["KABORE Issa"].id,
+            administration_id=administration_ocecos.id,
+            examen_id=resultat_kabore.examen_id,
+            numero_recepisse=resultat_kabore.numero_pv,
+            statut_verification=StatutVerificationCandidature.VERIFIE_MANUEL,
+            methode_verification=MethodeVerification.VALIDATION_MANUELLE,
+            date_verification=datetime.now(UTC),
+            dernier_resultat_id=resultat_kabore.id,
+            dernier_resultat_statut=resultat_kabore.decision,
+            dernier_resultat_phase=resultat_kabore.phase.value,
+        )
+    )
+
+    administration_bac, _, resultat_sanou = await _get("office-bac", "000201")
+    db.add(
+        Candidature(
+            profil_candidat_id=profils["SANOU Richard"].id,
+            administration_id=administration_bac.id,
+            examen_id=resultat_sanou.examen_id,
+            numero_recepisse=resultat_sanou.numero_pv,
+            statut_verification=StatutVerificationCandidature.VERIFIE_AUTO,
+            methode_verification=MethodeVerification.DATE_NAISSANCE,
+            date_verification=datetime.now(UTC),
+            dernier_resultat_id=resultat_sanou.id,
+            dernier_resultat_statut=resultat_sanou.decision,
+            dernier_resultat_phase=resultat_sanou.phase.value,
+        )
+    )
+
+    _, examen_bac, _ = await _get("office-bac", "000201")
+    db.add(
+        Candidature(
+            profil_candidat_id=profils["SANOU Richard"].id,
+            administration_id=administration_bac.id,
+            examen_id=examen_bac.id,
+            numero_recepisse="000999",  # candidature à un futur résultat, pas encore publié
+            statut_verification=StatutVerificationCandidature.EN_ATTENTE,
+        )
+    )
+
+    await db.commit()
+    print("3 profils candidat de démonstration créés (dont 1 auto-découvert par CNIB).")
+
+
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
         await seed_super_admin(db)
         await seed_administrations_pilotes(db)
+        await seed_profils_candidats(db)
 
 
 if __name__ == "__main__":

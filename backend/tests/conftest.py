@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from datetime import UTC, date, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -8,11 +9,13 @@ from sqlalchemy.pool import StaticPool
 from app.config import get_settings
 from app.core.cache import cache_clear
 from app.core.rate_limit import limiter
-from app.core.security import hash_password
+from app.core.security import hash_deterministe, hash_password
 from app.database import get_db
 from app.main import app
 from app.models import Administration, RoleUtilisateur, Utilisateur
 from app.models.base import Base
+from app.models.profil_candidat import ProfilCandidat
+from app.services.candidat.auth_service import AuthCandidatService
 
 
 @pytest.fixture(autouse=True)
@@ -36,6 +39,10 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
+        # SQLite ne supporte pas les schémas Postgres : les tables du schéma
+        # "plateforme" (profil candidat, docs/PROFIL_CANDIDAT_UNIFIE.md § 2) sont créées
+        # sans préfixe de schéma en test, tout en gardant le vrai schéma en production.
+        execution_options={"schema_translate_map": {"plateforme": None}},
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -110,3 +117,53 @@ async def autre_administration_headers(
     return await _creer_administration_et_headers(
         client, db_session, code="autre-tenant", email="admin@autre-tenant.bf"
     )
+
+
+async def _creer_profil_candidat(
+    db_session: AsyncSession, *, numero_cnib: str, telephone: str
+) -> ProfilCandidat:
+    profil = ProfilCandidat(
+        numero_cnib=numero_cnib,
+        numero_cnib_hash=hash_deterministe(numero_cnib),
+        nom_complet="Candidat Test",
+        date_naissance=date(2000, 1, 1).isoformat(),
+        telephone=telephone,
+        telephone_hash=hash_deterministe(telephone),
+        telephone_verifie=True,
+        consentement_apdp_date=datetime.now(UTC),
+        consentement_apdp_version="v1",
+    )
+    db_session.add(profil)
+    await db_session.commit()
+    await db_session.refresh(profil)
+    return profil
+
+
+@pytest.fixture
+async def candidat_profil(db_session: AsyncSession) -> ProfilCandidat:
+    """Un profil candidat plateforme, créé directement en base (sans passer par le
+    parcours OTP complet) pour les tests qui n'exercent pas spécifiquement l'auth."""
+    return await _creer_profil_candidat(
+        db_session, numero_cnib="B00000001", telephone="+22670000001"
+    )
+
+
+@pytest.fixture
+async def candidat_headers(candidat_profil: ProfilCandidat) -> dict[str, str]:
+    token = AuthCandidatService.creer_session(candidat_profil.id)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+async def autre_candidat_profil(db_session: AsyncSession) -> ProfilCandidat:
+    """Un second profil candidat — pour les tests d'isolation (un candidat ne doit
+    jamais voir ou modifier les candidatures d'un autre candidat)."""
+    return await _creer_profil_candidat(
+        db_session, numero_cnib="B00000002", telephone="+22670000002"
+    )
+
+
+@pytest.fixture
+async def autre_candidat_headers(autre_candidat_profil: ProfilCandidat) -> dict[str, str]:
+    token = AuthCandidatService.creer_session(autre_candidat_profil.id)
+    return {"Authorization": f"Bearer {token}"}

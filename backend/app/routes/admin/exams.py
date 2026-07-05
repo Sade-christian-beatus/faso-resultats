@@ -8,6 +8,7 @@ from app.core.deps import get_current_administration
 from app.database import get_db
 from app.models import Administration, Examen, StatutExamen
 from app.schemas.examen import ExamenCreate, ExamenOut
+from app.services.candidat.matching_service import MatchingService
 
 router = APIRouter(prefix="/api/v1/admin/exams", tags=["admin-exams"])
 
@@ -88,6 +89,9 @@ async def publish_exam(
     examen = await _get_exam_ou_404(exam_id, administration, db)
 
     examen.statut = StatutExamen.PUBLISHED
+    # Rapproche les candidatures plateforme en attente de ce résultat désormais publié,
+    # et notifie les candidats concernés (docs/PROFIL_CANDIDAT_UNIFIE.md § 4.5, § 6).
+    await MatchingService(db).traiter_publication_examen(examen)
     await db.commit()
     await db.refresh(examen)
     return examen

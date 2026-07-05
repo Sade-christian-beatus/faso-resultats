@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
 
+    # Profil candidat (plateforme, transversal aux tenants) — docs/PROFIL_CANDIDAT_UNIFIE.md
+    candidat_jwt_expire_minutes: int = 60 * 24 * 30  # session 30 jours (§ 4.2)
+    candidat_encryption_key: str = "OgXLPUp9gH0vXWzvXG2zxQx0n4XJEwxbUBEKsbhBzlE="
+    candidat_hash_pepper: str = "change-me-in-production"
+    candidat_otp_expire_minutes: int = 5
+    candidat_otp_max_tentatives: int = 3
+
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"
 

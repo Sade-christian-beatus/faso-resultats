@@ -9,6 +9,7 @@ class ExamenPublicOut(BaseModel):
     model_config = {"from_attributes": True}
 
     id: uuid.UUID
+    administration_id: uuid.UUID
     type_examen: TypeExamen
     annee: int
     libelle: str
