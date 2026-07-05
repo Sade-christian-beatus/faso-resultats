@@ -4,12 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from app.config import get_settings
-from app.core.deps import get_current_admin
+from app.core.deps import get_current_utilisateur
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, verify_password
 from app.database import get_db
-from app.models import Admin
-from app.schemas.auth import AdminOut, LoginRequest, TokenResponse
+from app.models import Utilisateur
+from app.schemas.auth import LoginRequest, TokenResponse, UtilisateurOut
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-auth"])
 settings = get_settings()
@@ -24,34 +24,36 @@ _INVALID_CREDENTIALS = HTTPException(
     "/login",
     response_model=TokenResponse,
     summary="Connexion admin",
-    description="Authentifie un administrateur et renvoie un token JWT.",
+    description="Authentifie un utilisateur (toute administration ou plateforme) et "
+    "renvoie un token JWT.",
 )
 @limiter.limit(settings.rate_limit_login)
 async def login(
     request: Request, credentials: LoginRequest, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
-    result = await db.execute(select(Admin).where(Admin.email == credentials.email))
-    admin = result.scalar_one_or_none()
+    result = await db.execute(select(Utilisateur).where(Utilisateur.email == credentials.email))
+    utilisateur = result.scalar_one_or_none()
 
     if (
-        admin is None
-        or not admin.actif
-        or not verify_password(credentials.password, admin.mot_de_passe_hash)
+        utilisateur is None
+        or not utilisateur.actif
+        or not verify_password(credentials.password, utilisateur.mot_de_passe_hash)
     ):
         raise _INVALID_CREDENTIALS
 
-    admin.derniere_connexion = func.now()
+    utilisateur.derniere_connexion = func.now()
     await db.commit()
 
-    token = create_access_token(subject=str(admin.id))
+    token = create_access_token(subject=str(utilisateur.id))
     return TokenResponse(access_token=token)
 
 
 @router.get(
     "/me",
-    response_model=AdminOut,
-    summary="Profil de l'admin connecté",
-    description="Renvoie les informations de l'administrateur authentifié par le token JWT.",
+    response_model=UtilisateurOut,
+    summary="Profil de l'utilisateur connecté",
+    description="Renvoie les informations de l'utilisateur authentifié par le token "
+    "JWT, avec son administration de rattachement (absente pour les rôles plateforme).",
 )
-async def me(current_admin: Admin = Depends(get_current_admin)) -> Admin:
-    return current_admin
+async def me(current_utilisateur: Utilisateur = Depends(get_current_utilisateur)) -> Utilisateur:
+    return current_utilisateur

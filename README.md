@@ -1,14 +1,15 @@
 # Faso Résultats
 
-Une couche complémentaire d'accès aux résultats d'examens et concours, couvrant le
-BEPC, le BAC, les examens professionnels et les concours administratifs et
-paramilitaires non desservis par les plateformes officielles existantes, avec les
-canaux SMS et mobile que celles-ci ne proposent pas. Compatible en partenariat avec
-SIGEC pour le CEP.
+Faso Résultats — la plateforme SaaS de publication des résultats d'examens et
+concours pour les administrations burkinabè. Chaque administration cliente
+(OCECOS, Office du BAC, AGRE, etc.) dispose de son propre espace : elle importe
+ses résultats, les valide, et les publie sous sa propre identité, pendant que
+les candidats consultent leur résultat par numéro de PV sur un portail unique.
 
-Voir `docs/CONTEXTE_METIER.md` pour la cartographie complète du paysage
-concurrentiel (plateformes gouvernementales existantes) et des examens/concours
-couverts.
+Voir `docs/PIVOT_SAAS_B2G.md` pour le positionnement détaillé et
+`docs/MULTI_TENANCY.md` pour l'architecture d'isolation entre administrations.
+Le CEP est hors périmètre (couvert par SIGEC-CEP) ; voir `docs/CONTEXTE_METIER.md`
+pour la cartographie complète du paysage concurrentiel.
 
 ## Démarrage rapide (Docker)
 
@@ -38,7 +39,14 @@ Les services disponibles :
 | API docs  | http://localhost:8000/docs   |
 | Health    | http://localhost:8000/health |
 
-Identifiants admin par défaut : `admin@faso-resultats.bf` / `ChangeMe123!`
+Identifiants créés par le seed (voir `backend/seed.py`) :
+
+| Compte | Email | Mot de passe |
+|--------|-------|--------------|
+| Super-admin plateforme | `superadmin@faso-resultats.bf` | `ChangeMe123!` |
+| Admin OCECOS | `admin@ocecos.bf` | `ChangeMe123!` |
+| Admin Office du BAC | `admin@office-bac.bf` | `ChangeMe123!` |
+| Admin AGRE | `admin@agre.bf` | `ChangeMe123!` |
 
 ## Développement local sans Docker
 

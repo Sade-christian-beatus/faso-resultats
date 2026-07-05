@@ -270,6 +270,22 @@ Après chaque étape majeure, produire un résumé structuré :
   projet.** Faso Résultats reste un produit mono-pays (Burkina Faso) de
   façon permanente. Simplifie durablement le modèle de données (pas besoin
   de généraliser `TypeExamen` ni d'ajouter un champ `pays` à `Examen`).
+- **2026-07-05 — Pivot SaaS B2G multi-tenant.** Faso Résultats devient une
+  plateforme servant plusieurs administrations clientes (OCECOS, Office du
+  BAC, AGRE...), chacune isolée comme un tenant, plutôt qu'un agrégateur
+  B2C. Voir `docs/PIVOT_SAAS_B2G.md` (positionnement) et
+  `docs/MULTI_TENANCY.md` (architecture d'isolation). Schéma partagé +
+  colonne `administration_id` retenu (pas de schémas/bases séparés), en
+  cohérence avec « pas de sur-ingénierie ». Le CEP reste hors périmètre
+  (couvert par SIGEC-CEP). Différé à un chantier ultérieur : endpoints
+  super-admin de gestion des `Administration`, `AuditLog`, et
+  restructuration des URLs vers l'arborescence cible (`docs/PIVOT_SAAS_B2G.md`
+  § 2.5) — l'isolation fonctionnelle est en place, seule la convention de
+  routes n'a pas encore été alignée.
+- **2026-07-05 — Profil candidat unifié (`docs/PROFIL_CANDIDAT_UNIFIE.md`)
+  non démarré.** Chantier explicitement mis en attente jusqu'à ce que le
+  pivot multi-tenant ci-dessus soit confirmé complet, sur demande directe
+  du développeur ("ne pas mélanger les deux chantiers").
 
 ---
 

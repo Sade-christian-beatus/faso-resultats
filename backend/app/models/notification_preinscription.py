@@ -27,6 +27,9 @@ class NotificationPreinscription(TimestampMixin, Base):
     __table_args__ = (Index("ix_notifications_examen_statut", "examen_id", "statut"),)
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    administration_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("administrations.id", ondelete="CASCADE"), nullable=False
+    )
     examen_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("examens.id", ondelete="CASCADE"), nullable=False
     )

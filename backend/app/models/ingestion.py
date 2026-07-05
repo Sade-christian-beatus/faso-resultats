@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,13 +33,19 @@ class Ingestion(TimestampMixin, Base):
     """Un import de fichier source. Chaque résultat créé y est rattaché pour la traçabilité."""
 
     __tablename__ = "ingestions"
+    __table_args__ = (
+        Index("ix_ingestions_administration_created", "administration_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    administration_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("administrations.id", ondelete="CASCADE"), nullable=False
+    )
     examen_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("examens.id", ondelete="CASCADE"), nullable=False
     )
     admin_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("admins.id", ondelete="RESTRICT"), nullable=False
+        GUID(), ForeignKey("utilisateurs.id", ondelete="RESTRICT"), nullable=False
     )
     nom_fichier: Mapped[str] = mapped_column(String(255))
     chemin_fichier: Mapped[str] = mapped_column(String(500))

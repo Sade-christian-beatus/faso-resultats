@@ -11,7 +11,7 @@ from app.core.rate_limit import limiter
 from app.core.security import hash_password
 from app.database import get_db
 from app.main import app
-from app.models import Admin
+from app.models import Administration, RoleUtilisateur, Utilisateur
 from app.models.base import Base
 
 
@@ -59,16 +59,54 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
-async def admin_headers(client: AsyncClient, db_session: AsyncSession) -> dict[str, str]:
-    """Crée un admin et renvoie les headers d'autorisation pour les routes protégées."""
-    email = "admin@faso-resultats.bf"
+async def _creer_administration_et_headers(
+    client: AsyncClient, db_session: AsyncSession, *, code: str, email: str
+) -> dict[str, str]:
+    administration = Administration(
+        code=code,
+        nom_officiel=f"Administration {code}",
+        sigle=code.upper(),
+        ministere_tutelle="Ministère de test",
+        contact_referent_nom="Référent Test",
+        contact_referent_email=email,
+        contact_referent_telephone="+22600000000",
+    )
+    db_session.add(administration)
+    await db_session.commit()
+    await db_session.refresh(administration)
+
     password = "ChangeMe123!"
     db_session.add(
-        Admin(email=email, mot_de_passe_hash=hash_password(password), nom_complet="Admin Test")
+        Utilisateur(
+            administration_id=administration.id,
+            email=email,
+            mot_de_passe_hash=hash_password(password),
+            nom_complet="Admin Test",
+            role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+        )
     )
     await db_session.commit()
 
     response = await client.post("/api/v1/admin/login", json={"email": email, "password": password})
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+async def admin_headers(client: AsyncClient, db_session: AsyncSession) -> dict[str, str]:
+    """Crée une administration + un utilisateur ADMIN_ADMINISTRATION rattaché, renvoie
+    les headers d'autorisation pour les routes admin scopées par tenant."""
+    return await _creer_administration_et_headers(
+        client, db_session, code="tenant-test", email="admin@faso-resultats.bf"
+    )
+
+
+@pytest.fixture
+async def autre_administration_headers(
+    client: AsyncClient, db_session: AsyncSession
+) -> dict[str, str]:
+    """Un second tenant, avec son propre utilisateur — pour les tests d'isolation
+    multi-tenant (jamais voir/modifier les données d'une autre administration)."""
+    return await _creer_administration_et_headers(
+        client, db_session, code="autre-tenant", email="admin@autre-tenant.bf"
+    )

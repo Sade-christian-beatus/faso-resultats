@@ -11,6 +11,7 @@ from app.models.base import Base, TimestampMixin
 from app.models.guid import GUID
 
 if TYPE_CHECKING:
+    from app.models.administration import Administration
     from app.models.examen import Examen
     from app.models.ingestion import Ingestion
 
@@ -31,9 +32,13 @@ class Resultat(TimestampMixin, Base):
     __tablename__ = "resultats"
     __table_args__ = (
         Index("ix_resultats_examen_pv_jury_phase", "examen_id", "numero_pv", "jury", "phase"),
+        Index("ix_resultats_administration", "administration_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
+    administration_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("administrations.id", ondelete="CASCADE"), nullable=False
+    )
     examen_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("examens.id", ondelete="CASCADE"), nullable=False
     )
@@ -81,5 +86,6 @@ class Resultat(TimestampMixin, Base):
     # Ligne brute telle qu'extraite du fichier source, conservée pour audit.
     donnees_brutes: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"))
 
+    administration: Mapped["Administration"] = relationship()
     examen: Mapped["Examen"] = relationship(back_populates="resultats")
     ingestion: Mapped["Ingestion"] = relationship(back_populates="resultats")

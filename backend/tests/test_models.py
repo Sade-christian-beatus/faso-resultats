@@ -6,20 +6,44 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    Admin,
+    Administration,
     Examen,
     Ingestion,
     PhasePublication,
     Resultat,
+    RoleUtilisateur,
     StatutExamen,
     TypeExamen,
     TypeFichier,
+    Utilisateur,
 )
+
+
+async def _creer_administration(db_session: AsyncSession) -> Administration:
+    administration = Administration(
+        code="tenant-test",
+        nom_officiel="Administration Test",
+        sigle="TEST",
+        ministere_tutelle="Ministère de test",
+        contact_referent_nom="Référent Test",
+        contact_referent_email="contact@tenant-test.bf",
+        contact_referent_telephone="+22600000000",
+    )
+    db_session.add(administration)
+    await db_session.commit()
+    await db_session.refresh(administration)
+    return administration
 
 
 @pytest.mark.asyncio
 async def test_examen_default_statut_is_draft(db_session: AsyncSession) -> None:
-    examen = Examen(type_examen=TypeExamen.BAC, annee=2026, libelle="BAC 2026 - Session normale")
+    administration = await _creer_administration(db_session)
+    examen = Examen(
+        administration_id=administration.id,
+        type_examen=TypeExamen.BAC,
+        annee=2026,
+        libelle="BAC 2026 - Session normale",
+    )
     db_session.add(examen)
     await db_session.commit()
 
@@ -28,12 +52,25 @@ async def test_examen_default_statut_is_draft(db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_resultat_requires_examen_id(db_session: AsyncSession) -> None:
-    admin = Admin(email="admin@faso-resultats.bf", mot_de_passe_hash="hash", nom_complet="Admin")
-    examen = Examen(type_examen=TypeExamen.BAC, annee=2026, libelle="BAC 2026")
+    administration = await _creer_administration(db_session)
+    admin = Utilisateur(
+        administration_id=administration.id,
+        email="admin@faso-resultats.bf",
+        mot_de_passe_hash="hash",
+        nom_complet="Admin",
+        role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+    )
+    examen = Examen(
+        administration_id=administration.id,
+        type_examen=TypeExamen.BAC,
+        annee=2026,
+        libelle="BAC 2026",
+    )
     db_session.add_all([admin, examen])
     await db_session.commit()
 
     ingestion = Ingestion(
+        administration_id=administration.id,
         examen_id=examen.id,
         admin_id=admin.id,
         nom_fichier="resultats.pdf",
@@ -44,6 +81,7 @@ async def test_resultat_requires_examen_id(db_session: AsyncSession) -> None:
     await db_session.commit()
 
     resultat_sans_examen = Resultat(
+        administration_id=administration.id,
         examen_id=None,
         ingestion_id=ingestion.id,
         numero_pv="12345",
@@ -61,12 +99,25 @@ async def test_resultat_requires_examen_id(db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_resultat_traceable_to_source_ingestion(db_session: AsyncSession) -> None:
-    admin = Admin(email="admin@faso-resultats.bf", mot_de_passe_hash="hash", nom_complet="Admin")
-    examen = Examen(type_examen=TypeExamen.CEP, annee=2026, libelle="CEP 2026")
+    administration = await _creer_administration(db_session)
+    admin = Utilisateur(
+        administration_id=administration.id,
+        email="admin@faso-resultats.bf",
+        mot_de_passe_hash="hash",
+        nom_complet="Admin",
+        role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+    )
+    examen = Examen(
+        administration_id=administration.id,
+        type_examen=TypeExamen.CEP,
+        annee=2026,
+        libelle="CEP 2026",
+    )
     db_session.add_all([admin, examen])
     await db_session.commit()
 
     ingestion = Ingestion(
+        administration_id=administration.id,
         examen_id=examen.id,
         admin_id=admin.id,
         nom_fichier="cep_2026.xlsx",
@@ -77,6 +128,7 @@ async def test_resultat_traceable_to_source_ingestion(db_session: AsyncSession) 
     await db_session.commit()
 
     resultat = Resultat(
+        administration_id=administration.id,
         examen_id=examen.id,
         ingestion_id=ingestion.id,
         numero_pv="00042",
@@ -96,12 +148,25 @@ async def test_resultat_traceable_to_source_ingestion(db_session: AsyncSession) 
 
 @pytest.mark.asyncio
 async def test_resultat_defaut_phase_resultat_unique(db_session: AsyncSession) -> None:
-    admin = Admin(email="admin@faso-resultats.bf", mot_de_passe_hash="hash", nom_complet="Admin")
-    examen = Examen(type_examen=TypeExamen.BAC, annee=2026, libelle="BAC 2026")
+    administration = await _creer_administration(db_session)
+    admin = Utilisateur(
+        administration_id=administration.id,
+        email="admin@faso-resultats.bf",
+        mot_de_passe_hash="hash",
+        nom_complet="Admin",
+        role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+    )
+    examen = Examen(
+        administration_id=administration.id,
+        type_examen=TypeExamen.BAC,
+        annee=2026,
+        libelle="BAC 2026",
+    )
     db_session.add_all([admin, examen])
     await db_session.commit()
 
     ingestion = Ingestion(
+        administration_id=administration.id,
         examen_id=examen.id,
         admin_id=admin.id,
         nom_fichier="bac_2026.xlsx",
@@ -112,6 +177,7 @@ async def test_resultat_defaut_phase_resultat_unique(db_session: AsyncSession) -
     await db_session.commit()
 
     resultat = Resultat(
+        administration_id=administration.id,
         examen_id=examen.id,
         ingestion_id=ingestion.id,
         numero_pv="00099",
@@ -132,8 +198,16 @@ async def test_resultat_defaut_phase_resultat_unique(db_session: AsyncSession) -
 async def test_resultat_plusieurs_phases_pour_le_meme_candidat(db_session: AsyncSession) -> None:
     """Modèle temporel des concours paramilitaires (docs/CONTEXTE_METIER.md § 2.4) :
     un même candidat peut avoir plusieurs Resultat pour le même examen, un par phase."""
-    admin = Admin(email="admin@faso-resultats.bf", mot_de_passe_hash="hash", nom_complet="Admin")
+    administration = await _creer_administration(db_session)
+    admin = Utilisateur(
+        administration_id=administration.id,
+        email="admin@faso-resultats.bf",
+        mot_de_passe_hash="hash",
+        nom_complet="Admin",
+        role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+    )
     examen = Examen(
+        administration_id=administration.id,
         type_examen=TypeExamen.ARMEE,
         annee=2026,
         libelle="Concours Armée 2026",
@@ -143,6 +217,7 @@ async def test_resultat_plusieurs_phases_pour_le_meme_candidat(db_session: Async
     await db_session.commit()
 
     ingestion = Ingestion(
+        administration_id=administration.id,
         examen_id=examen.id,
         admin_id=admin.id,
         nom_fichier="armee_2026.xlsx",
@@ -153,6 +228,7 @@ async def test_resultat_plusieurs_phases_pour_le_meme_candidat(db_session: Async
     await db_session.commit()
 
     candidat = {
+        "administration_id": administration.id,
         "examen_id": examen.id,
         "ingestion_id": ingestion.id,
         "numero_pv": "000123",

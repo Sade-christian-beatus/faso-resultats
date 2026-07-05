@@ -1,7 +1,12 @@
 """Peuple la base avec les données minimales pour démarrer en développement.
 
-Idempotent : peut être relancé sans dupliquer l'admin ou les examens d'exemple.
+Idempotent : peut être relancé sans dupliquer les comptes ou administrations.
 Usage : python seed.py
+
+Modèle multi-tenant (docs/PIVOT_SAAS_B2G.md) : un super-admin plateforme, 3
+administrations clientes pilotes (OCECOS, Office du BAC, AGRE), un utilisateur
+ADMIN_ADMINISTRATION par tenant, un examen par tenant avec quelques résultats
+fictifs. Le CEP est hors périmètre (couvert par SIGEC-CEP, voir docs/CONTEXTE_METIER.md).
 """
 
 import asyncio
@@ -12,165 +17,237 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.database import AsyncSessionLocal
 from app.models import (
-    Admin,
+    Administration,
     CategorieExamen,
     Examen,
     Ingestion,
-    PhasePublication,
     Resultat,
+    RoleUtilisateur,
     SourceDonnees,
+    StatutExamen,
     StatutIngestion,
     TypeExamen,
     TypeFichier,
+    Utilisateur,
 )
 
-DEFAULT_ADMIN_EMAIL = "admin@faso-resultats.bf"
-DEFAULT_ADMIN_PASSWORD = "ChangeMe123!"
+DEFAULT_PASSWORD = "ChangeMe123!"
+SUPER_ADMIN_EMAIL = "superadmin@faso-resultats.bf"
+
+# code, nom_officiel, sigle, ministere_tutelle, email admin tenant
+_ADMINISTRATIONS = [
+    (
+        "ocecos",
+        "Office Central des Examens et Concours du Secondaire",
+        "OCECOS",
+        "Ministère de l'Éducation nationale",
+        "admin@ocecos.bf",
+    ),
+    (
+        "office-bac",
+        "Office du Baccalauréat",
+        "Office du BAC",
+        "Ministère de l'Éducation nationale",
+        "admin@office-bac.bf",
+    ),
+    (
+        "agre",
+        "Agence Générale de Recrutement de l'État",
+        "AGRE",
+        "Ministère de la Fonction Publique, du Travail et de la Protection sociale",
+        "admin@agre.bf",
+    ),
+]
 
 
-async def seed_admin(db: AsyncSession) -> Admin:
-    result = await db.execute(select(Admin).where(Admin.email == DEFAULT_ADMIN_EMAIL))
-    admin = result.scalar_one_or_none()
-    if admin is not None:
-        print(f"Admin {DEFAULT_ADMIN_EMAIL} existe déjà, rien à faire.")
-        return admin
-
-    admin = Admin(
-        email=DEFAULT_ADMIN_EMAIL,
-        mot_de_passe_hash=hash_password(DEFAULT_ADMIN_PASSWORD),
-        nom_complet="Administrateur par défaut",
-    )
-    db.add(admin)
-    await db.commit()
-    await db.refresh(admin)
-    print(f"Admin par défaut créé : {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
-    print("Pensez à changer ce mot de passe avant la mise en production.")
-    return admin
-
-
-async def seed_examens_exemple(db: AsyncSession, admin: Admin) -> None:
-    """Un exemple par segment du positionnement concurrentiel (docs/CONTEXTE_METIER.md),
-    pour visualiser categorie/source_donnees/phases_publication en conditions réelles."""
-    if (await db.execute(select(Examen))).scalars().first() is not None:
-        print("Des examens existent déjà, rien à faire pour les exemples.")
+async def seed_super_admin(db: AsyncSession) -> None:
+    result = await db.execute(select(Utilisateur).where(Utilisateur.email == SUPER_ADMIN_EMAIL))
+    if result.scalar_one_or_none() is not None:
+        print(f"Super-admin {SUPER_ADMIN_EMAIL} existe déjà, rien à faire.")
         return
 
-    cep = Examen(
-        type_examen=TypeExamen.CEP,
-        annee=2026,
-        libelle="CEP 2026",
-        categorie=CategorieExamen.EXAMEN_SCOLAIRE,
-        ministere_tutelle="MEBAPLN",
-        # Couvert par SIGEC-CEP (resultats.examens.gov.bf) : partenariat potentiel, pas
-        # encore conclu — voir docs/CONTEXTE_METIER.md § 1.
-        source_donnees=SourceDonnees.SIGEC_API,
-        partenariat_officiel=False,
-    )
-    bepc = Examen(
-        type_examen=TypeExamen.BEPC,
-        annee=2026,
-        libelle="BEPC 2026",
-        categorie=CategorieExamen.EXAMEN_SCOLAIRE,
-        ministere_tutelle="DGEC",
-        source_donnees=SourceDonnees.FILE_IMPORT,
-    )
-    bac = Examen(
-        type_examen=TypeExamen.BAC_GENERAL,
-        annee=2026,
-        libelle="BAC 2026 - Série D",
-        categorie=CategorieExamen.EXAMEN_SCOLAIRE,
-        serie="D",
-        ministere_tutelle="DGEC",
-        source_donnees=SourceDonnees.FILE_IMPORT,
-    )
-    concours_direct_a = Examen(
-        type_examen=TypeExamen.CD_CATEGORIE_A,
-        annee=2026,
-        libelle="Concours direct catégorie A 2026",
-        categorie=CategorieExamen.CONCOURS_DIRECT,
-        ministere_tutelle="Ministère de la Fonction Publique, du Travail et de la "
-        "Protection sociale",
-        source_donnees=SourceDonnees.FILE_IMPORT,
-    )
-    armee = Examen(
-        type_examen=TypeExamen.ARMEE,
-        annee=2026,
-        libelle="Concours Armée 2026",
-        categorie=CategorieExamen.CONCOURS_PARAMILITAIRE,
-        ministere_tutelle="Ministère de la Défense",
-        # Aucun canal en ligne : communiqués RTB/Sidwaya + affichage physique.
-        source_donnees=SourceDonnees.PRESS_MONITORING,
-        phases_publication=["EPREUVES_SPORTIVES", "ADMISSIBILITE", "ADMISSION_DEFINITIVE"],
-    )
-    police = Examen(
-        type_examen=TypeExamen.POLICE,
-        annee=2026,
-        libelle="Concours Police 2026",
-        categorie=CategorieExamen.CONCOURS_PARAMILITAIRE,
-        ministere_tutelle="Ministère de la Sécurité",
-        source_donnees=SourceDonnees.FACEBOOK_SCRAPING,
-        phases_publication=["ADMISSIBILITE", "ADMISSION_DEFINITIVE"],
-    )
-    db.add_all([cep, bepc, bac, concours_direct_a, armee, police])
-    await db.flush()
-
-    # Un candidat au concours Armée sur ses 3 phases successives, pour donner un
-    # exemple concret du modèle temporel (docs/CONTEXTE_METIER.md § 2.4).
-    ingestion_armee = Ingestion(
-        examen_id=armee.id,
-        admin_id=admin.id,
-        nom_fichier="seed-armee.xlsx",
-        chemin_fichier="seed://armee",
-        type_fichier=TypeFichier.EXCEL,
-        statut=StatutIngestion.PUBLIEE,
-        nombre_lignes_detectees=3,
-        nombre_erreurs=0,
-    )
-    db.add(ingestion_armee)
-    await db.flush()
-
-    candidat = {
-        "examen_id": armee.id,
-        "ingestion_id": ingestion_armee.id,
-        "numero_pv": "000123",
-        "jury": "Ouagadougou",
-        "nom": "KABORE",
-        "prenom": "Issa",
-        "donnees_brutes": {"source": "seed"},
-    }
-    db.add_all(
-        [
-            Resultat(
-                **candidat,
-                decision="APTE",
-                phase=PhasePublication.EPREUVES_SPORTIVES,
-                phase_suivante_attendue=PhasePublication.ADMISSIBILITE,
-            ),
-            Resultat(
-                **candidat,
-                decision="ADMISSIBLE",
-                phase=PhasePublication.ADMISSIBILITE,
-                phase_suivante_attendue=PhasePublication.ADMISSION_DEFINITIVE,
-            ),
-            Resultat(
-                **candidat,
-                decision="ADMIS",
-                phase=PhasePublication.ADMISSION_DEFINITIVE,
-                phase_suivante_attendue=None,
-            ),
-        ]
+    db.add(
+        Utilisateur(
+            administration_id=None,
+            email=SUPER_ADMIN_EMAIL,
+            mot_de_passe_hash=hash_password(DEFAULT_PASSWORD),
+            nom_complet="Super-administrateur Faso Résultats",
+            role=RoleUtilisateur.SUPER_ADMIN,
+        )
     )
     await db.commit()
-    print(
-        "Examens d'exemple créés : CEP, BEPC, BAC, concours direct catégorie A, "
-        "Armée (3 phases), Police."
-    )
+    print(f"Super-admin créé : {SUPER_ADMIN_EMAIL} / {DEFAULT_PASSWORD}")
+
+
+async def seed_administrations_pilotes(db: AsyncSession) -> None:
+    codes_pilotes = [code for code, *_ in _ADMINISTRATIONS]
+    result = await db.execute(select(Administration).where(Administration.code.in_(codes_pilotes)))
+    if result.scalars().first() is not None:
+        print("Les administrations pilotes existent déjà, rien à faire.")
+        return
+
+    for code, nom_officiel, sigle, ministere_tutelle, email_admin in _ADMINISTRATIONS:
+        administration = Administration(
+            code=code,
+            nom_officiel=nom_officiel,
+            sigle=sigle,
+            ministere_tutelle=ministere_tutelle,
+            contact_referent_nom="À désigner",
+            contact_referent_email=email_admin,
+            contact_referent_telephone="+22600000000",
+            convention_active=False,
+        )
+        db.add(administration)
+        await db.flush()
+
+        utilisateur = Utilisateur(
+            administration_id=administration.id,
+            email=email_admin,
+            mot_de_passe_hash=hash_password(DEFAULT_PASSWORD),
+            nom_complet=f"Administrateur {sigle}",
+            role=RoleUtilisateur.ADMIN_ADMINISTRATION,
+        )
+        db.add(utilisateur)
+        await db.flush()
+
+        examen, candidats = _construire_examen_exemple(administration, sigle)
+        db.add(examen)
+        await db.flush()
+
+        ingestion = Ingestion(
+            administration_id=administration.id,
+            examen_id=examen.id,
+            admin_id=utilisateur.id,
+            nom_fichier=f"seed-{code}.xlsx",
+            chemin_fichier=f"seed://{code}",
+            type_fichier=TypeFichier.EXCEL,
+            statut=StatutIngestion.PUBLIEE,
+            nombre_lignes_detectees=len(candidats),
+            nombre_erreurs=0,
+        )
+        db.add(ingestion)
+        await db.flush()
+
+        for candidat in candidats:
+            db.add(
+                Resultat(
+                    administration_id=administration.id,
+                    examen_id=examen.id,
+                    ingestion_id=ingestion.id,
+                    donnees_brutes={"source": "seed"},
+                    **candidat,
+                )
+            )
+
+        print(f"Tenant pilote créé : {sigle} ({email_admin} / {DEFAULT_PASSWORD})")
+
+    await db.commit()
+
+
+def _construire_examen_exemple(
+    administration: Administration, sigle: str
+) -> tuple[Examen, list[dict]]:
+    if sigle == "OCECOS":
+        examen = Examen(
+            administration_id=administration.id,
+            type_examen=TypeExamen.BEPC,
+            annee=2026,
+            libelle="BEPC 2026",
+            categorie=CategorieExamen.EXAMEN_SCOLAIRE,
+            ministere_tutelle=administration.ministere_tutelle,
+            source_donnees=SourceDonnees.FILE_IMPORT,
+            statut=StatutExamen.PUBLISHED,
+        )
+        candidats = [
+            {
+                "numero_pv": "000101",
+                "jury": "Ouagadougou 1",
+                "nom": "TRAORE",
+                "prenom": "Awa",
+                "decision": "ADMIS",
+                "moyenne": 13.45,
+            },
+            {
+                "numero_pv": "000102",
+                "jury": "Bobo-Dioulasso",
+                "nom": "KABORE",
+                "prenom": "Issa",
+                "decision": "AJOURNE",
+            },
+        ]
+    elif sigle == "Office du BAC":
+        examen = Examen(
+            administration_id=administration.id,
+            type_examen=TypeExamen.BAC_GENERAL,
+            annee=2026,
+            libelle="BAC 2026 - Série D",
+            categorie=CategorieExamen.EXAMEN_SCOLAIRE,
+            serie="D",
+            ministere_tutelle=administration.ministere_tutelle,
+            source_donnees=SourceDonnees.FILE_IMPORT,
+            statut=StatutExamen.PUBLISHED,
+        )
+        candidats = [
+            {
+                "numero_pv": "000201",
+                "jury": "Ouagadougou 1",
+                "nom": "SANOU",
+                "prenom": "Richard",
+                "decision": "ADMIS",
+                "moyenne": 12.8,
+            },
+            {
+                "numero_pv": "000202",
+                "jury": "Koudougou",
+                "nom": "OUEDRAOGO",
+                "prenom": "Fatou",
+                "decision": "AJOURNE",
+            },
+        ]
+    else:  # AGRE — format concours direct Fonction publique (numero_recepisse/rang)
+        examen = Examen(
+            administration_id=administration.id,
+            type_examen=TypeExamen.CD_CATEGORIE_A,
+            annee=2026,
+            libelle="Concours direct catégorie A 2026",
+            categorie=CategorieExamen.CONCOURS_DIRECT,
+            ministere_tutelle=administration.ministere_tutelle,
+            source_donnees=SourceDonnees.FILE_IMPORT,
+            statut=StatutExamen.PUBLISHED,
+        )
+        candidats = [
+            {
+                "numero_pv": "000015",
+                "numero_recepisse": "000015",
+                "code_concours": "120",
+                "code_centre": "03",
+                "rang_numerique": 1,
+                "rang_affiche": "1°",
+                "jury": "03",
+                "nom": "BAYALA",
+                "prenom": "Jean-Claude",
+                "decision": "ADMISSIBLE",
+            },
+            {
+                "numero_pv": "000042",
+                "numero_recepisse": "000042",
+                "code_concours": "120",
+                "code_centre": "03",
+                "rang_numerique": 2,
+                "rang_affiche": "2°",
+                "jury": "03",
+                "nom": "TRAORE",
+                "prenom": "Awa",
+                "decision": "ADMISSIBLE",
+            },
+        ]
+    return examen, candidats
 
 
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
-        admin = await seed_admin(db)
-        await seed_examens_exemple(db, admin)
+        await seed_super_admin(db)
+        await seed_administrations_pilotes(db)
 
 
 if __name__ == "__main__":
