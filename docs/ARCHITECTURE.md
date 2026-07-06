@@ -171,8 +171,9 @@ publication gouvernemental existant, avec une seule méthode `fetch_results(exam
 - **`FileImportSource`** (implémentée) — délègue à
   `app.services.ingestion.dispatch.parser_fichier`, déjà utilisé directement par
   `POST /api/v1/admin/ingestions`. Seule source réellement utilisée en Phase 1 : c'est
-  le cœur stratégique du projet, puisqu'à l'exception du CEP (couvert par SIGEC-CEP),
-  **aucun** examen ni concours du Burkina Faso ne dispose aujourd'hui d'une
+  le cœur stratégique du projet, puisqu'à l'exception du CEP (couvert par SIGEC-CEP,
+  hors périmètre de Faso Résultats — voir `docs/PIVOT_SAAS_B2G.md`), **aucun**
+  examen ni concours du Burkina Faso ne dispose aujourd'hui d'une
   consultation individuelle par numéro de PV — tout reste au format PDF/communiqué
   téléchargeable. La qualité et la vitesse de ce pipeline sont l'avantage compétitif
   principal.

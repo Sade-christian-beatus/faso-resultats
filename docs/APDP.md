@@ -8,7 +8,11 @@
 > officielle. Les points marqués ⚠️ nécessitent une confirmation juridique.
 
 Maintenu à jour à chaque évolution touchant des données à caractère
-personnel, conformément à `CLAUDE.md`.
+personnel, conformément à `CLAUDE.md`. Ce document couvre les données
+d'examens et de résultats (côté administration/tenant) — voir
+`docs/APDP_PROFIL_CANDIDAT.md` pour le traitement dédié au profil candidat
+unifié (schéma `plateforme`), où le statut de Faso Résultats change
+(responsable de traitement plutôt que sous-traitant).
 
 ---
 
@@ -33,13 +37,14 @@ technique.
 | `date_naissance`, `lieu_naissance` | Identifiante, sensible | Stockées (traçabilité), **non exposées côté API publique** (voir `CLAUDE.md`, décision du 2026-07-03) |
 | `donnees_brutes` (jsonb) | Copie de la ligne source | Audit — permet de remonter à ce qui a été réellement importé, en cas de contestation |
 
-### 2.2 Comptes administrateurs (`admins`)
+### 2.2 Comptes administrateurs (`utilisateurs`, anciennement `admins`)
 
 | Donnée | Sensibilité | Utilisée pour |
 |---|---|---|
 | `email` | Identifiante | Connexion |
 | `mot_de_passe_hash` | Sensible (jamais en clair, bcrypt) | Authentification |
 | `nom_complet` | Identifiante | Affichage interne |
+| `administration_id`, `role` | — | Rattachement au tenant et permissions (voir `docs/MULTI_TENANCY.md`) |
 
 ### 2.3 Préinscriptions SMS (`notifications_preinscription`)
 
@@ -113,8 +118,10 @@ combler avant une mise en production réelle — voir §9.
 Mesures déjà en place (Phase 1) :
 
 - Mots de passe admin hashés avec bcrypt, jamais stockés/loggés en clair.
-- Authentification admin par JWT (expiration configurable), routes
-  d'écriture toutes protégées par `get_current_admin`.
+- Authentification admin par JWT (expiration configurable, audience dédiée
+  `admin` — voir `docs/MULTI_TENANCY.md`), routes d'écriture toutes protégées
+  par `get_current_utilisateur` et scopées par tenant via
+  `get_current_administration`.
 - Rate limiting sur le login (5/min/IP par défaut) et les routes publiques
   (30/min/IP par défaut).
 - CORS restreint aux origines déclarées (`CORS_ORIGINS`).
@@ -125,9 +132,10 @@ Mesures déjà en place (Phase 1) :
 
 À vérifier/compléter avant mise en production :
 
-- ⚠️ **Absence de purge/rotation des mots de passe par défaut** : le compte
-  admin créé par `seed.py` (`admin@faso-resultats.bf` / `ChangeMe123!`) doit
-  être changé avant toute exposition publique du service.
+- ⚠️ **Absence de purge/rotation des mots de passe par défaut** : les comptes
+  créés par `seed.py` (super-admin plateforme et un admin par administration
+  pilote, tous en `ChangeMe123!` — voir `README.md`) doivent être changés
+  avant toute exposition publique du service.
 - ⚠️ **Logs applicatifs** : non audités formellement à ce stade pour
   vérifier qu'aucune donnée personnelle sensible n'y transite (FastAPI/
   uvicorn logguent les requêtes, potentiellement avec des paramètres de
@@ -142,8 +150,10 @@ Mesures déjà en place (Phase 1) :
 
 ## 8. Destinataires et sous-traitants
 
-- **Administrateurs habilités** (comptes `admins`) : accès à l'ensemble des
-  données candidats via les routes admin, pour l'import et la correction.
+- **Administrateurs habilités** (comptes `utilisateurs`) : accès aux données
+  de leur propre administration (tenant) uniquement via les routes admin,
+  pour l'import et la correction — jamais aux données d'une autre
+  administration (voir `docs/MULTI_TENANCY.md`).
 - **Hébergeur** : ⚠️ à préciser une fois l'infrastructure de production
   choisie (doit être burkinabè, cf. `CLAUDE.md`).
 - **Opérateurs télécom** (Orange, Moov, Telecel) : ⚠️ concernera le numéro
