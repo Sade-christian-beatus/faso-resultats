@@ -17,6 +17,7 @@ def construire_resultats(ingestion: Ingestion) -> list[Resultat]:
         resultats.append(
             Resultat(
                 id=uuid.uuid4(),
+                administration_id=ingestion.administration_id,
                 examen_id=ingestion.examen_id,
                 ingestion_id=ingestion.id,
                 numero_pv=donnees["numero_pv"],

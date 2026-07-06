@@ -37,12 +37,36 @@ faso-resultats/
 
 ## Modèle de données
 
+> Architecture multi-tenant (pivot SaaS B2G, voir `docs/PIVOT_SAAS_B2G.md` et
+> `docs/MULTI_TENANCY.md`) : schéma partagé, isolation par colonne
+> `administration_id` sur chaque table métier.
+
+### `administrations`
+Un tenant (administration cliente : OCECOS, Office du BAC, AGRE...).
+
+| Colonne | Type | Notes |
+|---|---|---|
+| id | UUID (PK) | |
+| code | string, unique | identifiant technique (slug) |
+| nom_officiel / sigle / ministere_tutelle | string | |
+| logo_url / couleur_primaire / domaine_personnalise | string nullable | personnalisation par tenant |
+| contact_referent_nom / email / telephone | string | |
+| date_signature_convention | date nullable | |
+| convention_active | bool, défaut `False` | |
+| plan_abonnement | enum (`STARTER`, `STANDARD`, `PREMIUM`), défaut `STARTER` | |
+| quota_sms_mensuel / quota_examens_annuel | int, défaut `0` | |
+| statut | enum (`ACTIF`, `SUSPENDU`, `PILOTE`, `RESILIE`), défaut `PILOTE` | |
+| created_at / updated_at | timestamptz | |
+
+Index : `code` (unique).
+
 ### `examens`
 Un examen ou concours pour une année donnée (ex : "BAC 2026 - Session normale").
 
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
+| administration_id | UUID (FK → administrations, CASCADE), **NOT NULL** | tenant propriétaire |
 | type_examen | enum `TypeExamen`, voir taxonomie complète en § Sources de données | `BAC` et `CONCOURS_DIRECT` conservés (non-breaking) en plus des variantes précises (`BAC_GENERAL`...) |
 | annee | int | |
 | libelle | string | |
@@ -55,17 +79,20 @@ Un examen ou concours pour une année donnée (ex : "BAC 2026 - Session normale"
 | phases_publication | jsonb (liste), défaut `[]` | phases attendues pour ce type d'examen — voir § Phases de publication |
 | created_at / updated_at | timestamptz | |
 
-Index : `(statut, annee)` — filtrage des examens publiés récents.
+Index : `(administration_id, statut)` — filtrage tenant des examens publiés.
 
-### `admins`
-Comptes d'administration (upload, validation, publication).
+### `utilisateurs`
+Comptes de connexion à l'espace admin (anciennement `admins`).
 
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
+| administration_id | UUID (FK → administrations, CASCADE) nullable | NULL uniquement pour les rôles plateforme (`SUPER_ADMIN`, `SUPPORT`) — voir `docs/MULTI_TENANCY.md` |
 | email | string, unique | |
 | mot_de_passe_hash | string | bcrypt, jamais en clair |
 | nom_complet | string | |
+| telephone | string nullable | |
+| role | enum `RoleUtilisateur` (`SUPER_ADMIN`, `SUPPORT`, `ADMIN_ADMINISTRATION`, `OPERATEUR_INGESTION`, `OPERATEUR_PUBLICATION`, `LECTEUR`) | |
 | actif | bool | |
 | derniere_connexion | timestamptz nullable | |
 
@@ -76,8 +103,9 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
+| administration_id | UUID (FK → administrations, CASCADE), **NOT NULL** | tenant propriétaire |
 | examen_id | UUID (FK → examens, CASCADE) | |
-| admin_id | UUID (FK → admins, RESTRICT) | qui a uploadé |
+| admin_id | UUID (FK → utilisateurs, RESTRICT) | qui a uploadé |
 | nom_fichier / chemin_fichier | string | |
 | type_fichier | enum (`PDF`, `EXCEL`, `PDF_OCR`) | |
 | statut | enum (`EN_ATTENTE`, `PREVISUALISATION`, `VALIDEE`, `PUBLIEE`, `REJETEE`) | reflète le flux upload → prévisualisation → correction → publication |
@@ -86,12 +114,15 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | erreurs_fichier | jsonb (liste de string) | messages au niveau du fichier entier (colonnes non reconnues, fichier vide...), pas d'une ligne précise |
 | publiee_at | timestamptz nullable | |
 
+Index : `(administration_id, created_at)`.
+
 ### `resultats`
 Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produit.
 
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
+| administration_id | UUID (FK → administrations, CASCADE), **NOT NULL** | tenant propriétaire |
 | examen_id | UUID (FK → examens, CASCADE), **NOT NULL** | un résultat sans examen valide est refusé |
 | ingestion_id | UUID (FK → ingestions, RESTRICT), **NOT NULL** | traçabilité vers le fichier source |
 | numero_pv / jury | string | |
@@ -106,11 +137,12 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | phase_suivante_attendue | enum `PhasePublication` nullable | |
 | donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
 
-Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation, un
-candidat pouvant désormais avoir plusieurs `Resultat` pour un même examen (un par
-phase). Il s'agit d'un index de performance, pas d'une contrainte d'unicité — rien
-n'empêche au niveau base deux lignes strictement identiques ; la déduplication reste
-une responsabilité applicative si besoin.
+Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation
+(non filtrée par tenant, voir § Routes publiques), un candidat pouvant désormais
+avoir plusieurs `Resultat` pour un même examen (un par phase). Il s'agit d'un index
+de performance, pas d'une contrainte d'unicité — rien n'empêche au niveau base deux
+lignes strictement identiques ; la déduplication reste une responsabilité
+applicative si besoin. Index séparé sur `administration_id` pour les vues admin.
 
 ### `notifications_preinscription`
 Préinscription à la notification SMS (fonctionnalité Phase 2, table créée dès
@@ -119,6 +151,7 @@ Phase 1 pour ne pas devoir réécrire le schéma plus tard).
 | Colonne | Type | Notes |
 |---|---|---|
 | id | UUID (PK) | |
+| administration_id | UUID (FK → administrations, CASCADE), **NOT NULL** | tenant propriétaire |
 | examen_id | UUID (FK → examens, CASCADE) | |
 | telephone | string | donnée sensible |
 | numero_pv | string | |
@@ -223,24 +256,33 @@ reste du travail esthétique.
   limiter le brute force. Réponse 401 générique ("Email ou mot de passe
   incorrect") que l'email existe ou non, pour ne pas permettre l'énumération
   de comptes.
-- Token JWT (`python-jose`, HS256) : `sub` = id admin, expiration configurable
-  (`JWT_EXPIRE_MINUTES`, défaut 60 min).
-- `app/core/deps.get_current_admin` : dépendance FastAPI (`HTTPBearer`) à
-  injecter dans toute future route `/api/v1/admin/*` pour exiger un token
-  valide et un compte actif.
+- Token JWT (`python-jose`, HS256) : `sub` = id utilisateur, expiration
+  configurable (`JWT_EXPIRE_MINUTES`, défaut 60 min).
+- `app/core/deps.get_current_utilisateur` : dépendance FastAPI (`HTTPBearer`)
+  injectée dans toute route `/api/v1/admin/*` pour exiger un token valide et
+  un compte actif.
+- `app/core/deps.get_current_administration` : dépendance qui résout le
+  tenant (`Administration`) de l'utilisateur connecté — voir
+  `docs/MULTI_TENANCY.md` pour le détail de l'isolation multi-tenant.
 - `GET /api/v1/admin/me` : exemple de route protégée, renvoie le profil de
-  l'admin authentifié (jamais le hash du mot de passe).
-- `backend/seed.py` : crée l'admin par défaut (`admin@faso-resultats.bf` /
-  `ChangeMe123!`, à changer avant mise en production), idempotent.
+  l'utilisateur authentifié (jamais le hash du mot de passe), avec son
+  `role` et son `administration_id`.
+- `backend/seed.py` : crée un super-admin plateforme
+  (`superadmin@faso-resultats.bf`) et un utilisateur `ADMIN_ADMINISTRATION`
+  par tenant pilote (OCECOS, Office du BAC, AGRE), tous en
+  `ChangeMe123!` (à changer avant mise en production), idempotent.
 
 ## Admin — examens
 
-- `POST /api/v1/admin/exams` : crée un examen en statut `DRAFT`.
-- `GET /api/v1/admin/exams` : liste tous les examens (vue admin, tous statuts).
+- `POST /api/v1/admin/exams` : crée un examen en statut `DRAFT`, rattaché à
+  l'administration de l'utilisateur connecté.
+- `GET /api/v1/admin/exams` : liste les examens de l'administration courante
+  (vue admin, tous statuts).
 - `POST /api/v1/admin/exams/{id}/publish` : passe l'examen en `PUBLISHED`,
-  le rendant visible côté public (une fois les routes publiques construites).
-  Séparé volontairement de la publication d'une ingestion : charger des
-  résultats et rendre un examen public sont deux décisions distinctes.
+  le rendant visible côté public. Séparé volontairement de la publication
+  d'une ingestion : charger des résultats et rendre un examen public sont
+  deux décisions distinctes. 404 si l'examen appartient à une autre
+  administration.
 
 ## Pipeline d'ingestion
 
@@ -509,6 +551,11 @@ et examen) sont des étapes distinctes, contrôlées séparément.
 
 ## Routes publiques (`app/routes/public/results.py`)
 
+- **Portail unique cross-tenant, volontairement non filtré par
+  administration** : un candidat consulte son résultat par numéro de PV sans
+  connaître ni choisir une administration. Décision actée dans
+  `docs/PIVOT_SAAS_B2G.md` § 2.6 (option A) — voir `docs/MULTI_TENANCY.md`
+  § 3 pour la justification complète.
 - `GET /api/v1/public/exams` : examens en statut `PUBLISHED` uniquement.
 - `GET /api/v1/public/results?examen_id=&numero_pv=&jury=` : recherche par
   numéro de PV (le `jury` est optionnel, utile pour désambiguïser — c'est
@@ -558,6 +605,17 @@ conformément à la stack verrouillée. Aucun bundler, aucune dépendance npm.
   (`localhost`/`127.0.0.1`) pour pointer vers `http://<hôte>:8000` ; en
   production, `API_BASE` reste vide (même origine attendue derrière un
   reverse proxy — à confirmer selon l'hébergement final).
+- **`candidat.html` + `js/candidat.js`** : espace candidat plateforme (voir
+  § Profil candidat unifié ci-dessous). Inscription (CNIB + nom + date de
+  naissance + téléphone + consentement), connexion et inscription passent
+  toutes les deux par une étape de code OTP commune. Le token candidat est
+  stocké en `localStorage` (pas `sessionStorage`) pour permettre la session
+  persistante de 30 jours du § 4.2 de `docs/PROFIL_CANDIDAT_UNIFIE.md`.
+  Dashboard : ajout d'une candidature (sélection d'un examen public +
+  numéro de récépissé) et liste des candidatures avec statut de
+  vérification. Ne couvre pas la confirmation par OTP du mécanisme 3
+  (fallback, § 5) — le candidat voit sa candidature en attente mais
+  l'endpoint `POST .../confirmer-otp` n'est pas encore relié à une UI.
 
 ### Bugs trouvés et corrigés en testant dans un vrai navigateur (Playwright)
 
@@ -587,7 +645,46 @@ développement (réseau sans accès à `cdn.tailwindcss.com`, donc sans CSS).
 Le rendu visuel réel (couleurs, espacements Tailwind) a été confirmé
 ensuite sur poste réel avec accès internet, sur `index.html` et
 `admin.html` (mise en forme correcte, pas de superposition connexion/
-tableau de bord).
+tableau de bord). Le même filet de sécurité `.hidden` a été ajouté à
+`candidat.html` et vérifié dans les mêmes conditions dégradées.
+
+## Profil candidat unifié
+
+Voir `docs/PROFIL_CANDIDAT_UNIFIE.md` pour la spécification complète et
+`docs/APDP_PROFIL_CANDIDAT.md` pour la conformité APDP dédiée. Résumé
+architectural :
+
+- **Modèles** (`app/models/profil_candidat.py`, `app/models/candidature.py`,
+  `app/models/journal_consultation_profil.py`) : vivent dans le schéma
+  Postgres `plateforme`, distinct des schémas tenants (`administration_id`
+  sur `Candidature` est une simple référence, sans FK cross-schéma). CNIB,
+  téléphone et date de naissance sont chiffrés au repos
+  (`app/models/encrypted_str.py`, Fernet/AES) ; `numero_cnib_hash` et
+  `telephone_hash` (HMAC-SHA256, `app.core.security.hash_deterministe`)
+  permettent la recherche/unicité sans jamais indexer la valeur en clair.
+- **Auth candidat** (`app/services/candidat/auth_service.py`,
+  `app/routes/candidat/auth.py`) : OTP SMS (stub d'envoi, code renvoyé en
+  clair dans la réponse HTTP uniquement hors production — voir
+  `settings.environment`), JWT dédié avec audience `candidat` (distincte de
+  `admin` — `app/core/security.py`), session 30 jours
+  (`CANDIDAT_JWT_EXPIRE_MINUTES`).
+- **Vérification de propriété d'un récépissé**
+  (`app/services/candidat/verification_service.py`) : CNIB automatique →
+  date de naissance → fallback OTP, dans cet ordre (§5 de la spec).
+- **Matching et notifications**
+  (`app/services/candidat/matching_service.py`,
+  `app/services/candidat/notification_engine.py`) : rapprochement
+  rétroactif à l'inscription (résultats déjà publiés), rapprochement à la
+  publication d'un examen (`app/routes/admin/exams.py::publish_exam`
+  appelle `MatchingService.traiter_publication_examen`). L'envoi SMS reste
+  un stub journalisé (voir `docs/ROADMAP.md`, Phase 2).
+- **Isolation** : aucune route admin ne permet de lister les profils
+  candidats ; un candidat ne peut jamais voir les candidatures d'un autre
+  candidat — voir `tests/test_isolation_profil_candidat.py`.
+- **Non implémenté à ce jour** (voir `docs/APDP_PROFIL_CANDIDAT.md` § 6) :
+  détection d'abus avancée (seuil de 30 % de rejets), alerte de prise de
+  contrôle de compte, purge automatique des comptes inactifs, traitement
+  des candidatures orphelines à la résiliation d'une administration.
 
 ## Validation Docker Compose
 

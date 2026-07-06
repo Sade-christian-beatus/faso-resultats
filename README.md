@@ -1,14 +1,32 @@
 # Faso Résultats
 
-Une couche complémentaire d'accès aux résultats d'examens et concours, couvrant le
-BEPC, le BAC, les examens professionnels et les concours administratifs et
-paramilitaires non desservis par les plateformes officielles existantes, avec les
-canaux SMS et mobile que celles-ci ne proposent pas. Compatible en partenariat avec
-SIGEC pour le CEP.
+Faso Résultats — la plateforme SaaS de publication des résultats d'examens et
+concours pour les administrations burkinabè. Chaque administration cliente
+(OCECOS, Office du BAC, AGRE, etc.) dispose de son propre espace : elle importe
+ses résultats, les valide, et les publie sous sa propre identité, pendant que
+les candidats consultent leur résultat par numéro de PV sur un portail unique.
 
-Voir `docs/CONTEXTE_METIER.md` pour la cartographie complète du paysage
-concurrentiel (plateformes gouvernementales existantes) et des examens/concours
-couverts.
+Voir `docs/PIVOT_SAAS_B2G.md` pour le positionnement détaillé et
+`docs/MULTI_TENANCY.md` pour l'architecture d'isolation entre administrations.
+Le CEP est hors périmètre (couvert par SIGEC-CEP) ; voir `docs/CONTEXTE_METIER.md`
+pour la cartographie complète du paysage concurrentiel.
+
+## Configuration obligatoire
+
+L'application **refuse de démarrer** sans ces variables (`backend/.env`, jamais
+commité) :
+
+| Variable | Rôle | Génération |
+|---|---|---|
+| `JWT_SECRET_KEY` | Signature des tokens admin | Chaîne aléatoire quelconque |
+| `CANDIDAT_ENCRYPTION_KEY` | Chiffrement au repos (CNIB, téléphone, date de naissance du profil candidat) | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+`CANDIDAT_ENCRYPTION_KEY` doit être une **vraie clé Fernet** (32 octets
+base64 url-safe) : sans elle, ou avec une valeur invalide, `app.config.get_settings()`
+lève une `RuntimeError` explicite au premier import de l'application (donc
+avant même de démarrer `uvicorn`, `alembic` ou `seed.py`). Ne jamais réutiliser
+la même clé entre environnements (dev/staging/prod), ne jamais la committer en
+clair.
 
 ## Démarrage rapide (Docker)
 
@@ -38,7 +56,14 @@ Les services disponibles :
 | API docs  | http://localhost:8000/docs   |
 | Health    | http://localhost:8000/health |
 
-Identifiants admin par défaut : `admin@faso-resultats.bf` / `ChangeMe123!`
+Identifiants créés par le seed (voir `backend/seed.py`) :
+
+| Compte | Email | Mot de passe |
+|--------|-------|--------------|
+| Super-admin plateforme | `superadmin@faso-resultats.bf` | `ChangeMe123!` |
+| Admin OCECOS | `admin@ocecos.bf` | `ChangeMe123!` |
+| Admin Office du BAC | `admin@office-bac.bf` | `ChangeMe123!` |
+| Admin AGRE | `admin@agre.bf` | `ChangeMe123!` |
 
 ## Développement local sans Docker
 
@@ -53,6 +78,9 @@ pip install -r requirements.txt
 # Copier la config
 copy .env.example .env
 # Adapter DATABASE_URL pour pointer vers votre PostgreSQL local
+# Générer une vraie clé pour CANDIDAT_ENCRYPTION_KEY (obligatoire, voir ci-dessus) :
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# ... puis coller le résultat dans .env
 
 # Migrations
 alembic upgrade head

@@ -3,24 +3,28 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.models import Admin
+from app.models import RoleUtilisateur, Utilisateur
 
 EMAIL = "admin@faso-resultats.bf"
 PASSWORD = "ChangeMe123!"
 
 
-async def _create_admin(db_session: AsyncSession, *, actif: bool = True) -> Admin:
-    admin = Admin(
-        email=EMAIL, mot_de_passe_hash=hash_password(PASSWORD), nom_complet="Admin", actif=actif
+async def _create_utilisateur(db_session: AsyncSession, *, actif: bool = True) -> Utilisateur:
+    utilisateur = Utilisateur(
+        email=EMAIL,
+        mot_de_passe_hash=hash_password(PASSWORD),
+        nom_complet="Admin",
+        role=RoleUtilisateur.SUPER_ADMIN,
+        actif=actif,
     )
-    db_session.add(admin)
+    db_session.add(utilisateur)
     await db_session.commit()
-    return admin
+    return utilisateur
 
 
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_admin(db_session)
+    await _create_utilisateur(db_session)
 
     response = await client.post("/api/v1/admin/login", json={"email": EMAIL, "password": PASSWORD})
 
@@ -32,7 +36,7 @@ async def test_login_success(client: AsyncClient, db_session: AsyncSession) -> N
 
 @pytest.mark.asyncio
 async def test_login_wrong_password(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_admin(db_session)
+    await _create_utilisateur(db_session)
 
     response = await client.post(
         "/api/v1/admin/login", json={"email": EMAIL, "password": "mauvais-mot-de-passe"}
@@ -51,8 +55,10 @@ async def test_login_unknown_email(client: AsyncClient, db_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_login_inactive_admin_rejected(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_admin(db_session, actif=False)
+async def test_login_inactive_utilisateur_rejected(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await _create_utilisateur(db_session, actif=False)
 
     response = await client.post("/api/v1/admin/login", json={"email": EMAIL, "password": PASSWORD})
 
@@ -68,7 +74,7 @@ async def test_me_requires_token(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_me_with_valid_token(client: AsyncClient, db_session: AsyncSession) -> None:
-    await _create_admin(db_session)
+    await _create_utilisateur(db_session)
     login_response = await client.post(
         "/api/v1/admin/login", json={"email": EMAIL, "password": PASSWORD}
     )
@@ -77,7 +83,10 @@ async def test_me_with_valid_token(client: AsyncClient, db_session: AsyncSession
     response = await client.get("/api/v1/admin/me", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
-    assert response.json()["email"] == EMAIL
+    body = response.json()
+    assert body["email"] == EMAIL
+    assert body["role"] == "SUPER_ADMIN"
+    assert body["administration_id"] is None
 
 
 @pytest.mark.asyncio

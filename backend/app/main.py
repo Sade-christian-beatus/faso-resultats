@@ -10,6 +10,8 @@ from app.routes import health
 from app.routes.admin import auth as admin_auth
 from app.routes.admin import exams as admin_exams
 from app.routes.admin import ingestions as admin_ingestions
+from app.routes.candidat import auth as candidat_auth
+from app.routes.candidat import candidatures as candidat_candidatures
 from app.routes.public import results as public_results
 
 settings = get_settings()
@@ -36,4 +38,6 @@ app.include_router(health.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_exams.router)
 app.include_router(admin_ingestions.router)
+app.include_router(candidat_auth.router)
+app.include_router(candidat_candidatures.router)
 app.include_router(public_results.router)

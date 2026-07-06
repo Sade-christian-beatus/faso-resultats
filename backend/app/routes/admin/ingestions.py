@@ -8,19 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from app.config import get_settings
-from app.core.deps import get_current_admin
+from app.core.deps import get_current_administration, get_current_utilisateur
 from app.database import get_db
-from app.models import Admin, Examen, Ingestion, StatutIngestion, TypeFichier
+from app.models import Administration, Examen, Ingestion, StatutIngestion, TypeFichier, Utilisateur
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
 from app.services.ingestion.dispatch import parser_fichier
 from app.services.ingestion.publication import construire_resultats
 from app.services.ingestion.template import construire_modele_excel
 
-router = APIRouter(
-    prefix="/api/v1/admin/ingestions",
-    tags=["admin-ingestions"],
-    dependencies=[Depends(get_current_admin)],
-)
+router = APIRouter(prefix="/api/v1/admin/ingestions", tags=["admin-ingestions"])
 settings = get_settings()
 
 _EXTENSIONS_AUTORISEES = {
@@ -30,9 +26,13 @@ _EXTENSIONS_AUTORISEES = {
 }
 
 
-async def _get_ingestion_ou_404(ingestion_id: uuid.UUID, db: AsyncSession) -> Ingestion:
+async def _get_ingestion_ou_404(
+    ingestion_id: uuid.UUID, administration: Administration, db: AsyncSession
+) -> Ingestion:
+    """Filtre systématiquement par administration : une ingestion d'un autre tenant
+    renvoie 404 comme si elle n'existait pas, pour ne jamais confirmer son existence."""
     ingestion = await db.get(Ingestion, ingestion_id)
-    if ingestion is None:
+    if ingestion is None or ingestion.administration_id != administration.id:
         raise HTTPException(status_code=404, detail="Ingestion introuvable")
     return ingestion
 
@@ -61,11 +61,12 @@ async def upload_ingestion(
         description="Appliquée à toute ligne sans décision propre (ex. listes "
         "d'admissibilité à un concours, où la décision vaut pour tout le document).",
     ),
-    current_admin: Admin = Depends(get_current_admin),
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
+    administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> IngestionPreviewOut:
     examen = await db.get(Examen, examen_id)
-    if examen is None:
+    if examen is None or examen.administration_id != administration.id:
         raise HTTPException(status_code=404, detail="Examen introuvable")
 
     extension = Path(file.filename or "").suffix.lower()
@@ -96,8 +97,9 @@ async def upload_ingestion(
 
     ingestion = Ingestion(
         id=ingestion_id,
+        administration_id=administration.id,
         examen_id=examen_id,
-        admin_id=current_admin.id,
+        admin_id=current_utilisateur.id,
         nom_fichier=file.filename or chemin_fichier.name,
         chemin_fichier=str(chemin_fichier),
         type_fichier=type_fichier,
@@ -119,7 +121,9 @@ async def upload_ingestion(
     description="Fichier .xlsx avec les en-têtes exactes reconnues par le parser, pour "
     "une administration qui n'a pas encore de fichier dans un format compatible.",
 )
-async def download_template() -> Response:
+async def download_template(
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
+) -> Response:
     return Response(
         content=construire_modele_excel(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -131,12 +135,19 @@ async def download_template() -> Response:
     "",
     response_model=list[IngestionOut],
     summary="Lister les ingestions",
-    description="Vue admin de toutes les ingestions, filtrable par examen.",
+    description="Vue admin des ingestions de l'administration de l'utilisateur connecté, "
+    "filtrable par examen.",
 )
 async def list_ingestions(
-    examen_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db)
+    examen_id: uuid.UUID | None = None,
+    administration: Administration = Depends(get_current_administration),
+    db: AsyncSession = Depends(get_db),
 ) -> list[Ingestion]:
-    query = select(Ingestion).order_by(Ingestion.created_at.desc())
+    query = (
+        select(Ingestion)
+        .where(Ingestion.administration_id == administration.id)
+        .order_by(Ingestion.created_at.desc())
+    )
     if examen_id is not None:
         query = query.where(Ingestion.examen_id == examen_id)
     result = await db.execute(query)
@@ -151,9 +162,11 @@ async def list_ingestions(
     "prévisualisation et correction.",
 )
 async def get_ingestion(
-    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+    ingestion_id: uuid.UUID,
+    administration: Administration = Depends(get_current_administration),
+    db: AsyncSession = Depends(get_db),
 ) -> IngestionPreviewOut:
-    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    ingestion = await _get_ingestion_ou_404(ingestion_id, administration, db)
     return _vers_preview(ingestion)
 
 
@@ -165,9 +178,12 @@ async def get_ingestion(
     "l'admin. Uniquement possible tant que l'ingestion n'est pas publiée ni rejetée.",
 )
 async def correct_ingestion(
-    ingestion_id: uuid.UUID, payload: CorrectionRequest, db: AsyncSession = Depends(get_db)
+    ingestion_id: uuid.UUID,
+    payload: CorrectionRequest,
+    administration: Administration = Depends(get_current_administration),
+    db: AsyncSession = Depends(get_db),
 ) -> IngestionPreviewOut:
-    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    ingestion = await _get_ingestion_ou_404(ingestion_id, administration, db)
     if ingestion.statut != StatutIngestion.PREVISUALISATION:
         raise HTTPException(
             status_code=409,
@@ -193,9 +209,11 @@ async def correct_ingestion(
     "coordonnée, ex. jour de proclamation du BAC).",
 )
 async def publish_ingestion(
-    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+    ingestion_id: uuid.UUID,
+    administration: Administration = Depends(get_current_administration),
+    db: AsyncSession = Depends(get_db),
 ) -> Ingestion:
-    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    ingestion = await _get_ingestion_ou_404(ingestion_id, administration, db)
     if ingestion.statut != StatutIngestion.PREVISUALISATION:
         raise HTTPException(
             status_code=409, detail="Cette ingestion n'est pas en attente de publication"
@@ -225,9 +243,11 @@ async def publish_ingestion(
     description="Écarte l'ingestion sans créer de résultats (ex : mauvais fichier importé).",
 )
 async def reject_ingestion(
-    ingestion_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+    ingestion_id: uuid.UUID,
+    administration: Administration = Depends(get_current_administration),
+    db: AsyncSession = Depends(get_db),
 ) -> Ingestion:
-    ingestion = await _get_ingestion_ou_404(ingestion_id, db)
+    ingestion = await _get_ingestion_ou_404(ingestion_id, administration, db)
     if ingestion.statut != StatutIngestion.PREVISUALISATION:
         raise HTTPException(status_code=409, detail="Cette ingestion n'est pas en attente")
 
