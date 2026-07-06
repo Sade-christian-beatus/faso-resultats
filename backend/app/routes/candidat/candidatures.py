@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.core.deps import get_current_profil_candidat
 from app.core.rate_limit import limiter
 from app.database import get_db
+from app.models import Administration, Examen, StatutAdministration, StatutExamen
 from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
 from app.models.journal_consultation_profil import ActionJournalConsultation
 from app.models.profil_candidat import ProfilCandidat
@@ -37,6 +38,34 @@ async def _rejets_aujourdhui(db: AsyncSession, profil_id: uuid.UUID) -> int:
         )
     )
     return result.scalar_one()
+
+
+async def _administration_et_examen_existent(
+    db: AsyncSession, administration_id: uuid.UUID, examen_id: uuid.UUID
+) -> bool:
+    """Candidature.administration_id/examen_id ne sont pas des FK (schéma plateforme
+    volontairement indépendant des schémas tenants, voir docs/MULTI_TENANCY.md) : sans
+    ce contrôle applicatif, un candidat pourrait créer des candidatures orphelines
+    référençant des UUID inexistants."""
+    # ACTIF et PILOTE sont tous deux des statuts opérationnels (voir seed.py : les 3
+    # administrations de démonstration OCECOS/Office du BAC/AGRE sont PILOTE par
+    # défaut) — seuls SUSPENDU et RESILIE bloquent l'ajout d'une candidature.
+    administration = await db.get(Administration, administration_id)
+    if administration is None or administration.statut in (
+        StatutAdministration.SUSPENDU,
+        StatutAdministration.RESILIE,
+    ):
+        return False
+
+    examen = await db.get(Examen, examen_id)
+    if (
+        examen is None
+        or examen.administration_id != administration_id
+        or examen.statut not in (StatutExamen.PUBLISHED, StatutExamen.DRAFT)
+    ):
+        return False
+
+    return True
 
 
 @router.get(
@@ -80,6 +109,11 @@ async def create_candidature(
     profil: ProfilCandidat = Depends(get_current_profil_candidat),
     db: AsyncSession = Depends(get_db),
 ) -> Candidature:
+    if not await _administration_et_examen_existent(
+        db, payload.administration_id, payload.examen_id
+    ):
+        raise HTTPException(status_code=404, detail="Administration ou examen introuvable")
+
     if await _rejets_aujourdhui(db, profil.id) >= _MAX_REJETS_PAR_JOUR:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -157,7 +191,9 @@ async def create_candidature(
     "résultat publié : confirme la propriété du récépissé par un code envoyé au "
     "candidat lui-même, plutôt qu'une correspondance automatique.",
 )
+@limiter.limit(settings.rate_limit_login)
 async def confirmer_otp(
+    request: Request,
     candidature_id: uuid.UUID,
     payload: CandidatureOtpConfirmRequest,
     profil: ProfilCandidat = Depends(get_current_profil_candidat),

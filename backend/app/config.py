@@ -1,6 +1,12 @@
 from functools import lru_cache
 
+from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_MESSAGE_CLE_CHIFFREMENT_INVALIDE = (
+    "CANDIDAT_ENCRYPTION_KEY manquante ou invalide. Générer une clé avec : "
+    'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+)
 
 
 class Settings(BaseSettings):
@@ -20,7 +26,11 @@ class Settings(BaseSettings):
 
     # Profil candidat (plateforme, transversal aux tenants) — docs/PROFIL_CANDIDAT_UNIFIE.md
     candidat_jwt_expire_minutes: int = 60 * 24 * 30  # session 30 jours (§ 4.2)
-    candidat_encryption_key: str = "OgXLPUp9gH0vXWzvXG2zxQx0n4XJEwxbUBEKsbhBzlE="
+    # Pas de valeur par défaut fonctionnelle : une clé de chiffrement partagée par tout
+    # déploiement qui oublierait de la surcharger serait un risque de sécurité réel
+    # (déchiffrement de tous les CNIB/téléphones/dates de naissance avec la clé publiée
+    # dans le code source). Validée au premier accès aux settings, voir get_settings().
+    candidat_encryption_key: str | None = None
     candidat_hash_pepper: str = "change-me-in-production"
     candidat_otp_expire_minutes: int = 5
     candidat_otp_max_tentatives: int = 3
@@ -36,6 +46,17 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
+def _valider_cle_chiffrement_candidat(cle: str | None) -> None:
+    if not cle:
+        raise RuntimeError(_MESSAGE_CLE_CHIFFREMENT_INVALIDE)
+    try:
+        Fernet(cle.encode())
+    except Exception as exc:
+        raise RuntimeError(_MESSAGE_CLE_CHIFFREMENT_INVALIDE) from exc
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    _valider_cle_chiffrement_candidat(settings.candidat_encryption_key)
+    return settings

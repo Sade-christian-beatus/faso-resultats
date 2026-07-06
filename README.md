@@ -11,6 +11,23 @@ Voir `docs/PIVOT_SAAS_B2G.md` pour le positionnement détaillé et
 Le CEP est hors périmètre (couvert par SIGEC-CEP) ; voir `docs/CONTEXTE_METIER.md`
 pour la cartographie complète du paysage concurrentiel.
 
+## Configuration obligatoire
+
+L'application **refuse de démarrer** sans ces variables (`backend/.env`, jamais
+commité) :
+
+| Variable | Rôle | Génération |
+|---|---|---|
+| `JWT_SECRET_KEY` | Signature des tokens admin | Chaîne aléatoire quelconque |
+| `CANDIDAT_ENCRYPTION_KEY` | Chiffrement au repos (CNIB, téléphone, date de naissance du profil candidat) | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+
+`CANDIDAT_ENCRYPTION_KEY` doit être une **vraie clé Fernet** (32 octets
+base64 url-safe) : sans elle, ou avec une valeur invalide, `app.config.get_settings()`
+lève une `RuntimeError` explicite au premier import de l'application (donc
+avant même de démarrer `uvicorn`, `alembic` ou `seed.py`). Ne jamais réutiliser
+la même clé entre environnements (dev/staging/prod), ne jamais la committer en
+clair.
+
 ## Démarrage rapide (Docker)
 
 **Prérequis :** Docker Desktop installé et démarré sur Windows 11.
@@ -61,6 +78,9 @@ pip install -r requirements.txt
 # Copier la config
 copy .env.example .env
 # Adapter DATABASE_URL pour pointer vers votre PostgreSQL local
+# Générer une vraie clé pour CANDIDAT_ENCRYPTION_KEY (obligatoire, voir ci-dessus) :
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# ... puis coller le résultat dans .env
 
 # Migrations
 alembic upgrade head
