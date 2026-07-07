@@ -12,7 +12,7 @@ from app.database import get_db
 from app.models import Administration, Examen, StatutAdministration, StatutExamen
 from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
 from app.models.journal_consultation_profil import ActionJournalConsultation
-from app.models.profil_candidat import ProfilCandidat
+from app.models.profil_candidat import ProfilCandidat, StatutProfilCandidat
 from app.schemas.candidat import (
     CandidatureCreate,
     CandidatureOtpConfirmRequest,
@@ -25,8 +25,6 @@ from app.services.candidat.verification_service import DecisionVerification, Ver
 router = APIRouter(prefix="/api/v1/candidat/candidatures", tags=["candidat"])
 settings = get_settings()
 
-_MAX_REJETS_PAR_JOUR = 5
-
 
 async def _rejets_aujourdhui(db: AsyncSession, profil_id: uuid.UUID) -> int:
     depuis = datetime.now(UTC) - timedelta(days=1)
@@ -38,6 +36,28 @@ async def _rejets_aujourdhui(db: AsyncSession, profil_id: uuid.UUID) -> int:
         )
     )
     return result.scalar_one()
+
+
+async def _verifier_et_suspendre_si_abus(db: AsyncSession, profil: ProfilCandidat) -> None:
+    """Détection d'abus (docs/PROFIL_CANDIDAT_UNIFIE.md § 8) : au-delà d'un nombre
+    minimal de tentatives, un taux de rejet trop élevé suggère un compte qui accumule
+    des récépissés qui ne lui appartiennent pas — suspension automatique."""
+    total = (
+        await db.execute(select(func.count()).where(Candidature.profil_candidat_id == profil.id))
+    ).scalar_one()
+    if total < settings.candidat_abus_minimum_tentatives:
+        return
+
+    rejets = (
+        await db.execute(
+            select(func.count()).where(
+                Candidature.profil_candidat_id == profil.id,
+                Candidature.statut_verification == StatutVerificationCandidature.REJETE,
+            )
+        )
+    ).scalar_one()
+    if rejets / total > settings.candidat_abus_taux_rejet_suspension:
+        profil.statut = StatutProfilCandidat.SUSPENDU
 
 
 async def _administration_et_examen_existent(
@@ -114,7 +134,7 @@ async def create_candidature(
     ):
         raise HTTPException(status_code=404, detail="Administration ou examen introuvable")
 
-    if await _rejets_aujourdhui(db, profil.id) >= _MAX_REJETS_PAR_JOUR:
+    if await _rejets_aujourdhui(db, profil.id) >= settings.candidat_abus_seuil_rejets_par_jour:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Trop de tentatives infructueuses aujourd'hui. Réessayez demain ou "
@@ -147,6 +167,8 @@ async def create_candidature(
                 statut_verification=StatutVerificationCandidature.REJETE,
             )
         )
+        await db.flush()
+        await _verifier_et_suspendre_si_abus(db, profil)
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -174,7 +196,10 @@ async def create_candidature(
         # Aucune donnée exploitable dans le résultat publié : fallback OTP envoyé sur le
         # téléphone du profil, à confirmer via POST .../{id}/confirmer-otp.
         candidature.methode_verification = MethodeVerification.OTP_SMS
-        await AuthCandidatService.generer_otp(profil.telephone)
+        code = await AuthCandidatService.generer_otp(profil.telephone)
+        # Attribut transitoire (non mappé, jamais persisté) : renvoyé au client hors
+        # production uniquement, comme InscriptionResponse.code_otp_debug.
+        candidature.code_otp_debug = code if settings.environment != "production" else None
 
     db.add(candidature)
     await journaliser(db, profil.id, ActionJournalConsultation.ADD_CANDIDATURE, request)
@@ -213,6 +238,19 @@ async def confirmer_otp(
     candidature.statut_verification = StatutVerificationCandidature.VERIFIE_MANUEL
     candidature.methode_verification = MethodeVerification.VALIDATION_MANUELLE
     candidature.date_verification = datetime.now(UTC)
+
+    # Renseigne le cache de dernier résultat (comme la branche VERIFIEE de
+    # create_candidature) : sans ça, la candidature passe vérifiée mais le dashboard
+    # continue d'afficher « résultat pas encore publié ».
+    resultat = await VerificationService(db).trouver_resultat_publie(
+        candidature.administration_id, candidature.examen_id, candidature.numero_recepisse
+    )
+    if resultat is not None:
+        candidature.dernier_resultat_id = resultat.id
+        candidature.dernier_resultat_phase = resultat.phase.value
+        candidature.dernier_resultat_statut = resultat.decision
+        candidature.dernier_resultat_publie_at = datetime.now(UTC)
+
     await db.commit()
     await db.refresh(candidature)
     return candidature

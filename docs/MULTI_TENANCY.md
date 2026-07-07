@@ -91,13 +91,17 @@ tout simplement pas du point de vue de l'administration courante.
 
 ## 6. Limites actuelles (assumées, à lever si besoin)
 
-- Pas encore de **journal d'audit** (`AuditLog`) tracant qui a fait
-  quoi sur quel tenant — prévu mais différé (`docs/PIVOT_SAAS_B2G.md`
-  § 8, item 11).
-- Pas encore d'**endpoints super-admin** pour gérer les `Administration`
-  via l'API (CRUD, création du premier `ADMIN_ADMINISTRATION` d'un
-  tenant) — aujourd'hui ces opérations passent par `seed.py` ou un accès
-  direct à la base. Différé (`docs/PIVOT_SAAS_B2G.md` § 8, item 8).
+- **Journal d'audit** (`AuditLog`, `app/models/audit_log.py`) : trace login,
+  création/publication d'examen, upload/correction/publication/rejet
+  d'ingestion, création/modification d'administration, avec `utilisateur_id`,
+  `administration_id`, action, timestamp, IP. Les FK utilisent
+  `ondelete="SET NULL"` (pas `CASCADE`) pour que l'historique survive à la
+  suppression de l'entité référencée.
+- **Endpoints super-admin** pour gérer les `Administration` via l'API
+  (`POST/GET/PATCH /api/v1/admin/administrations`, `POST .../utilisateurs`
+  pour provisionner le premier `ADMIN_ADMINISTRATION` d'un tenant) — voir
+  `app/routes/admin/administrations.py`. `seed.py` reste utile pour amorcer
+  un environnement de développement, mais n'est plus le seul chemin.
 - Pas encore de **restructuration des routes** vers l'arborescence cible
   de la section 2.5 du pivot (`/api/v1/auth/login`, `/api/v1/me`,
   `/api/v1/administrations`, namespace public par `administration_code`)

@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     candidat_hash_pepper: str = "change-me-in-production"
     candidat_otp_expire_minutes: int = 5
     candidat_otp_max_tentatives: int = 3
+    # Verrouillage du numéro de téléphone après candidat_otp_max_tentatives échecs,
+    # indépendant de toute nouvelle génération de code (sans quoi redemander un OTP
+    # débloquait immédiatement le numéro — voir docs/ROADMAP.md, correctif de sécurité).
+    candidat_otp_lockout_minutes: int = 15
+    candidat_abus_seuil_rejets_par_jour: int = 5
+    candidat_abus_taux_rejet_suspension: float = 0.3
+    candidat_abus_minimum_tentatives: int = 5
+    # Rétention (docs/PROFIL_CANDIDAT_UNIFIE.md § 7, docs/APDP_PROFIL_CANDIDAT.md § 5) :
+    # durées provisoires, à valider avec l'APDP avant mise en production réelle.
+    candidat_purge_candidature_resiliee_jours: int = 180  # 6 mois, § 7
+    candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée APDP
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"

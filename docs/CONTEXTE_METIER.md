@@ -1,8 +1,17 @@
 # Contexte métier — Faso Résultats
 
-> Document de référence sur le positionnement du projet : paysage concurrentiel
-> (plateformes gouvernementales existantes) et cartographie complète des examens
-> et concours au Burkina Faso. À maintenir à jour à mesure que ce contexte évolue.
+> Document de référence sur le paysage concurrentiel (plateformes gouvernementales
+> existantes) et la cartographie complète des examens et concours au Burkina Faso.
+>
+> ⚠️ **Ce document précède le pivot SaaS B2G du 2026-07-05.** Ses conclusions de
+> pitch (ex. "Faso Résultats devient LA plateforme de consultation individuelle
+> pour 95% du marché") reflètent le positionnement B2C d'origine, remplacé depuis
+> par un positionnement SaaS B2G — voir `docs/PIVOT_SAAS_B2G.md` pour le
+> positionnement actuel qui fait autorité. La cartographie du paysage concurrentiel
+> ci-dessous (quel examen est couvert par quelle plateforme) reste valable et utile ;
+> seule la conclusion stratégique sur ce qu'en fait Faso Résultats est obsolète.
+> Le CEP, en particulier, reste hors périmètre du projet dans les deux
+> positionnements (voir `docs/PIVOT_SAAS_B2G.md` et `docs/ROADMAP.md`).
 
 ---
 

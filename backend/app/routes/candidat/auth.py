@@ -26,6 +26,7 @@ from app.schemas.candidat import (
 from app.services.candidat.auth_service import AuthCandidatService
 from app.services.candidat.journal_service import journaliser
 from app.services.candidat.matching_service import MatchingService
+from app.services.candidat.notification_engine import NotificationEngine
 
 router = APIRouter(prefix="/api/v1/candidat", tags=["candidat"])
 settings = get_settings()
@@ -66,17 +67,21 @@ async def inscription(
         )
 
     code = await AuthCandidatService.generer_otp(payload.telephone)
-    await cache_set(
-        _cle_inscription_attente(payload.telephone),
-        {
-            "numero_cnib": payload.numero_cnib,
-            "nom_complet": payload.nom_complet,
-            "date_naissance": payload.date_naissance.isoformat(),
-            "telephone": payload.telephone,
-            "consentement_apdp_version": payload.consentement_apdp_version,
-        },
-        ttl_secondes=settings.candidat_otp_expire_minutes * 60,
-    )
+    if code is not None:
+        # Numéro non verrouillé : mémorise les données d'inscription en attente de
+        # confirmation OTP. Si verrouillé (code=None), ne rien stocker — la tentative
+        # ne peut de toute façon pas aboutir pendant la fenêtre de verrouillage.
+        await cache_set(
+            _cle_inscription_attente(payload.telephone),
+            {
+                "numero_cnib": payload.numero_cnib,
+                "nom_complet": payload.nom_complet,
+                "date_naissance": payload.date_naissance.isoformat(),
+                "telephone": payload.telephone,
+                "consentement_apdp_version": payload.consentement_apdp_version,
+            },
+            ttl_secondes=settings.candidat_otp_expire_minutes * 60,
+        )
 
     return InscriptionResponse(
         message="Un code de vérification a été envoyé par SMS.",
@@ -152,6 +157,12 @@ async def otp_verify(
         await db.commit()
         await db.refresh(profil)
         await cache_delete(_cle_inscription_attente(payload.telephone))
+
+        # Atténuation prise de contrôle de compte (§ 8, risque 2) : le titulaire du
+        # téléphone est notifié immédiatement, qu'il soit ou non l'auteur de l'inscription.
+        await NotificationEngine.envoyer_sms(
+            profil.telephone, NotificationEngine.formater_message_alerte_creation_compte()
+        )
 
         token = AuthCandidatService.creer_session(profil.id)
         return SessionResponse(access_token=token, compte_cree=True)

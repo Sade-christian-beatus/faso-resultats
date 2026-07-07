@@ -286,6 +286,18 @@ Après chaque étape majeure, produire un résumé structuré :
   non démarré.** Chantier explicitement mis en attente jusqu'à ce que le
   pivot multi-tenant ci-dessus soit confirmé complet, sur demande directe
   du développeur ("ne pas mélanger les deux chantiers").
+- **2026-07-07 — Chantiers différés du pivot SaaS B2G et du profil candidat
+  clôturés** (AuditLog, endpoints super-admin, verrouillage OTP temporisé,
+  détection d'abus, alerte de prise de contrôle de compte, purge des
+  candidatures orphelines/comptes inactifs, UI candidat du mécanisme 3).
+  Reste explicitement différée : la restructuration des routes vers
+  l'arborescence cible (`docs/PIVOT_SAAS_B2G.md` § 2.5) — jugée invasive
+  pour un bénéfice fonctionnel limité tant qu'aucun partenaire externe ne
+  consomme l'API ; à reprendre sur demande explicite. Un bug réel a été
+  trouvé et corrigé en testant le mécanisme 3 dans un vrai navigateur :
+  `confirmer_otp()` marquait la candidature vérifiée sans jamais peupler le
+  cache `dernier_resultat_*`, donc le dashboard candidat continuait
+  d'afficher « résultat pas encore publié » après confirmation.
 
 ---
 

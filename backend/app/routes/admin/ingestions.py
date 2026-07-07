@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +10,17 @@ from sqlalchemy.sql import func
 from app.config import get_settings
 from app.core.deps import get_current_administration, get_current_utilisateur
 from app.database import get_db
-from app.models import Administration, Examen, Ingestion, StatutIngestion, TypeFichier, Utilisateur
+from app.models import (
+    ActionAuditLog,
+    Administration,
+    Examen,
+    Ingestion,
+    StatutIngestion,
+    TypeFichier,
+    Utilisateur,
+)
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
+from app.services.audit_service import journaliser_audit
 from app.services.ingestion.dispatch import parser_fichier
 from app.services.ingestion.publication import construire_resultats
 from app.services.ingestion.template import construire_modele_excel
@@ -53,6 +62,7 @@ def _vers_preview(ingestion: Ingestion) -> IngestionPreviewOut:
     "POST /publish n'est pas appelé explicitement.",
 )
 async def upload_ingestion(
+    request: Request,
     examen_id: uuid.UUID = Form(...),
     type_fichier: TypeFichier = Form(...),
     file: UploadFile = File(...),
@@ -110,6 +120,14 @@ async def upload_ingestion(
         apercu_donnees=[ligne.as_dict() for ligne in resultat_parsing.lignes],
     )
     db.add(ingestion)
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.UPLOAD_INGESTION,
+        request=request,
+        details={"ingestion_id": str(ingestion.id), "examen_id": str(examen_id)},
+    )
     await db.commit()
     await db.refresh(ingestion)
     return _vers_preview(ingestion)
@@ -178,8 +196,10 @@ async def get_ingestion(
     "l'admin. Uniquement possible tant que l'ingestion n'est pas publiée ni rejetée.",
 )
 async def correct_ingestion(
+    request: Request,
     ingestion_id: uuid.UUID,
     payload: CorrectionRequest,
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> IngestionPreviewOut:
@@ -193,6 +213,14 @@ async def correct_ingestion(
     ingestion.apercu_donnees = [ligne.model_dump() for ligne in payload.lignes]
     ingestion.nombre_lignes_detectees = len(payload.lignes)
     ingestion.nombre_erreurs = sum(1 for ligne in payload.lignes if ligne.erreurs)
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.CORRECT_INGESTION,
+        request=request,
+        details={"ingestion_id": str(ingestion.id)},
+    )
     await db.commit()
     await db.refresh(ingestion)
     return _vers_preview(ingestion)
@@ -209,7 +237,9 @@ async def correct_ingestion(
     "coordonnée, ex. jour de proclamation du BAC).",
 )
 async def publish_ingestion(
+    request: Request,
     ingestion_id: uuid.UUID,
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> Ingestion:
@@ -231,6 +261,14 @@ async def publish_ingestion(
 
     ingestion.statut = StatutIngestion.PUBLIEE
     ingestion.publiee_at = func.now()
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.PUBLISH_INGESTION,
+        request=request,
+        details={"ingestion_id": str(ingestion.id)},
+    )
     await db.commit()
     await db.refresh(ingestion)
     return ingestion
@@ -243,7 +281,9 @@ async def publish_ingestion(
     description="Écarte l'ingestion sans créer de résultats (ex : mauvais fichier importé).",
 )
 async def reject_ingestion(
+    request: Request,
     ingestion_id: uuid.UUID,
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> Ingestion:
@@ -252,6 +292,14 @@ async def reject_ingestion(
         raise HTTPException(status_code=409, detail="Cette ingestion n'est pas en attente")
 
     ingestion.statut = StatutIngestion.REJETEE
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.REJECT_INGESTION,
+        request=request,
+        details={"ingestion_id": str(ingestion.id)},
+    )
     await db.commit()
     await db.refresh(ingestion)
     return ingestion
