@@ -162,6 +162,23 @@ async def test_recherche_resultat_utilise_le_cache(
 
 
 @pytest.mark.asyncio
+async def test_liste_administrations_publiques_expose_les_champs_utiles(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """admin_headers crée une administration en statut PILOTE (défaut du modèle) : elle
+    doit apparaître dans la liste publique, sans exposer les champs de contact interne."""
+    response = await client.get("/api/v1/public/administrations")
+
+    assert response.status_code == 200
+    administrations = response.json()
+    assert len(administrations) >= 1
+    premiere = administrations[0]
+    assert "nom_officiel" in premiere
+    assert "sigle" in premiere
+    assert "contact_referent_email" not in premiere
+
+
+@pytest.mark.asyncio
 async def test_droits_candidat_expose_un_contact_et_les_droits(client: AsyncClient) -> None:
     """Canal de contact dédié (docs/APDP_PROFIL_CANDIDAT.md § 8) pour les demandes qui
     ne passent pas par les endpoints candidat en libre-service."""

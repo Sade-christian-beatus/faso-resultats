@@ -8,11 +8,46 @@ from app.config import get_settings
 from app.core.cache import cache_get, cache_set
 from app.core.rate_limit import limiter
 from app.database import get_db
-from app.models import Examen, Resultat, StatutExamen
-from app.schemas.public import DroitsCandidatOut, ExamenPublicOut, ResultatPublicOut
+from app.models import Administration, Examen, Resultat, StatutAdministration, StatutExamen
+from app.schemas.public import (
+    AdministrationPublicOut,
+    DroitsCandidatOut,
+    ExamenPublicOut,
+    ResultatPublicOut,
+)
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
 settings = get_settings()
+
+
+@router.get(
+    "/administrations",
+    response_model=list[AdministrationPublicOut],
+    summary="Lister les administrations clientes actives",
+    description="Administrations visibles publiquement (ACTIF ou PILOTE uniquement, "
+    "comme pour l'ajout de candidature). Résultat mis en cache.",
+)
+@limiter.limit(settings.rate_limit_public)
+async def list_public_administrations(
+    request: Request, db: AsyncSession = Depends(get_db)
+) -> list[AdministrationPublicOut]:
+    cle_cache = "public:administrations"
+    cache = await cache_get(cle_cache)
+    if cache is not None:
+        return [AdministrationPublicOut.model_validate(item) for item in cache]
+
+    result = await db.execute(
+        select(Administration)
+        .where(Administration.statut.in_([StatutAdministration.ACTIF, StatutAdministration.PILOTE]))
+        .order_by(Administration.nom_officiel)
+    )
+    administrations = [AdministrationPublicOut.model_validate(a) for a in result.scalars().all()]
+    await cache_set(
+        cle_cache,
+        [a.model_dump(mode="json") for a in administrations],
+        settings.cache_ttl_seconds,
+    )
+    return administrations
 
 
 @router.get(

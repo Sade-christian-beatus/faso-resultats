@@ -5,6 +5,17 @@ from pydantic import BaseModel
 from app.models import TypeExamen
 
 
+class AdministrationPublicOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    code: str
+    nom_officiel: str
+    sigle: str
+    logo_url: str | None
+    couleur_primaire: str | None
+
+
 class ExamenPublicOut(BaseModel):
     model_config = {"from_attributes": True}
 
