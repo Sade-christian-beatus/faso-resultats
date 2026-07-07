@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_super_admin
 from app.core.security import hash_password
 from app.database import get_db
-from app.models import ActionAuditLog, Administration, Utilisateur
+from app.models import ActionAuditLog, Administration, StatutAdministration, Utilisateur
 from app.schemas.administration import (
     AdministrationCreate,
     AdministrationOut,
@@ -16,6 +16,7 @@ from app.schemas.administration import (
 )
 from app.schemas.auth import UtilisateurOut
 from app.services.audit_service import journaliser_audit
+from app.services.candidat.purge_service import marquer_candidatures_administration_resiliee
 
 router = APIRouter(prefix="/api/v1/admin/administrations", tags=["super-admin"])
 
@@ -109,10 +110,19 @@ async def update_administration(
     db: AsyncSession = Depends(get_db),
 ) -> Administration:
     administration = await _get_administration_ou_404(administration_id, db)
+    statut_avant = administration.statut
 
     updates = payload.model_dump(exclude_unset=True)
     for champ, valeur in updates.items():
         setattr(administration, champ, valeur)
+
+    if (
+        statut_avant != StatutAdministration.RESILIE
+        and administration.statut == StatutAdministration.RESILIE
+    ):
+        # Candidatures orphelines (docs/PROFIL_CANDIDAT_UNIFIE.md § 7) : marquées
+        # immédiatement, purgées après 6 mois par le script purge_candidats.py.
+        await marquer_candidatures_administration_resiliee(db, administration.id)
 
     await journaliser_audit(
         db,
