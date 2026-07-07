@@ -1,4 +1,5 @@
 from app.models.administration import Administration, PlanAbonnement, StatutAdministration
+from app.models.audit_log import ActionAuditLog, AuditLog
 from app.models.base import Base
 from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
 from app.models.examen import CategorieExamen, Examen, SourceDonnees, StatutExamen, TypeExamen
@@ -38,4 +39,6 @@ __all__ = [
     "MethodeVerification",
     "JournalConsultationProfil",
     "ActionJournalConsultation",
+    "AuditLog",
+    "ActionAuditLog",
 ]

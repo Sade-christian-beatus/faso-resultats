@@ -1,13 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_administration
+from app.core.deps import get_current_administration, get_current_utilisateur
 from app.database import get_db
-from app.models import Administration, Examen, StatutExamen
+from app.models import ActionAuditLog, Administration, Examen, StatutExamen, Utilisateur
 from app.schemas.examen import ExamenCreate, ExamenOut
+from app.services.audit_service import journaliser_audit
 from app.services.candidat.matching_service import MatchingService
 
 router = APIRouter(prefix="/api/v1/admin/exams", tags=["admin-exams"])
@@ -33,7 +34,9 @@ async def _get_exam_ou_404(
     "pas publié explicitement), rattaché à l'administration de l'utilisateur connecté.",
 )
 async def create_exam(
+    request: Request,
     payload: ExamenCreate,
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> Examen:
@@ -50,6 +53,15 @@ async def create_exam(
         phases_publication=payload.phases_publication,
     )
     db.add(examen)
+    await db.flush()
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.CREATE_EXAMEN,
+        request=request,
+        details={"examen_id": str(examen.id)},
+    )
     await db.commit()
     await db.refresh(examen)
     return examen
@@ -82,7 +94,9 @@ async def list_exams(
     "ingestion deviennent alors consultables.",
 )
 async def publish_exam(
+    request: Request,
     exam_id: uuid.UUID,
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
 ) -> Examen:
@@ -92,6 +106,14 @@ async def publish_exam(
     # Rapproche les candidatures plateforme en attente de ce résultat désormais publié,
     # et notifie les candidats concernés (docs/PROFIL_CANDIDAT_UNIFIE.md § 4.5, § 6).
     await MatchingService(db).traiter_publication_examen(examen)
+    await journaliser_audit(
+        db,
+        utilisateur_id=current_utilisateur.id,
+        administration_id=administration.id,
+        action=ActionAuditLog.PUBLISH_EXAMEN,
+        request=request,
+        details={"examen_id": str(examen.id)},
+    )
     await db.commit()
     await db.refresh(examen)
     return examen

@@ -8,8 +8,9 @@ from app.core.deps import get_current_utilisateur
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, verify_password
 from app.database import get_db
-from app.models import Utilisateur
+from app.models import ActionAuditLog, Utilisateur
 from app.schemas.auth import LoginRequest, TokenResponse, UtilisateurOut
+from app.services.audit_service import journaliser_audit
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-auth"])
 settings = get_settings()
@@ -42,6 +43,13 @@ async def login(
         raise _INVALID_CREDENTIALS
 
     utilisateur.derniere_connexion = func.now()
+    await journaliser_audit(
+        db,
+        utilisateur_id=utilisateur.id,
+        administration_id=utilisateur.administration_id,
+        action=ActionAuditLog.LOGIN,
+        request=request,
+    )
     await db.commit()
 
     token = create_access_token(subject=str(utilisateur.id))

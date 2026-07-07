@@ -7,6 +7,7 @@ repasser un examen PUBLISHED en DRAFT) — les tests ci-dessous vérifient le co
 réel du code, pas un comportement hypothétique non implémenté."""
 
 from datetime import UTC, date, datetime
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -175,7 +176,12 @@ async def test_publication_avec_candidature_correspondante_notifie(
         numero_cnib="B00000010",
     )
 
-    await MatchingService(db_session).traiter_publication_examen(examen)
+    # Force une heure de jour : NotificationEngine respecte la plage silencieuse
+    # 22h-6h (voir test_notification_engine.py), sans quoi ce test dépendrait de
+    # l'heure réelle d'exécution.
+    with patch("app.services.candidat.notification_engine.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2026, 7, 6, 14, 0, tzinfo=UTC)
+        await MatchingService(db_session).traiter_publication_examen(examen)
     await db_session.commit()
     await db_session.refresh(candidature)
 
@@ -220,7 +226,9 @@ async def test_publication_avec_plusieurs_candidats_notifie_chacun(
         db_session, administration, examen, numero_recepisse="000011", numero_cnib="B00000021"
     )
 
-    await MatchingService(db_session).traiter_publication_examen(examen)
+    with patch("app.services.candidat.notification_engine.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2026, 7, 6, 14, 0, tzinfo=UTC)
+        await MatchingService(db_session).traiter_publication_examen(examen)
     await db_session.commit()
     await db_session.refresh(candidature_a)
     await db_session.refresh(candidature_b)
