@@ -17,6 +17,7 @@ class ActionJournalConsultation(str, enum.Enum):
     DELETE_CANDIDATURE = "DELETE_CANDIDATURE"
     UPDATE_PREFERENCES = "UPDATE_PREFERENCES"
     DELETE_ACCOUNT = "DELETE_ACCOUNT"
+    EXPORT_DONNEES = "EXPORT_DONNEES"
 
 
 class JournalConsultationProfil(Base):

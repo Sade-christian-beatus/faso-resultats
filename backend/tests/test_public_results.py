@@ -159,3 +159,15 @@ async def test_recherche_resultat_utilise_le_cache(
     )
 
     assert premiere.json() == deuxieme.json()
+
+
+@pytest.mark.asyncio
+async def test_droits_candidat_expose_un_contact_et_les_droits(client: AsyncClient) -> None:
+    """Canal de contact dédié (docs/APDP_PROFIL_CANDIDAT.md § 8) pour les demandes qui
+    ne passent pas par les endpoints candidat en libre-service."""
+    response = await client.get("/api/v1/public/droits-candidat")
+
+    assert response.status_code == 200
+    corps = response.json()
+    assert "@" in corps["contact_dpo"]
+    assert len(corps["droits"]) >= 4

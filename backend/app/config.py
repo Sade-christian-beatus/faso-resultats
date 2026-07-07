@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # durées provisoires, à valider avec l'APDP avant mise en production réelle.
     candidat_purge_candidature_resiliee_jours: int = 180  # 6 mois, § 7
     candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée APDP
+    # Canal de contact dédié aux demandes d'exercice de droits qui ne passent pas par
+    # les endpoints existants (docs/APDP_PROFIL_CANDIDAT.md § 8) — à remplacer par une
+    # vraie adresse avant mise en production.
+    candidat_dpo_contact_email: str = "dpo@fasoresultats.bf"
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"

@@ -9,7 +9,7 @@ from app.core.cache import cache_get, cache_set
 from app.core.rate_limit import limiter
 from app.database import get_db
 from app.models import Examen, Resultat, StatutExamen
-from app.schemas.public import ExamenPublicOut, ResultatPublicOut
+from app.schemas.public import DroitsCandidatOut, ExamenPublicOut, ResultatPublicOut
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
 settings = get_settings()
@@ -84,3 +84,29 @@ async def search_public_results(
         cle_cache, [r.model_dump(mode="json") for r in resultats], settings.cache_ttl_seconds
     )
     return resultats
+
+
+@router.get(
+    "/droits-candidat",
+    response_model=DroitsCandidatOut,
+    summary="Exercer ses droits sur le profil candidat",
+    description="Canal de contact dédié aux demandes d'exercice de droits qui ne "
+    "passent pas par les endpoints candidat en libre-service (GET/PATCH/DELETE "
+    "/api/v1/candidat/me, GET /api/v1/candidat/me/export) — par exemple une demande "
+    "formulée par un tiers, ou une correction d'identité (CNIB, nom, date de "
+    "naissance), volontairement non modifiable en libre-service.",
+)
+@limiter.limit(settings.rate_limit_public)
+async def droits_candidat(request: Request) -> DroitsCandidatOut:
+    return DroitsCandidatOut(
+        contact_dpo=settings.candidat_dpo_contact_email,
+        droits=[
+            "Droit d'accès : GET /api/v1/candidat/me",
+            "Droit à la portabilité : GET /api/v1/candidat/me/export",
+            "Droit de rectification (préférences, email) : PATCH /api/v1/candidat/me",
+            "Droit de rectification (identité : CNIB, nom, date de naissance) : "
+            "contacter le DPO",
+            "Droit à l'effacement : DELETE /api/v1/candidat/me",
+        ],
+        delai_reponse_indicatif="Sous 30 jours",
+    )

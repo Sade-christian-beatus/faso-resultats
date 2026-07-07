@@ -25,3 +25,9 @@ class ResultatPublicOut(BaseModel):
     decision: str
     moyenne: float | None
     etablissement: str | None
+
+
+class DroitsCandidatOut(BaseModel):
+    contact_dpo: str
+    droits: list[str]
+    delai_reponse_indicatif: str
