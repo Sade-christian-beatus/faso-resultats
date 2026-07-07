@@ -105,15 +105,25 @@ versionnée — `consentement_apdp_date`/`consentement_apdp_version`), recueilli
 - La suppression **n'affecte pas** les résultats publiés par les
   administrations, qui restent leur propriété et suivent leur propre
   politique de conservation (`docs/APDP.md`).
-- ⚠️ Durée de conservation par défaut (compte inactif, jamais supprimé
-  explicitement) non encore définie — à trancher avec l'APDP. **Non
-  implémenté à ce jour** : aucun job de purge automatique des comptes
-  inactifs n'existe (Phase 1).
+- Durée de conservation par défaut (compte inactif, jamais supprimé
+  explicitement) : `candidat_purge_inactivite_jours` (2 ans par défaut).
+  ⚠️ Valeur provisoire, non validée par l'APDP — à trancher avant mise en
+  production réelle. Purge effective via `purge_candidats.py`
+  (`app/services/candidat/purge_service.py`), à planifier via cron côté
+  infrastructure (pas de file de tâches en Phase 1, voir CLAUDE.md).
+  L'inactivité se mesure depuis la dernière connexion, ou depuis
+  l'inscription si le profil ne s'est jamais reconnecté.
 - Interaction avec la résiliation d'une administration
-  (`docs/PROFIL_CANDIDAT_UNIFIE.md` § 7) : les candidatures liées à une
-  administration résiliée devraient être marquées et purgées après un
-  délai — **non implémenté à ce jour**, à construire quand le premier cas
-  réel se présentera.
+  (`docs/PROFIL_CANDIDAT_UNIFIE.md` § 7) : dès que le statut d'une
+  administration passe à `RESILIE` (via
+  `PATCH /api/v1/admin/administrations/{id}`), ses candidatures sont
+  immédiatement marquées `ADMINISTRATION_RESILIEE` et leur cache de dernier
+  résultat (`dernier_resultat_*`) est purgé. `purge_candidats.py` les
+  supprime ensuite après `candidat_purge_candidature_resiliee_jours`
+  (6 mois par défaut, § 7). ⚠️ Ce mécanisme ne couvre que le volet
+  candidat — la politique de conservation des résultats historiques de
+  l'administration elle-même reste à trancher (`docs/PIVOT_SAAS_B2G.md`
+  § 4, point 4).
 
 ---
 
@@ -127,7 +137,10 @@ Mesures en place :
   `CANDIDAT_HASH_PEPPER`) plutôt que sur la valeur en clair.
 - **Authentification par OTP SMS** : code à 6 chiffres, valide
   `CANDIDAT_OTP_EXPIRE_MINUTES` (5 min par défaut), invalidé après usage,
-  verrouillé après `CANDIDAT_OTP_MAX_TENTATIVES` (3) tentatives infructueuses.
+  verrouillé après `CANDIDAT_OTP_MAX_TENTATIVES` (3) tentatives infructueuses
+  — verrouillage porté par une clé dédiée (`candidat_otp_lockout_minutes`,
+  15 min par défaut), indépendante de la génération d'un nouveau code : le
+  redemander pendant la fenêtre de verrouillage ne débloque plus le numéro.
 - **Audience JWT dédiée** (`aud=candidat`, distincte de `aud=admin`) : un
   token émis pour l'espace admin ne peut jamais authentifier une route
   candidat, et inversement — voir `app/core/security.py` et les tests
@@ -137,7 +150,16 @@ Mesures en place :
   générique identique, que le numéro soit inscrit ou non.
 - **Anti-abus sur l'ajout de candidature** : au-delà de 5 tentatives
   rejetées par jour et par profil, les nouvelles tentatives sont bloquées
-  (429) — voir `app/routes/candidat/candidatures.py`.
+  (429). Au-delà de `candidat_abus_minimum_tentatives` (5) et d'un taux de
+  rejet supérieur à `candidat_abus_taux_rejet_suspension` (30%), le profil
+  est suspendu automatiquement (`docs/PROFIL_CANDIDAT_UNIFIE.md` § 8) — voir
+  `app/routes/candidat/candidatures.py`.
+- **Alerte de prise de contrôle de compte** (§ 8, risque 2) : un SMS est
+  envoyé immédiatement au numéro utilisé pour créer un compte, qu'il soit ou
+  non l'auteur de l'inscription — voir
+  `NotificationEngine.formater_message_alerte_creation_compte()`. ⚠️ Portée
+  limitée : ne protège pas contre un attaquant qui contrôle déjà le
+  téléphone lui-même (SIM swap), faute de second canal indépendant (email).
 - **Journal d'audit immuable** de chaque accès/modification (§2.3).
 - **Isolation stricte** : aucune route admin ne permet de lister ou
   d'interroger les profils candidats plateforme ; un candidat ne peut
@@ -146,15 +168,6 @@ Mesures en place :
 
 Limites connues, à traiter avant une mise en production réelle :
 
-- ⚠️ **Détection d'abus avancée non implémentée** : le seuil « 30% de
-  candidatures rejetées → suspension automatique » décrit dans
-  `docs/PROFIL_CANDIDAT_UNIFIE.md` § 8 n'est pas construit ; seule la limite
-  simple de 5 rejets/jour l'est.
-- ⚠️ **Pas d'alerte de prise de contrôle de compte** : le mécanisme
-  "un compte vient d'être créé avec votre CNIB, si ce n'est pas vous..."
-  (§ 8, risque 2) n'est pas implémenté — un tiers connaissant le CNIB et le
-  téléphone d'une victime pourrait aujourd'hui créer un compte à sa place
-  sans que la victime en soit avertie.
 - ⚠️ Le code OTP n'est jamais envoyé par un vrai canal SMS en Phase 1 (stub,
   voir `app/services/candidat/notification_engine.py`) : il est renvoyé
   dans la réponse HTTP (`code_otp_debug`) uniquement quand
@@ -199,12 +212,14 @@ Limites connues, à traiter avant une mise en production réelle :
 ## 9. Prochaines étapes avant une vraie mise en production
 
 1. Faire valider ce document par l'APDP ou un professionnel du droit (base
-   légale, durée de conservation par défaut, responsable de traitement).
-2. Implémenter la détection d'abus avancée et l'alerte de prise de contrôle
-   de compte (§6).
-3. Remplacer le stub SMS par une intégration réelle (Orange/Moov/Telecel,
-   Phase 2) et supprimer tout renvoi de code OTP dans les réponses HTTP.
-4. Définir et implémenter une durée de conservation par défaut pour les
-   comptes inactifs, avec purge automatique.
-5. Construire le traitement des candidatures orphelines à la résiliation
-   d'une administration (§5).
+   légale, durée de conservation par défaut — notamment
+   `candidat_purge_inactivite_jours`, actuellement une valeur provisoire non
+   validée — responsable de traitement).
+2. Remplacer le stub SMS par une intégration réelle (Orange/Moov/Telecel,
+   Phase 2) et supprimer tout renvoi de code OTP dans les réponses HTTP
+   (`code_otp_debug`, présent sur les réponses d'inscription/connexion et
+   sur l'ajout de candidature via le mécanisme 3).
+3. Planifier `purge_candidats.py` via cron une fois l'infrastructure de
+   production choisie (§5).
+4. Prévoir un canal de contact dédié aux demandes d'exercice de droits qui
+   ne passeraient pas par les endpoints existants (§8).

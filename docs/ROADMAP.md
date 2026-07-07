@@ -16,26 +16,29 @@
 - Chiffrement au repos (Fernet) du CNIB/téléphone/date de naissance, hash déterministe
   pour la recherche — clé de chiffrement désormais obligatoire au démarrage (pas de
   valeur par défaut fonctionnelle), voir `README.md` § Configuration obligatoire
+- AuditLog complet (qui a fait quoi, quand, sur quel tenant) sur les actions
+  d'authentification et d'ingestion admin
+- Endpoints super-admin API pour gérer les `Administration` et provisionner le premier
+  utilisateur d'un nouveau tenant (`POST /api/v1/admin/administrations/*`)
+- Verrouillage OTP réellement temporisé (clé de verrouillage dédiée, indépendante de la
+  génération d'un nouveau code — voir `AuthCandidatService`)
+- Détection d'abus (seuil de candidatures rejetées → suspension automatique du profil,
+  `candidat_abus_taux_rejet_suspension`)
+- Alerte de prise de contrôle de compte (SMS immédiat au numéro utilisé pour créer un
+  compte)
+- Purge des candidatures orphelines à la résiliation d'une administration (marquage
+  immédiat + suppression après 6 mois) et des comptes candidat inactifs
+  (`purge_candidats.py`, à planifier via cron — pas de file de tâches en Phase 1)
+- UI candidat pour le mécanisme 3 de vérification (fallback OTP quand ni le CNIB ni la
+  date de naissance ne figurent dans le résultat publié)
 
 ## 🚧 En cours / à faire avant un lancement pilote réel
 
-- AuditLog complet (qui a fait quoi, quand, sur quel tenant)
-- Endpoints super-admin API pour gérer les `Administration` (aujourd'hui uniquement
-  via `seed.py` ou un accès direct à la base — un vrai onboarding self-service de
-  nouvelle administration cliente demande une intervention technique manuelle)
 - Restructuration des routes vers l'arborescence cible (`docs/PIVOT_SAAS_B2G.md` § 2.5)
-- UI candidat pour le mécanisme 3 de vérification (fallback OTP quand ni le CNIB ni la
-  date de naissance ne figurent dans le résultat publié) — l'endpoint existe côté API
-  (`POST /candidatures/{id}/confirmer-otp`), aucune UI ne le déclenche encore
-- Verrouillage OTP réellement temporisé (aujourd'hui : 3 échecs invalident le code
-  courant, mais générer un nouveau code débloque immédiatement le numéro — pas de
-  cool-down indépendant de la génération d'un nouveau code)
 - Intégration réelle des passerelles SMS (Orange Business en priorité, voir détail
   technique ci-dessous) — l'envoi reste un stub journalisé
-- Détection d'abus avancée (seuil de 30% de candidatures rejetées → suspension)
-- Alerte de prise de contrôle de compte (CNIB + téléphone d'un tiers réutilisés)
-- Purge automatisée des comptes candidat inactifs
-- Traitement des candidatures orphelines à la résiliation d'une administration
+- Durées de rétention (`candidat_purge_inactivite_jours`, 2 ans par défaut) non
+  validées par l'APDP — voir `docs/APDP_PROFIL_CANDIDAT.md` § 5
 
 ## 📅 Phase 2 — Intégration SMS et notifications proactives
 
