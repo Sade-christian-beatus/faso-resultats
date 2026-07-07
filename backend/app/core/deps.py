@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_access_token, decode_candidat_access_token
 from app.database import get_db
-from app.models import Administration, Utilisateur
+from app.models import Administration, RoleUtilisateur, Utilisateur
 from app.models.profil_candidat import ProfilCandidat, StatutProfilCandidat
 
 _bearer_scheme = HTTPBearer()
@@ -44,8 +44,8 @@ async def get_current_administration(
     dans tout le projet.
 
     Refuse toute requête scopée par tenant si l'utilisateur n'est rattaché à aucune
-    administration (cas des comptes SUPER_ADMIN/SUPPORT, réservés aux futures routes
-    de gestion multi-tenant, pas encore implémentées)."""
+    administration (cas des comptes SUPER_ADMIN/SUPPORT, réservés aux routes de
+    gestion multi-tenant — voir `get_current_super_admin`)."""
     if current_utilisateur.administration_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -58,6 +58,21 @@ async def get_current_administration(
     if administration is None:
         raise HTTPException(status_code=404, detail="Administration introuvable")
     return administration
+
+
+async def get_current_super_admin(
+    current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
+) -> Utilisateur:
+    """Réserve une route à l'équipe plateforme (docs/PIVOT_SAAS_B2G.md § 8, item 8) :
+    gestion des `Administration` (tenants) et provisionnement de leur premier
+    utilisateur. Un SUPPORT (lecture seule plateforme) n'a pas accès à ces routes
+    d'écriture — seul SUPER_ADMIN peut créer/modifier une administration."""
+    if current_utilisateur.role != RoleUtilisateur.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Réservé aux comptes SUPER_ADMIN de la plateforme.",
+        )
+    return current_utilisateur
 
 
 async def get_current_profil_candidat(

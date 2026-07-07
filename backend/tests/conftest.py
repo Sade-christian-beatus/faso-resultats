@@ -119,6 +119,28 @@ async def autre_administration_headers(
     )
 
 
+@pytest.fixture
+async def super_admin_headers(client: AsyncClient, db_session: AsyncSession) -> dict[str, str]:
+    """Un compte plateforme SUPER_ADMIN (administration_id NULL), pour les routes de
+    gestion des administrations clientes."""
+    password = "ChangeMe123!"
+    email = "superadmin@faso-resultats.bf"
+    db_session.add(
+        Utilisateur(
+            administration_id=None,
+            email=email,
+            mot_de_passe_hash=hash_password(password),
+            nom_complet="Super Admin Test",
+            role=RoleUtilisateur.SUPER_ADMIN,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.post("/api/v1/admin/login", json={"email": email, "password": password})
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 async def _creer_profil_candidat(
     db_session: AsyncSession, *, numero_cnib: str, telephone: str
 ) -> ProfilCandidat:
