@@ -228,6 +228,53 @@ async def test_ajout_candidature_sans_donnee_de_verification_necessite_otp(
 
     assert response.status_code == 201
     assert response.json()["methode_verification"] == "OTP_SMS"
+    # Renvoyé en développement (ENVIRONMENT != production), sur le même modèle que
+    # InscriptionResponse.code_otp_debug — permet de tester le mécanisme 3 de bout en
+    # bout sans SMS réel.
+    assert response.json()["code_otp_debug"] is not None
+
+
+@pytest.mark.asyncio
+async def test_confirmation_otp_du_mecanisme_3_verifie_la_candidature(
+    client: AsyncClient,
+    admin_headers: dict,
+    candidat_headers: dict,
+    db_session: AsyncSession,
+) -> None:
+    examen_id, administration_id = await _creer_examen(client, admin_headers, db_session)
+    admin_id = await _utilisateur_id(db_session, administration_id)
+    await _publier_resultat(
+        db_session,
+        administration_id=administration_id,
+        examen_id=examen_id,
+        admin_id=admin_id,
+        numero_recepisse="000010",
+    )
+
+    creation = await client.post(
+        "/api/v1/candidat/candidatures",
+        json={
+            "administration_id": administration_id,
+            "examen_id": examen_id,
+            "numero_recepisse": "000010",
+        },
+        headers=candidat_headers,
+    )
+    candidature_id = creation.json()["id"]
+    code = creation.json()["code_otp_debug"]
+
+    confirmation = await client.post(
+        f"/api/v1/candidat/candidatures/{candidature_id}/confirmer-otp",
+        json={"code": code},
+        headers=candidat_headers,
+    )
+
+    assert confirmation.status_code == 200
+    assert confirmation.json()["statut_verification"] == "VERIFIE_MANUEL"
+    assert confirmation.json()["methode_verification"] == "VALIDATION_MANUELLE"
+    # Sans ça, le dashboard afficherait « résultat pas encore publié » malgré une
+    # candidature vérifiée — voir confirmer_otp().
+    assert confirmation.json()["dernier_resultat_statut"] == "ADMISSIBLE"
 
 
 @pytest.mark.asyncio

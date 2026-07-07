@@ -196,7 +196,10 @@ async def create_candidature(
         # Aucune donnée exploitable dans le résultat publié : fallback OTP envoyé sur le
         # téléphone du profil, à confirmer via POST .../{id}/confirmer-otp.
         candidature.methode_verification = MethodeVerification.OTP_SMS
-        await AuthCandidatService.generer_otp(profil.telephone)
+        code = await AuthCandidatService.generer_otp(profil.telephone)
+        # Attribut transitoire (non mappé, jamais persisté) : renvoyé au client hors
+        # production uniquement, comme InscriptionResponse.code_otp_debug.
+        candidature.code_otp_debug = code if settings.environment != "production" else None
 
     db.add(candidature)
     await journaliser(db, profil.id, ActionJournalConsultation.ADD_CANDIDATURE, request)
@@ -235,6 +238,19 @@ async def confirmer_otp(
     candidature.statut_verification = StatutVerificationCandidature.VERIFIE_MANUEL
     candidature.methode_verification = MethodeVerification.VALIDATION_MANUELLE
     candidature.date_verification = datetime.now(UTC)
+
+    # Renseigne le cache de dernier résultat (comme la branche VERIFIEE de
+    # create_candidature) : sans ça, la candidature passe vérifiée mais le dashboard
+    # continue d'afficher « résultat pas encore publié ».
+    resultat = await VerificationService(db).trouver_resultat_publie(
+        candidature.administration_id, candidature.examen_id, candidature.numero_recepisse
+    )
+    if resultat is not None:
+        candidature.dernier_resultat_id = resultat.id
+        candidature.dernier_resultat_phase = resultat.phase.value
+        candidature.dernier_resultat_statut = resultat.decision
+        candidature.dernier_resultat_publie_at = datetime.now(UTC)
+
     await db.commit()
     await db.refresh(candidature)
     return candidature

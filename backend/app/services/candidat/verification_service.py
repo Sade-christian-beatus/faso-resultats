@@ -28,7 +28,7 @@ class VerificationService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def _trouver_resultat_publie(
+    async def trouver_resultat_publie(
         self, administration_id: uuid.UUID, examen_id: uuid.UUID, numero_recepisse: str
     ) -> Resultat | None:
         query = (
@@ -51,7 +51,7 @@ class VerificationService:
         examen_id: uuid.UUID,
         numero_recepisse: str,
     ) -> tuple[DecisionVerification, MethodeVerification | None, Resultat | None]:
-        resultat = await self._trouver_resultat_publie(
+        resultat = await self.trouver_resultat_publie(
             administration_id, examen_id, numero_recepisse
         )
         if resultat is None:

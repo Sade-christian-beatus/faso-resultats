@@ -89,6 +89,10 @@ class CandidatureOut(BaseModel):
     dernier_resultat_statut: str | None
     dernier_resultat_phase: str | None
     dernier_resultat_publie_at: datetime | None
+    # Non persisté : présent uniquement sur la réponse de création quand le mécanisme 3
+    # (fallback OTP) est déclenché, et seulement hors production — même logique que
+    # InscriptionResponse.code_otp_debug.
+    code_otp_debug: str | None = None
 
 
 class CandidatureOtpConfirmRequest(BaseModel):

@@ -162,6 +162,13 @@ const STYLE_STATUT = {
   REJETE: { texte: "Non vérifiée", classe: "bg-red-100 text-red-800" },
 };
 
+// Mécanisme 3 (fallback OTP, docs/PROFIL_CANDIDAT_UNIFIE.md § 5) : ni le CNIB ni la
+// date de naissance ne figuraient dans le résultat publié — un code a été envoyé au
+// candidat lui-même, à confirmer avant que la candidature ne soit considérée vérifiée.
+function attenteConfirmationOtp(c) {
+  return c.statut_verification === "EN_ATTENTE" && c.methode_verification === "OTP_SMS";
+}
+
 function rendreCandidatures(candidatures) {
   const zone = document.getElementById("zone-candidatures");
   if (candidatures.length === 0) {
@@ -171,7 +178,10 @@ function rendreCandidatures(candidatures) {
 
   zone.innerHTML = candidatures
     .map((c) => {
-      const style = STYLE_STATUT[c.statut_verification] || STYLE_STATUT.EN_ATTENTE;
+      const attenteOtp = attenteConfirmationOtp(c);
+      const style = attenteOtp
+        ? { texte: "Confirmation par code requise", classe: "bg-sky-100 text-sky-800" }
+        : STYLE_STATUT[c.statut_verification] || STYLE_STATUT.EN_ATTENTE;
       return `
       <div class="carte-candidature bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
         <div class="flex items-center justify-between gap-2">
@@ -182,6 +192,19 @@ function rendreCandidatures(candidatures) {
           c.dernier_resultat_statut
             ? `<p class="mt-2 text-lg font-semibold text-slate-900">${c.dernier_resultat_statut}</p>`
             : `<p class="mt-2 text-sm text-slate-400">Résultat pas encore publié</p>`
+        }
+        ${
+          attenteOtp
+            ? `
+        <form class="form-confirmer-otp mt-3 flex gap-2" data-id="${c.id}">
+          <input type="text" inputmode="numeric" maxlength="6" required placeholder="Code reçu par SMS"
+            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm tracking-[0.3em] text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
+          <button type="submit" class="bg-emerald-700 text-white text-sm font-medium rounded-lg px-3 py-2 hover:bg-emerald-800 active:bg-emerald-900 transition shadow-sm">
+            Confirmer
+          </button>
+        </form>
+        <p class="message-confirmer-otp mt-1.5 text-xs"></p>`
+            : ""
         }
         <button type="button" data-id="${c.id}" class="btn-retirer-candidature mt-2 text-xs text-slate-400 hover:text-red-600 underline underline-offset-2">
           Retirer
@@ -200,6 +223,27 @@ function rendreCandidatures(candidatures) {
         chargerCandidatures();
       } catch (erreur) {
         // silencieux : l'utilisateur peut réessayer
+      }
+    });
+  });
+
+  zone.querySelectorAll(".form-confirmer-otp").forEach((formulaire) => {
+    formulaire.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const messageEl = formulaire.nextElementSibling;
+      const code = formulaire.querySelector("input").value.trim();
+      messageEl.textContent = "";
+
+      try {
+        await apiFetch(`/api/v1/candidat/candidatures/${formulaire.dataset.id}/confirmer-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...enTeteAuth() },
+          body: JSON.stringify({ code }),
+        });
+        chargerCandidatures();
+      } catch (erreur) {
+        messageEl.textContent = "Code invalide ou expiré. Veuillez réessayer.";
+        messageEl.classList.add("text-red-600");
       }
     });
   });
@@ -240,7 +284,7 @@ document.getElementById("form-ajout-candidature").addEventListener("submit", asy
   }
 
   try {
-    await apiFetch("/api/v1/candidat/candidatures", {
+    const candidature = await apiFetch("/api/v1/candidat/candidatures", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...enTeteAuth() },
       body: JSON.stringify({
@@ -250,6 +294,11 @@ document.getElementById("form-ajout-candidature").addEventListener("submit", asy
       }),
     });
     document.getElementById("ajout-recepisse").value = "";
+    if (attenteConfirmationOtp(candidature)) {
+      messageEl.innerHTML = `<p class="text-sm text-sky-700">Un code de confirmation a été envoyé par SMS. Entrez-le ci-dessous, sous cette candidature.${
+        candidature.code_otp_debug ? ` Mode développement : code ${candidature.code_otp_debug}.` : ""
+      }</p>`;
+    }
     chargerCandidatures();
   } catch (erreur) {
     messageEl.innerHTML = `<p class="text-sm text-red-600">${erreur.message}</p>`;
