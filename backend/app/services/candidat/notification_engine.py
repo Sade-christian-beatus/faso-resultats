@@ -34,6 +34,18 @@ class NotificationEngine:
         return message[:160]
 
     @staticmethod
+    def formater_message_alerte_creation_compte() -> str:
+        """Atténuation d'une prise de contrôle de compte (docs/PROFIL_CANDIDAT_UNIFIE.md
+        § 8, risque 2) : notifie immédiatement le numéro de téléphone utilisé pour créer
+        un compte, pour qu'un titulaire légitime la remarque si ce n'est pas lui qui l'a
+        fait. Portée limitée : sans second canal indépendant (email), ne protège pas
+        contre un attaquant qui contrôle déjà le téléphone lui-même (SIM swap)."""
+        return (
+            "Faso Resultats: un compte candidat vient d'etre cree avec ce numero. "
+            "Si ce n'est pas vous, contactez le support."
+        )
+
+    @staticmethod
     async def envoyer_sms(telephone: str, message: str) -> bool:
         """Renvoie True si le SMS a été (simulé comme) envoyé. Ne journalise jamais le
         numéro complet, conformément à CLAUDE.md (« aucun log de données personnelles
