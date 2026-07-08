@@ -151,3 +151,75 @@ relatifs idiomatiques en Flutter), `lines_longer_than_80_chars` et
 comportement par défaut de `dart format`), `sort_pub_dependencies`
 (pubspec organisé par groupe fonctionnel commenté, plus lisible que l'ordre
 alphabétique strict).
+
+## Tests et polissage (jour 10)
+
+### Bug réel trouvé en écrivant les tests
+
+`DateFormatter.pourAffichage` (`DateFormat('dd/MM/yyyy', 'fr_FR')`) lève
+`LocaleDataException` au premier appel tant que
+`initializeDateFormatting('fr_FR')` n'a pas été appelé — ce qui n'était fait
+nulle part avant le jour 10. Écrans concernés :
+`auth_candidat_screen.dart` (affichage de la date de naissance saisie) et
+`securite_droits_screen.dart` (journal d'accès). Aucun test précédent ne
+sélectionnait réellement une date ou n'affichait le journal, d'où un crash
+en usage réel jamais détecté par la CI. Corrigé dans `main.dart` (appel au
+démarrage, avant `runApp`) et dans chaque fichier de test qui exerce ce
+chemin (`setUpAll(() => initializeDateFormatting('fr_FR'))`).
+
+### Tests ajoutés
+
+- `test/unit/date_formatter_test.dart` (formatters — absent jusqu'ici).
+- `test/unit/consultation_repository_impl_test.dart` : premier test de
+  repository contre un vrai `Dio`, via un `HttpClientAdapter` factice écrit
+  à la main (`_FakeHttpClientAdapter`) plutôt qu'un mock généré — cohérent
+  avec le choix mockito du jour 1/2. Couvre la conversion JSON, le 404 sans
+  résultat, une erreur serveur (`ServerException`) et une coupure réseau
+  (`ReseauException`).
+- `test/widget/securite_droits_screen_test.dart` et
+  `test/widget/candidature_otp_screen_test.dart` : deux écrans avec de la
+  vraie logique (export, double confirmation de suppression, mécanisme 3)
+  qui n'avaient encore aucun test.
+- `test/unit/http_cache_test.dart` (jour 9, ajouté en même temps que
+  `http_cache.dart`).
+
+### Accessibilité — revue statique
+
+- Mise à l'échelle du texte : automatique, `Text` respecte
+  `MediaQuery.textScaler` du système par défaut dans Flutter — aucune
+  configuration ne le désactive dans ce projet. Rien à faire.
+- Tailles de police : 12sp au minimum (métadonnées secondaires, bandeau
+  hors ligne), jamais en dessous — cohérent avec les recommandations
+  Material.
+- Labels : deux `IconButton` sans `tooltip` trouvés et corrigés (icône
+  profil du dashboard, bouton de validation de l'email du profil) — un
+  lecteur d'écran n'avait jusqu'ici aucun libellé à annoncer pour ces deux
+  actions.
+- Contraste : palette sobre définie au jour 1 (`AppColors`), réutilisée
+  partout sans variation ad hoc — pas de nouvelle vérification de contraste
+  chiffrée faite ici (nécessiterait un outil dédié, pas disponible dans cet
+  environnement).
+
+### Limites de cet environnement (honnêteté requise, CLAUDE.md)
+
+- **Aucun test manuel sur device/émulateur réel** : cet environnement
+  d'exécution n'a pas de SDK Android installé
+  (`flutter doctor` confirme : « Unable to locate Android SDK »). Le test
+  sur 3 tailles d'écran demandé par le prompt n'a donc pas pu être fait ici
+  — à faire avant toute publication, sur un poste avec Android Studio/un
+  émulateur.
+- **Taille de l'APK non mesurée** (objectif < 15 Mo) pour la même raison
+  (pas de build release possible sans SDK Android). Procédure documentée
+  dans `docs/RELEASE.md` § 4.
+- La CI GitHub Actions (`build-apk-debug`), elle, tourne sur un runner avec
+  SDK Android complet et continue de vérifier que la compilation Android
+  passe à chaque push.
+
+### Signature de release Android
+
+`android/app/build.gradle` sait désormais signer un build `release` avec un
+vrai keystore, s'il en trouve un dans `android/key.properties` (fichier
+jamais commité). En son absence — le cas aujourd'hui, aucun keystore de
+production n'existe — le build de release retombe sur la signature debug,
+comme avant. Procédure complète (génération du keystore, secrets CI) dans
+`docs/RELEASE.md`.

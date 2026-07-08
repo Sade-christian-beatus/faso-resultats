@@ -29,9 +29,11 @@ jobs:
       - run: flutter test --coverage
 
   # Build APK non signé, pour vérifier que la compilation Android passe.
-  # La signature réelle (release) est ajoutée au jour 10 (docs/RELEASE.md),
-  # une fois le keystore de production généré — voir ce document pour la
-  # procédure.
+  # android/app/build.gradle sait signer un build release (jour 10), mais
+  # seulement si android/key.properties existe (fichier jamais commité).
+  # Aucun keystore de production ne l'a encore été à ce jour : ce job reste
+  # donc un build debug tant que ce n'est pas fait. Procédure complète
+  # (génération du keystore, secrets CI) : docs/RELEASE.md.
   build-apk-debug:
     runs-on: ubuntu-latest
     needs: analyze-and-test

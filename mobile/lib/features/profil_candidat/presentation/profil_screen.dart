@@ -142,6 +142,7 @@ class _ChampEmailState extends State<_ChampEmail> {
             labelText: 'Email',
             suffixIcon: IconButton(
               icon: const Icon(Icons.check),
+              tooltip: "Enregistrer l'email",
               onPressed: () => ref
                   .read(profilCandidatNotifierProvider.notifier)
                   .mettreAJour(email: _controller.text.trim()),

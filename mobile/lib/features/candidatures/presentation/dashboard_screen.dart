@@ -40,6 +40,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
+            tooltip: 'Mon profil',
             onPressed: () => context.push(AppRoutes.profil),
           ),
         ],

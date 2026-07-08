@@ -43,14 +43,21 @@ Clean Architecture à 3 couches (`presentation` / `domain` / `data`) par
 fonctionnalité sous `lib/features/`, state management Riverpod, navigation
 go_router. Détail dans `docs/ARCHITECTURE.md`.
 
-## Limites connues (voir docs/ROADMAP_MOBILE.md)
+## Limites connues (voir docs/API.md pour le détail complet des écarts)
 
-- **Notifications push (FCM)** : SDK intégré côté client, mais aucun backend
-  d'enregistrement de token n'existe encore côté API — écrans concernés
-  gated « bientôt disponible ».
-- **Consultation par SMS** : écran gated, le SMS réel dépend d'un contrat
-  opérateur (Orange Business) non encore signé.
-- **Build Android release signé** : pas encore configuré (voir
-  `docs/RELEASE.md`, à construire au jour 10).
+- **Notifications push (FCM)** : dépendances déclarées (`firebase_core`,
+  `firebase_messaging`) mais SDK **non initialisé** — aucun projet Firebase
+  réel configuré dans ce dépôt et aucun backend d'enregistrement de token
+  côté API. Écran « Notifications » gated « bientôt disponible ».
+- **Consultation par SMS** : écran gated, sans numéro ni syntaxe affichés —
+  le SMS réel dépend d'un contrat opérateur (Orange Business) non encore
+  signé (Phase 2, volontairement non démarrée).
+- **Build Android release signé** : infrastructure de signature en place
+  (`android/app/build.gradle`, `docs/RELEASE.md`), mais aucun keystore de
+  production n'existe encore — les builds retombent sur la signature debug.
+- **Test manuel multi-écrans et mesure de la taille de l'APK** : non faits
+  dans l'environnement de développement (pas de SDK Android/émulateur
+  disponible) — à faire avant toute publication, voir
+  `docs/ARCHITECTURE.md` § Tests et polissage.
 - **iOS** : structure de projet générée, jamais testée (pas d'environnement
   macOS/Xcode disponible pendant le développement initial).
