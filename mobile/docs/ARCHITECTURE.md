@@ -223,3 +223,36 @@ jamais commité). En son absence — le cas aujourd'hui, aucun keystore de
 production n'existe — le build de release retombe sur la signature debug,
 comme avant. Procédure complète (génération du keystore, secrets CI) dans
 `docs/RELEASE.md`.
+
+## Audit de couverture (2026-07-08, suite du jour 10)
+
+Couverture ligne globale (`flutter test --coverage`) : 61% → **76%** après
+cet audit. Gap trouvé : les widget tests remplacent systématiquement les
+`*RepositoryImpl` réelles par des fakes (nécessaire pour tester la
+presentation sans réseau), ce qui laissait les implémentations réelles
+(appels Dio, mapping JSON, gestion d'erreur) et les intercepteurs
+entièrement non testés — **aucun test ne touchait jamais le vrai code
+réseau**, malgré tous les repositories déjà bien couverts côté « fakes ».
+Corrigé en ajoutant, avec le même `HttpClientAdapter` factice écrit à la
+main qu'au jour 10 :
+
+- `auth_interceptor_test.dart`, `retry_interceptor_test.dart` — les deux
+  intercepteurs Dio n'avaient jamais été exercés par aucun test.
+- `auth_candidat_repository_impl_test.dart`,
+  `candidatures_repository_impl_test.dart`,
+  `profil_candidat_repository_impl_test.dart` — les trois repositories
+  (sur quatre) qui n'avaient encore aucun test direct.
+- `resultat_card_test.dart` — le widget affichant un résultat trouvé
+  n'avait jamais été rendu par un test (`consultation_rapide_screen_test.dart`
+  n'exerce que le chemin « aucun résultat »).
+
+`FlutterSecureStorage.setMockInitialValues` (utilitaire `@visibleForTesting`
+du package, même principe que `SharedPreferences.setMockInitialValues`)
+permet de tester `AuthInterceptor` et les repositories qui touchent au
+token sans Keystore/Keychain réel.
+
+Gaps restants, non traités ici (effort/valeur jugé moindre) :
+`candidature_detail_sheet.dart`, `splash_screen.dart`,
+`profil_candidat/data/profil_candidat_mapper.dart` (couvert indirectement
+par les tests de repository ci-dessus, mais sans assertion dédiée sur
+chaque champ).
