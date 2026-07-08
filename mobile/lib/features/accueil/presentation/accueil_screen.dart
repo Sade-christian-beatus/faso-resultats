@@ -44,6 +44,11 @@ class AccueilScreen extends StatelessWidget {
                 onPressed: () => context.go(AppRoutes.authCandidat),
                 child: const Text('Créer ou accéder à mon espace candidat'),
               ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.consultationSms),
+                child: const Text('Pas de connexion ? Consulter par SMS'),
+              ),
             ],
           ),
         ),

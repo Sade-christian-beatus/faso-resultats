@@ -22,6 +22,11 @@ void main() {
           path: AppRoutes.authCandidat,
           builder: (context, state) => const Scaffold(body: Text('Auth')),
         ),
+        GoRoute(
+          path: AppRoutes.consultationSms,
+          builder: (context, state) =>
+              const Scaffold(body: Text('ConsultationSms')),
+        ),
       ],
     );
     return MaterialApp.router(routerConfig: router);
@@ -51,5 +56,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Auth'), findsOneWidget);
+  });
+
+  testWidgets('le CTA SMS navigue vers /consultation-sms', (tester) async {
+    await tester.pumpWidget(construireApp());
+
+    await tester.tap(find.text('Pas de connexion ? Consulter par SMS'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ConsultationSms'), findsOneWidget);
   });
 }
