@@ -39,3 +39,18 @@ class AppDurations {
   /// docs/PROFIL_CANDIDAT_UNIFIE.md § usage hors-ligne).
   static const Duration cacheResultats = Duration(hours: 24);
 }
+
+class AppInfo {
+  const AppInfo._();
+
+  /// Doit rester synchronisé manuellement avec `version:` dans pubspec.yaml.
+  /// Pas de dépendance `package_info_plus` pour une seule valeur statique
+  /// affichée à l'écran « À propos » (pas de sur-ingénierie, CLAUDE.md).
+  static const String version = '1.0.0+1';
+
+  /// Version du bandeau d'information affiché à la première ouverture
+  /// (jour 8) — distincte de celle du consentement à l'inscription candidat
+  /// (`_versionConsentementApdp`, auth_candidat_screen.dart) : ce bandeau
+  /// informe tout visiteur, y compris ceux qui ne créent jamais de compte.
+  static const String versionConsentementApp = 'v1';
+}

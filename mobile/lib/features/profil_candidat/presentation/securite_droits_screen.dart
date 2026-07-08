@@ -46,6 +46,12 @@ class SecuriteDroitsScreen extends ConsumerWidget {
           const _MesDroits(),
           const SizedBox(height: 16),
           OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.profil),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Rectifier mes données'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
             onPressed: () => _exporter(context, ref),
             icon: const Icon(Icons.download_outlined),
             label: const Text('Exporter mes données'),

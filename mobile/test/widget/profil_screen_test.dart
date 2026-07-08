@@ -167,6 +167,11 @@ void main() {
         construireApp(_FakeProfilCandidatRepository(), authRepository));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Se déconnecter'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Se déconnecter'));
     await tester.pumpAndSettle();
 

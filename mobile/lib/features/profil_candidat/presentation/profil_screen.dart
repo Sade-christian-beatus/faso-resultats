@@ -91,6 +91,13 @@ class ProfilScreen extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(AppRoutes.securiteDroits),
             ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Paramètres'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.parametres),
+            ),
             const SizedBox(height: 24),
             OutlinedButton(
               onPressed: () async {

@@ -1,13 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../config/constants.dart';
 import '../../../config/routes.dart';
 import '../../../config/theme.dart';
+import '../../../core/storage/prefs_storage.dart';
 
 /// Écran d'accueil : deux parcours possibles, sans hiérarchie imposée entre
 /// les deux (prompt § 1 — un candidat peut préférer rester anonyme).
-class AccueilScreen extends StatelessWidget {
+///
+/// Affiche aussi, à la toute première ouverture, un bandeau d'information
+/// versionné et horodaté (jour 8) — c'est le seul écran garanti d'être vu
+/// avant toute création de compte candidat (le splash redirige directement
+/// au dashboard si un token existe déjà).
+class AccueilScreen extends ConsumerStatefulWidget {
   const AccueilScreen({super.key});
+
+  @override
+  ConsumerState<AccueilScreen> createState() => _AccueilScreenState();
+}
+
+class _AccueilScreenState extends ConsumerState<AccueilScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _verifierConsentement());
+  }
+
+  Future<void> _verifierConsentement() async {
+    final prefs = ref.read(prefsStorageProvider);
+    if (prefs.versionConsentementAcceptee == AppInfo.versionConsentementApp) {
+      return;
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Avant de continuer'),
+        content: const Text(
+          'Faso Résultats vous permet de consulter vos résultats sans '
+          'créer de compte. Si vous créez un espace candidat, vos données '
+          '(CNIB, téléphone, date de naissance) sont chiffrées et utilisées '
+          'uniquement pour vérifier votre identité et vous notifier de vos '
+          'résultats. Vous pouvez les consulter ou les supprimer à tout '
+          'moment.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => context.push(AppRoutes.politiqueConfidentialite),
+            child: const Text('En savoir plus'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await ref
+                  .read(prefsStorageProvider)
+                  .enregistrerConsentement(AppInfo.versionConsentementApp);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text("J'ai compris"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

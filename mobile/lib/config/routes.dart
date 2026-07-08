@@ -10,6 +10,10 @@ import '../features/candidatures/presentation/dashboard_screen.dart';
 import '../features/consultation_rapide/presentation/consultation_rapide_screen.dart';
 import '../features/consultation_sms/presentation/consultation_sms_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/parametres/presentation/a_propos_screen.dart';
+import '../features/parametres/presentation/conditions_utilisation_screen.dart';
+import '../features/parametres/presentation/parametres_screen.dart';
+import '../features/parametres/presentation/politique_confidentialite_screen.dart';
 import '../features/profil_candidat/presentation/profil_screen.dart';
 import '../features/profil_candidat/presentation/securite_droits_screen.dart';
 
@@ -32,6 +36,10 @@ class AppRoutes {
   static const profil = '/profil';
   static const securiteDroits = '/profil/securite';
   static const notifications = '/profil/notifications';
+  static const parametres = '/profil/parametres';
+  static const politiqueConfidentialite = '/profil/parametres/confidentialite';
+  static const conditionsUtilisation = '/profil/parametres/conditions';
+  static const aPropos = '/profil/parametres/a-propos';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -79,6 +87,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.notifications,
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.parametres,
+        builder: (context, state) => const ParametresScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.politiqueConfidentialite,
+        builder: (context, state) => const PolitiqueConfidentialiteScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.conditionsUtilisation,
+        builder: (context, state) => const ConditionsUtilisationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aPropos,
+        builder: (context, state) => const AProposScreen(),
       ),
     ],
   );

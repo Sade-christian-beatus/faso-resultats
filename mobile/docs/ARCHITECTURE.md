@@ -96,7 +96,20 @@ levées.)*
 
 - `flutter_secure_storage` : uniquement le token de session candidat
   (Keystore Android / Keychain iOS).
-- `shared_preferences` : préférences non sensibles uniquement (langue).
+- `shared_preferences` : préférences non sensibles uniquement (langue,
+  version + horodatage du bandeau d'information de première ouverture —
+  jour 8, `PrefsStorage.enregistrerConsentement`).
+
+## Contenus légaux : rendus dans l'app, jamais liés vers une URL externe
+
+`Politique de confidentialité` et `Conditions d'utilisation` (jour 8) sont
+du texte statique dans l'app plutôt qu'un `url_launcher` vers une page web :
+aucune page publique n'est encore déployée pour ces documents. Lier vers une
+URL inexistante induirait l'utilisateur en erreur — même raisonnement que
+pour l'écran de consultation SMS gated (jour 7). Le contenu de la politique
+de confidentialité est un résumé en langage clair de
+`docs/APDP_PROFIL_CANDIDAT.md`, qui reste la source de référence technique
+à maintenir à jour en premier.
 
 ## Lint : very_good_analysis
 
