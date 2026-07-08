@@ -125,6 +125,11 @@ Widget construireApp(
             path: '/profil/securite',
             builder: (context, state) => const Scaffold(body: Text('Securite')),
           ),
+          GoRoute(
+            path: '/profil/notifications',
+            builder: (context, state) =>
+                const Scaffold(body: Text('Écran Notifications')),
+          ),
         ],
       ),
     ),
@@ -167,5 +172,17 @@ void main() {
 
     expect(authRepository.deconnexionAppelee, isTrue);
     expect(find.text('Accueil'), findsOneWidget);
+  });
+
+  testWidgets("taper sur Notifications navigue vers l'écran dédié",
+      (tester) async {
+    await tester.pumpWidget(construireApp(
+        _FakeProfilCandidatRepository(), _FakeAuthCandidatRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Notifications'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Écran Notifications'), findsOneWidget);
   });
 }

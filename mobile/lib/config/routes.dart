@@ -8,6 +8,7 @@ import '../features/auth_candidat/presentation/auth_candidat_screen.dart';
 import '../features/candidatures/presentation/ajout_candidature_screen.dart';
 import '../features/candidatures/presentation/dashboard_screen.dart';
 import '../features/consultation_rapide/presentation/consultation_rapide_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/profil_candidat/presentation/profil_screen.dart';
 import '../features/profil_candidat/presentation/securite_droits_screen.dart';
 
@@ -28,6 +29,7 @@ class AppRoutes {
   static const ajoutCandidature = '/dashboard/ajouter';
   static const profil = '/profil';
   static const securiteDroits = '/profil/securite';
+  static const notifications = '/profil/notifications';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -67,6 +69,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.securiteDroits,
         builder: (context, state) => const SecuriteDroitsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
   );

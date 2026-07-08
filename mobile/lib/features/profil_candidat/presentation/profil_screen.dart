@@ -79,6 +79,13 @@ class ProfilScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             ListTile(
               contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text('Notifications'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.notifications),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.shield_outlined),
               title: const Text('Sécurité et mes droits'),
               trailing: const Icon(Icons.chevron_right),
