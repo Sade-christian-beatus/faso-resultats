@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/routes.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'auth_candidat_providers.dart';
@@ -74,8 +74,8 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 if (validation != null && validation.hasError) ...[
                   const SizedBox(height: 8),
                   Text(
-                    validation.error is Failure
-                        ? (validation.error! as Failure).message
+                    validation.error is AppException
+                        ? (validation.error! as AppException).message
                         : 'Code invalide ou expiré. Veuillez réessayer.',
                     style: const TextStyle(color: Colors.red, fontSize: 13),
                   ),

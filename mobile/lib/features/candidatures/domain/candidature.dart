@@ -37,6 +37,7 @@ class Candidature {
     this.dernierResultatStatut,
     this.dernierResultatPhase,
     this.dernierResultatPublieAt,
+    this.codeOtpDebug,
   });
 
   final String id;
@@ -48,6 +49,11 @@ class Candidature {
   final String? dernierResultatStatut;
   final String? dernierResultatPhase;
   final DateTime? dernierResultatPublieAt;
+
+  /// Non persisté côté backend : renvoyé uniquement sur la réponse de
+  /// création, et seulement hors production (comme
+  /// `InscriptionResponse.codeOtpDebug`).
+  final String? codeOtpDebug;
 
   /// Le mécanisme 3 (fallback OTP) est en attente de confirmation : voir
   /// backend `create_candidature` — statut EN_ATTENTE + méthode OTP_SMS.

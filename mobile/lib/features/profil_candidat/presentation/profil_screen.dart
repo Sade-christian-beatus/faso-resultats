@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../config/routes.dart';
 import '../../../config/theme.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
 import '../../auth_candidat/presentation/auth_candidat_providers.dart';
@@ -22,8 +22,9 @@ class ProfilScreen extends ConsumerWidget {
       body: profil.when(
         loading: () => const LoadingIndicator(),
         error: (erreur, _) => ErrorView(
-          message:
-              erreur is Failure ? erreur.message : 'Une erreur est survenue.',
+          message: erreur is AppException
+              ? erreur.message
+              : 'Une erreur est survenue.',
           onRetry: () => ref.invalidate(profilCandidatNotifierProvider),
         ),
         data: (p) => ListView(

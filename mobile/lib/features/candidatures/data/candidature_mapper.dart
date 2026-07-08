@@ -17,6 +17,7 @@ extension CandidatureMapper on Map<String, dynamic> {
       dernierResultatPhase: this['dernier_resultat_phase'] as String?,
       dernierResultatPublieAt:
           publieAt == null ? null : DateTime.parse(publieAt),
+      codeOtpDebug: this['code_otp_debug'] as String?,
     );
   }
 }

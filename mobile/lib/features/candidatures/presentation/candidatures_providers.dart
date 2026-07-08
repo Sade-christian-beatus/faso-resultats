@@ -30,3 +30,45 @@ class Candidatures extends _$Candidatures {
     await rafraichir();
   }
 }
+
+/// État de l'ajout d'une candidature (jour 5) : soumission puis, le cas
+/// échéant, confirmation du mécanisme 3 (fallback OTP).
+@riverpod
+class AjoutCandidature extends _$AjoutCandidature {
+  @override
+  AsyncValue<Candidature>? build() => null;
+
+  Future<void> creer({
+    required String administrationId,
+    required String examenId,
+    required String numeroRecepisse,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(candidaturesRepositoryProvider).creer(
+            administrationId: administrationId,
+            examenId: examenId,
+            numeroRecepisse: numeroRecepisse,
+          ),
+    );
+    if (state?.hasValue ?? false) {
+      await ref.read(candidaturesProvider.notifier).rafraichir();
+    }
+  }
+
+  Future<void> confirmerOtp(
+      {required String candidatureId, required String code}) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(candidaturesRepositoryProvider).confirmerOtp(
+            candidatureId: candidatureId,
+            code: code,
+          ),
+    );
+    if (state?.hasValue ?? false) {
+      await ref.read(candidaturesProvider.notifier).rafraichir();
+    }
+  }
+
+  void reinitialiser() => state = null;
+}

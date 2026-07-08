@@ -5,6 +5,7 @@ import '../core/storage/secure_storage.dart';
 import '../features/accueil/presentation/accueil_screen.dart';
 import '../features/accueil/presentation/splash_screen.dart';
 import '../features/auth_candidat/presentation/auth_candidat_screen.dart';
+import '../features/candidatures/presentation/ajout_candidature_screen.dart';
 import '../features/candidatures/presentation/dashboard_screen.dart';
 import '../features/consultation_rapide/presentation/consultation_rapide_screen.dart';
 import '../features/profil_candidat/presentation/profil_screen.dart';
@@ -24,6 +25,7 @@ class AppRoutes {
   static const consultationRapide = '/consultation-rapide';
   static const authCandidat = '/auth';
   static const dashboard = '/dashboard';
+  static const ajoutCandidature = '/dashboard/ajouter';
   static const profil = '/profil';
   static const securiteDroits = '/profil/securite';
 }
@@ -53,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.dashboard,
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ajoutCandidature,
+        builder: (context, state) => const AjoutCandidatureScreen(),
       ),
       GoRoute(
         path: AppRoutes.profil,

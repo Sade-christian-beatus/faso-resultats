@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/routes.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
@@ -44,11 +44,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutes.ajoutCandidature),
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter'),
+      ),
       body: candidatures.when(
         loading: () => const LoadingIndicator(),
         error: (erreur, _) => ErrorView(
-          message:
-              erreur is Failure ? erreur.message : 'Une erreur est survenue.',
+          message: erreur is AppException
+              ? erreur.message
+              : 'Une erreur est survenue.',
           onRetry: () => ref.read(candidaturesProvider.notifier).rafraichir(),
         ),
         data: (liste) {

@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../config/routes.dart';
 import '../../../config/theme.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
@@ -136,7 +136,7 @@ class _JournalAcces extends ConsumerWidget {
     return export.when(
       loading: () => const LoadingIndicator(),
       error: (erreur, _) => ErrorView(
-        message: erreur is Failure
+        message: erreur is AppException
             ? erreur.message
             : 'Impossible de charger le journal.',
       ),

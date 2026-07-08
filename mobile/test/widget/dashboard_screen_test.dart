@@ -51,6 +51,21 @@ class _FakeCandidaturesRepository implements CandidaturesRepository {
   Future<List<Candidature>> lister() async => candidatures;
 
   @override
+  Future<Candidature> creer({
+    required String administrationId,
+    required String examenId,
+    required String numeroRecepisse,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<Candidature> confirmerOtp({
+    required String candidatureId,
+    required String code,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
   Future<void> retirer(String candidatureId) async {
     retireeAppelee = true;
     candidatures = candidatures.where((c) => c.id != candidatureId).toList();

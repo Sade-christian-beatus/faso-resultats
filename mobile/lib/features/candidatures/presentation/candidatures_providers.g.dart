@@ -41,5 +41,24 @@ final candidaturesProvider =
 );
 
 typedef _$Candidatures = AutoDisposeAsyncNotifier<List<Candidature>>;
+String _$ajoutCandidatureHash() => r'2a29c18b7e6be07adc00370c94b31c261da2a73b';
+
+/// État de l'ajout d'une candidature (jour 5) : soumission puis, le cas
+/// échéant, confirmation du mécanisme 3 (fallback OTP).
+///
+/// Copied from [AjoutCandidature].
+@ProviderFor(AjoutCandidature)
+final ajoutCandidatureProvider = AutoDisposeNotifierProvider<AjoutCandidature,
+    AsyncValue<Candidature>?>.internal(
+  AjoutCandidature.new,
+  name: r'ajoutCandidatureProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$ajoutCandidatureHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$AjoutCandidature = AutoDisposeNotifier<AsyncValue<Candidature>?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

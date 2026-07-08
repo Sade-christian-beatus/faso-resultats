@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/theme.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/operateur_detector.dart';
 import '../../../core/utils/validators.dart';
@@ -78,8 +78,8 @@ class _AuthCandidatScreenState extends ConsumerState<AuthCandidatScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
-                    envoi.error is Failure
-                        ? (envoi.error! as Failure).message
+                    envoi.error is AppException
+                        ? (envoi.error! as AppException).message
                         : 'Une erreur est survenue. Veuillez réessayer.',
                     style:
                         const TextStyle(color: AppColors.erreur, fontSize: 13),

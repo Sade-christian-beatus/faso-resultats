@@ -26,6 +26,47 @@ class CandidaturesRepositoryImpl implements CandidaturesRepository {
   }
 
   @override
+  Future<Candidature> creer({
+    required String administrationId,
+    required String examenId,
+    required String numeroRecepisse,
+  }) async {
+    try {
+      final reponse = await _dio.post<Map<String, dynamic>>(
+        ApiPaths.candidatCandidatures,
+        data: {
+          'administration_id': administrationId,
+          'examen_id': examenId,
+          'numero_recepisse': numeroRecepisse,
+        },
+      );
+      return reponse.data!.versCandidature();
+    } on DioException catch (erreur) {
+      _lancerExceptionAdaptee(erreur);
+    }
+  }
+
+  @override
+  Future<Candidature> confirmerOtp({
+    required String candidatureId,
+    required String code,
+  }) async {
+    try {
+      final reponse = await _dio.post<Map<String, dynamic>>(
+        ApiPaths.candidatureConfirmerOtp(candidatureId),
+        data: {'code': code},
+      );
+      return reponse.data!.versCandidature();
+    } on DioException catch (erreur) {
+      if (erreur.response?.statusCode == 401) {
+        throw const AuthentificationException(
+            'Code invalide ou expiré. Veuillez réessayer.');
+      }
+      _lancerExceptionAdaptee(erreur);
+    }
+  }
+
+  @override
   Future<void> retirer(String candidatureId) async {
     try {
       await _dio.delete<void>(ApiPaths.candidature(candidatureId));
@@ -43,8 +84,11 @@ class CandidaturesRepositoryImpl implements CandidaturesRepository {
         'Connexion impossible. Vérifiez votre accès internet et réessayez.',
       );
     }
+    final detail = erreur.response?.data is Map
+        ? (erreur.response!.data as Map)['detail'] as String?
+        : null;
     throw ServerException(
-      'Une erreur est survenue. Veuillez réessayer.',
+      detail ?? 'Une erreur est survenue. Veuillez réessayer.',
       statusCode: erreur.response?.statusCode,
     );
   }

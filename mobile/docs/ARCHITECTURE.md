@@ -71,12 +71,26 @@ Un seul client Dio (`lib/core/network/dio_client.dart`), avec :
 (gestion hors-ligne) plutôt qu'au jour 1, pour ne pas construire une couche
 de cache avant d'avoir des données réelles à mettre en cache.
 
-## Erreurs : exceptions (data) → Failure (domain/presentation)
+## Erreurs : exceptions typées, propagées telles quelles jusqu'à la presentation
 
 Pas de type `Either`/`Result` générique (pas de dépendance `dartz`/`fpdart`) :
-un simple `try/catch` par repository suffit à ce volume de code, et un
-sealed class `Failure` (voir `lib/core/errors/failures.dart`) porte déjà un
-message prêt à afficher, en français, jamais un code d'erreur brut.
+un simple `try/catch` par repository suffit à ce volume de code. Les
+repositories lèvent des exceptions typées (`ServerException`,
+`ReseauException`, `AuthentificationException`, `CacheException` — voir
+`lib/core/errors/exceptions.dart`), toutes porteuses d'un message déjà en
+français, prêt à afficher. Les notifiers Riverpod codegen les laissent
+remonter sans les intercepter : elles arrivent telles quelles dans
+`AsyncValue.error`, que la presentation lit via l'interface commune
+`AppException` (`erreur is AppException ? erreur.message : '...'`).
+
+*(Correction jour 5 : les 4 exceptions implémentaient initialement
+`Exception` seul, et un sealed class `Failure` distinct — jamais réellement
+levé par aucun repository — servait de test dans 6 écrans. Le test
+`is Failure` était donc toujours faux et chaque écran retombait sur son
+message générique de repli, y compris pour des erreurs réseau où le message
+réel était plus informatif. `Failure`/`failures.dart` supprimés, remplacés
+par l'interface `AppException` réellement implémentée par les exceptions
+levées.)*
 
 ## Stockage
 

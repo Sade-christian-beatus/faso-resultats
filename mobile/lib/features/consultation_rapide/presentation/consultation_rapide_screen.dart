@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/theme.dart';
-import '../../../core/errors/failures.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../core/widgets/empty_view.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
@@ -156,7 +156,7 @@ class _ZoneResultats extends StatelessWidget {
     return recherche!.when(
       loading: () => const LoadingIndicator(),
       error: (erreur, _) => ErrorView(
-        message: erreur is Failure
+        message: erreur is AppException
             ? erreur.message
             : 'Une erreur est survenue. Veuillez réessayer.',
       ),
