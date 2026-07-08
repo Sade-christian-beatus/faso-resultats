@@ -93,6 +93,11 @@ async def test_recherche_resultat_trouve(client: AsyncClient, admin_headers: dic
     # Données sensibles non exposées publiquement.
     assert "date_naissance" not in body[0]
     assert "lieu_naissance" not in body[0]
+    # Phase/rang exposés (nécessaires à l'affichage "Rang / Phase / Prochaine
+    # étape" côté clients, ex. app mobile) — RESULTAT_UNIQUE par défaut pour un
+    # examen scolaire simple.
+    assert body[0]["phase"] == "RESULTAT_UNIQUE"
+    assert body[0]["phase_suivante_attendue"] is None
 
 
 @pytest.mark.asyncio
@@ -159,3 +164,32 @@ async def test_recherche_resultat_utilise_le_cache(
     )
 
     assert premiere.json() == deuxieme.json()
+
+
+@pytest.mark.asyncio
+async def test_liste_administrations_publiques_expose_les_champs_utiles(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """admin_headers crée une administration en statut PILOTE (défaut du modèle) : elle
+    doit apparaître dans la liste publique, sans exposer les champs de contact interne."""
+    response = await client.get("/api/v1/public/administrations")
+
+    assert response.status_code == 200
+    administrations = response.json()
+    assert len(administrations) >= 1
+    premiere = administrations[0]
+    assert "nom_officiel" in premiere
+    assert "sigle" in premiere
+    assert "contact_referent_email" not in premiere
+
+
+@pytest.mark.asyncio
+async def test_droits_candidat_expose_un_contact_et_les_droits(client: AsyncClient) -> None:
+    """Canal de contact dédié (docs/APDP_PROFIL_CANDIDAT.md § 8) pour les demandes qui
+    ne passent pas par les endpoints candidat en libre-service."""
+    response = await client.get("/api/v1/public/droits-candidat")
+
+    assert response.status_code == 200
+    corps = response.json()
+    assert "@" in corps["contact_dpo"]
+    assert len(corps["droits"]) >= 4

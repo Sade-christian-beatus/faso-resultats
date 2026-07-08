@@ -1,0 +1,33 @@
+pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        file("local.properties").withInputStream { properties.load(it) }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+        return flutterSdkPath
+    }()
+
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    // AGP 8.1.0 + Gradle 8.3 no longer met Flutter's minimum Gradle version
+    // (>= 8.7.0, enforced by dev.flutter.flutter-gradle-plugin as of this
+    // Flutter version) -- CI build failure caught 2026-07-08. Bumped to a
+    // pair within AGP 8.7's documented supported Gradle range (8.9-8.11,
+    // see gradle-wrapper.properties) rather than jumping to AGP 9+, which a
+    // fresh `flutter create` with this same Flutter version confirmed only
+    // reads the newer Kotlin DSL (build.gradle.kts) -- this project still
+    // uses the classic Groovy build.gradle.
+    id "com.android.application" version "8.7.0" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+}
+
+include ":app"

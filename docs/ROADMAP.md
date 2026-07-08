@@ -95,13 +95,34 @@ pas mise en file).
 1. **Validation juridique de `docs/APDP.md` et `docs/APDP_PROFIL_CANDIDAT.md`** —
    plusieurs points (base légale, responsable de traitement, durée de conservation)
    explicitement marqués comme non tranchés.
-2. **Tests de charge réalistes** avant un vrai jour de proclamation (CLAUDE.md exige
-   <200 ms en cache chaud ; jamais mesuré sous charge réaliste de centaines de
-   milliers de requêtes).
+2. **Tests de charge à grande échelle** — première mesure réelle effectuée le
+   2026-07-07 (client `httpx` async local contre un serveur `uvicorn` mono-processus,
+   sur `GET /api/v1/public/results` en cache chaud) :
+
+   | Concurrence client | Débit | p50 | p95 | p99 |
+   |---|---|---|---|---|
+   | 10 | 576 req/s | 10 ms | 48 ms | 119 ms |
+   | 25 | 404 req/s | 40 ms | 181 ms | 287 ms |
+   | 50 | 255-315 req/s | 105-135 ms | 450-575 ms | 800-940 ms |
+
+   L'objectif <200 ms est tenu à concurrence modérée (10-25 clients) mais dépassé au
+   p95/p99 à 50. Point important : le processus `uvicorn` restait à ~23-30% CPU même
+   au pic — ce n'est **pas** le serveur qui sature, c'est le générateur de charge
+   (client asyncio mono-processus sur la même machine, seul cœur disponible pour lui).
+   Le débit qui *baisse* quand la concurrence *augmente* (576→255 req/s) est la
+   signature classique d'un client saturé, pas d'un serveur saturé. **Donc toujours
+   pas de mesure fiable de la vraie limite serveur** — il faut un outil de charge
+   dédié (k6, locust, plusieurs machines clientes) contre un déploiement réel avant un
+   vrai jour de proclamation. Ce qui est acquis : le chemin cache chaud fonctionne
+   sans erreur sous charge, et le serveur a manifestement de la marge CPU non utilisée
+   à explorer (ex. `uvicorn --workers N`).
 3. **Mise en production réelle** : hébergement burkinabè (souveraineté des données),
    HTTPS, rotation des mots de passe par défaut créés par `seed.py`.
 4. **Calibrage OCR** : aucun spécimen de PV scanné/photo n'est disponible actuellement
    pour calibrer le parser OCR — à refaire dès qu'un nouveau spécimen sera fourni.
+5. **Intégration SMS réelle (Orange Business)** : nécessite un contrat et des
+   identifiants API que ce projet n'a pas encore — `NotificationEngine.envoyer_sms`
+   reste un stub journalisé en attendant.
 
 Chaque phase reste conditionnée à une demande explicite avant de démarrer le code,
 conformément à `CLAUDE.md`, même si les choix techniques ci-dessus sont déjà actés.

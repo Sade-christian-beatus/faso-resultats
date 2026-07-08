@@ -97,3 +97,48 @@ class CandidatureOut(BaseModel):
 
 class CandidatureOtpConfirmRequest(BaseModel):
     code: str = Field(min_length=6, max_length=6)
+
+
+class CandidatureExport(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    administration_id: uuid.UUID
+    examen_id: uuid.UUID
+    numero_recepisse: str
+    statut_verification: StatutVerificationCandidature
+    methode_verification: MethodeVerification | None
+    date_verification: datetime | None
+    dernier_resultat_statut: str | None
+    dernier_resultat_phase: str | None
+    dernier_resultat_publie_at: datetime | None
+    created_at: datetime
+
+
+class JournalEntreeExport(BaseModel):
+    model_config = {"from_attributes": True}
+
+    action: str
+    ip: str | None
+    timestamp: datetime
+
+
+class ProfilCandidatExport(BaseModel):
+    """Droit à la portabilité (docs/APDP_PROFIL_CANDIDAT.md § 8) : l'intégralité des
+    données du profil connecté, dans un format structuré et exploitable — contrairement
+    à `ProfilCandidatOut` (§ Droit d'accès), qui expose volontairement moins de champs
+    pour l'usage courant du dashboard."""
+
+    id: uuid.UUID
+    numero_cnib: str
+    nom_complet: str
+    date_naissance: str
+    telephone: str
+    email: str | None
+    statut: str
+    consentement_apdp_date: datetime
+    consentement_apdp_version: str
+    created_at: datetime
+    derniere_connexion: datetime | None
+    candidatures: list[CandidatureExport]
+    journal: list[JournalEntreeExport]

@@ -1,0 +1,4 @@
+storePassword=changeme
+keyPassword=changeme
+keyAlias=upload
+storeFile=/absolute/path/to/faso-resultats-upload-keystore.jks

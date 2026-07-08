@@ -197,15 +197,20 @@ Limites connues, à traiter avant une mise en production réelle :
 
 - **Droit d'accès** : `GET /api/v1/candidat/me`.
 - **Droit de rectification** : `PATCH /api/v1/candidat/me` (préférences,
-  email) — les données d'identité (CNIB, nom, date de naissance) ne sont
-  volontairement pas modifiables par cette route ; leur correction
-  nécessiterait un canal de support dédié (⚠️ non implémenté).
+  email) — les données d'identité (CNIB, nom, date de naissance) restent
+  volontairement non modifiables par cette route ; leur correction passe par
+  le canal de contact ci-dessous.
 - **Droit à l'effacement** : `DELETE /api/v1/candidat/me` (§5).
-- **Droit à la portabilité** : ⚠️ non implémenté à ce jour (pas d'export des
-  données du profil dans un format structuré).
-- ⚠️ Aucun canal de contact dédié aux demandes d'exercice de droits qui ne
-  passeraient pas par ces endpoints (ex. demande formulée par une tierce
-  personne) — à prévoir avant mise en production.
+- **Droit à la portabilité** : `GET /api/v1/candidat/me/export` — renvoie le
+  profil déchiffré (identité, candidatures, journal de consultation) dans un
+  format JSON structuré, distinct de `GET /me` qui n'expose que les champs
+  utiles au dashboard courant.
+- **Canal de contact dédié** : `GET /api/v1/public/droits-candidat` (endpoint
+  public, non authentifié) renvoie l'email de contact DPO
+  (`candidat_dpo_contact_email`, ⚠️ valeur placeholder à remplacer par une
+  vraie adresse avant mise en production) et la liste des droits exerçables,
+  pour les demandes qui ne passent pas par les endpoints en libre-service
+  ci-dessus (ex. rectification d'identité, demande formulée par un tiers).
 
 ---
 
@@ -221,5 +226,5 @@ Limites connues, à traiter avant une mise en production réelle :
    sur l'ajout de candidature via le mécanisme 3).
 3. Planifier `purge_candidats.py` via cron une fois l'infrastructure de
    production choisie (§5).
-4. Prévoir un canal de contact dédié aux demandes d'exercice de droits qui
-   ne passeraient pas par les endpoints existants (§8).
+4. Remplacer `candidat_dpo_contact_email` (placeholder) par une vraie adresse
+   de contact avant mise en production (§8).

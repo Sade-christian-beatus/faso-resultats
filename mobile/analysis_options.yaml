@@ -1,0 +1,24 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - lib/**/*.g.dart
+    - lib/**/*.freezed.dart
+
+linter:
+  rules:
+    # Le code métier reste en français (nommage), conforme à CLAUDE.md du backend.
+    public_member_api_docs: false
+    # Imports relatifs à l'intérieur du package : idiomatique en Flutter, plus
+    # lisible que `package:faso_resultats_mobile/...` pour un fichier voisin.
+    always_use_package_imports: false
+    # dart format (80 colonnes, non configurable dans cette version du SDK)
+    # fait déjà ce travail ; cette règle en double n'apporte rien.
+    lines_longer_than_80_chars: false
+    # pubspec.yaml est organisé par groupe fonctionnel commenté (réseau,
+    # stockage, notifications...), plus lisible que l'ordre alphabétique strict.
+    sort_pub_dependencies: false
+    # Entre en conflit direct avec dart format, qui recollapse les appels
+    # courts sur une ligne : cette règle réclamerait alors une virgule
+    # finale sur un appel que le formatter vient de rendre mono-ligne.
+    require_trailing_commas: false

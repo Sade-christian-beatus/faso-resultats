@@ -18,8 +18,9 @@ commité) :
 
 | Variable | Rôle | Génération |
 |---|---|---|
-| `JWT_SECRET_KEY` | Signature des tokens admin | Chaîne aléatoire quelconque |
+| `JWT_SECRET_KEY` | Signature des tokens admin et candidat | Chaîne aléatoire quelconque |
 | `CANDIDAT_ENCRYPTION_KEY` | Chiffrement au repos (CNIB, téléphone, date de naissance du profil candidat) | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `CANDIDAT_HASH_PEPPER` | Pepper des hash de recherche (CNIB, téléphone) | Chaîne aléatoire quelconque |
 
 `CANDIDAT_ENCRYPTION_KEY` doit être une **vraie clé Fernet** (32 octets
 base64 url-safe) : sans elle, ou avec une valeur invalide, `app.config.get_settings()`
@@ -27,6 +28,14 @@ lève une `RuntimeError` explicite au premier import de l'application (donc
 avant même de démarrer `uvicorn`, `alembic` ou `seed.py`). Ne jamais réutiliser
 la même clé entre environnements (dev/staging/prod), ne jamais la committer en
 clair.
+
+`JWT_SECRET_KEY` et `CANDIDAT_HASH_PEPPER` ont une valeur par défaut de
+développement (`change-me-in-production`, publique dans le code source) pour
+que l'app démarre sans `.env` local. **Ce défaut est refusé si
+`ENVIRONMENT=production`** (audit 2026-07-08, `app.config._valider_secrets_production`)
+: un déploiement production qui oublierait de les surcharger ne démarre pas
+plutôt que de tourner silencieusement avec des secrets publics (tokens
+forgeables, pepper de hash connu).
 
 ## Démarrage rapide (Docker)
 

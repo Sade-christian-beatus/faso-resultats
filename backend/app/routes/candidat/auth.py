@@ -11,14 +11,21 @@ from app.core.deps import get_current_profil_candidat
 from app.core.rate_limit import limiter
 from app.core.security import hash_deterministe
 from app.database import get_db
-from app.models.journal_consultation_profil import ActionJournalConsultation
+from app.models.candidature import Candidature
+from app.models.journal_consultation_profil import (
+    ActionJournalConsultation,
+    JournalConsultationProfil,
+)
 from app.models.profil_candidat import ProfilCandidat, StatutProfilCandidat
 from app.schemas.candidat import (
+    CandidatureExport,
     InscriptionRequest,
     InscriptionResponse,
+    JournalEntreeExport,
     LoginRequest,
     LoginResponse,
     OtpVerifyRequest,
+    ProfilCandidatExport,
     ProfilCandidatOut,
     ProfilCandidatUpdate,
     SessionResponse,
@@ -196,6 +203,63 @@ async def me(
     await journaliser(db, profil.id, ActionJournalConsultation.VIEW_DASHBOARD, request)
     await db.commit()
     return profil
+
+
+@router.get(
+    "/me/export",
+    response_model=ProfilCandidatExport,
+    summary="Exporter mes données (droit à la portabilité)",
+    description="Renvoie l'intégralité des données du profil connecté (identité, "
+    "candidatures, journal de consultation) dans un format structuré — droit à la "
+    "portabilité (docs/APDP_PROFIL_CANDIDAT.md § 8), distinct de GET /me qui n'expose "
+    "que les champs utiles au dashboard courant.",
+)
+async def export_me(
+    request: Request,
+    profil: ProfilCandidat = Depends(get_current_profil_candidat),
+    db: AsyncSession = Depends(get_db),
+) -> ProfilCandidatExport:
+    candidatures = (
+        (
+            await db.execute(
+                select(Candidature)
+                .where(Candidature.profil_candidat_id == profil.id)
+                .order_by(Candidature.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    journal = (
+        (
+            await db.execute(
+                select(JournalConsultationProfil)
+                .where(JournalConsultationProfil.profil_candidat_id == profil.id)
+                .order_by(JournalConsultationProfil.timestamp.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    export = ProfilCandidatExport(
+        id=profil.id,
+        numero_cnib=profil.numero_cnib,
+        nom_complet=profil.nom_complet,
+        date_naissance=profil.date_naissance,
+        telephone=profil.telephone,
+        email=profil.email,
+        statut=profil.statut.value,
+        consentement_apdp_date=profil.consentement_apdp_date,
+        consentement_apdp_version=profil.consentement_apdp_version,
+        created_at=profil.created_at,
+        derniere_connexion=profil.derniere_connexion,
+        candidatures=[CandidatureExport.model_validate(c) for c in candidatures],
+        journal=[JournalEntreeExport.model_validate(j) for j in journal],
+    )
+    await journaliser(db, profil.id, ActionJournalConsultation.EXPORT_DONNEES, request)
+    await db.commit()
+    return export
 
 
 @router.patch(
