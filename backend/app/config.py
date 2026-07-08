@@ -8,6 +8,17 @@ _MESSAGE_CLE_CHIFFREMENT_INVALIDE = (
     'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
 )
 
+# Valeurs par défaut de développement, publiques dans le code source : jamais
+# acceptables en production (audit 2026-07-08). Contrairement à
+# candidat_encryption_key, ces deux champs ont une valeur par défaut
+# fonctionnelle (l'app démarre sans .env local) — le risque est donc qu'un
+# déploiement production oublie de les surcharger et démarre quand même,
+# silencieusement vulnérable (JWT forgeables, pepper de hash public).
+_VALEURS_DEV_INSECURES = {
+    "jwt_secret_key": "change-me-in-production",
+    "candidat_hash_pepper": "change-me-in-production",
+}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -70,8 +81,26 @@ def _valider_cle_chiffrement_candidat(cle: str | None) -> None:
         raise RuntimeError(_MESSAGE_CLE_CHIFFREMENT_INVALIDE) from exc
 
 
+def _valider_secrets_production(settings: Settings) -> None:
+    if settings.environment != "production":
+        return
+    champs_non_surcharges = [
+        champ
+        for champ, defaut in _VALEURS_DEV_INSECURES.items()
+        if getattr(settings, champ) == defaut
+    ]
+    if champs_non_surcharges:
+        noms = ", ".join(champ.upper() for champ in champs_non_surcharges)
+        raise RuntimeError(
+            f"ENVIRONMENT=production mais {noms} garde sa valeur de développement "
+            "par défaut (publique dans le code source). Définir une vraie valeur "
+            "secrète via les variables d'environnement avant de démarrer."
+        )
+
+
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
     _valider_cle_chiffrement_candidat(settings.candidat_encryption_key)
+    _valider_secrets_production(settings)
     return settings
