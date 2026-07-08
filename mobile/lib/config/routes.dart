@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/storage/secure_storage.dart';
 import '../features/accueil/presentation/accueil_screen.dart';
 import '../features/accueil/presentation/splash_screen.dart';
+import '../features/auth_candidat/presentation/auth_candidat_screen.dart';
 import '../features/consultation_rapide/presentation/consultation_rapide_screen.dart';
 
 /// go_router plutôt qu'auto_route (choix structurant) : déclaratif, sans
@@ -46,8 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.authCandidat,
-        builder: (context, state) =>
-            const _EcranAVenir(titre: 'Espace candidat'),
+        builder: (context, state) => const AuthCandidatScreen(),
       ),
       GoRoute(
         path: AppRoutes.dashboard,
