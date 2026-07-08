@@ -1,8 +1,9 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models import TypeExamen
+from app.models import PhasePublication, TypeExamen
 
 
 class AdministrationPublicOut(BaseModel):
@@ -36,6 +37,14 @@ class ResultatPublicOut(BaseModel):
     decision: str
     moyenne: float | None
     etablissement: str | None
+    # Concours à phases multiples (docs/CONTEXTE_METIER.md § 2.4) : présents sur le
+    # modèle depuis la Phase 1 mais jamais exposés publiquement jusqu'ici — nécessaires
+    # pour l'affichage "Rang / Phase / Prochaine étape" attendu côté clients (mobile).
+    rang_numerique: int | None
+    rang_affiche: str | None
+    phase: PhasePublication
+    phase_suivante_attendue: PhasePublication | None
+    date_publication_phase: datetime | None
 
 
 class DroitsCandidatOut(BaseModel):

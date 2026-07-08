@@ -93,6 +93,11 @@ async def test_recherche_resultat_trouve(client: AsyncClient, admin_headers: dic
     # Données sensibles non exposées publiquement.
     assert "date_naissance" not in body[0]
     assert "lieu_naissance" not in body[0]
+    # Phase/rang exposés (nécessaires à l'affichage "Rang / Phase / Prochaine
+    # étape" côté clients, ex. app mobile) — RESULTAT_UNIQUE par défaut pour un
+    # examen scolaire simple.
+    assert body[0]["phase"] == "RESULTAT_UNIQUE"
+    assert body[0]["phase_suivante_attendue"] is None
 
 
 @pytest.mark.asyncio
