@@ -18,7 +18,8 @@ Le prompt de départ supposait plusieurs choses que le backend ne fait pas.
 | Pas d'endpoint pour envoyer un résultat par SMS à un numéro arbitraire (hors compte candidat) | Bouton « Recevoir par SMS » présent dans l'UI (carte résultat) mais gated « bientôt disponible » (jour 2) — dépend de l'intégration SMS réelle, non démarrée |
 | Aucune infrastructure push (FCM) côté backend : pas de modèle, pas d'endpoint d'enregistrement de token | SDK FCM intégré côté client (jour 6), écrans gated « bientôt disponible » — aucun appel réseau vers un endpoint qui n'existe pas |
 | SMS jamais connecté à un vrai opérateur (stub backend uniquement) | Écran « Consulter par SMS » gated « bientôt disponible » (jour 7) |
-| Pas de liste de sessions actives / révocation côté candidat (JWT sans état) | Fonctionnalité non construite — noté comme limite connue |
+| Pas de liste de sessions actives / révocation côté candidat (JWT sans état) | Fonctionnalité non construite — écran « Sécurité » l'indique explicitement (jour 4) plutôt que de l'omettre silencieusement |
+| Le prompt attend « édition téléphone » sur l'écran profil — `ProfilCandidatUpdate` (backend) n'accepte que `email`/`notifications_*`, l'identité (téléphone, CNIB, nom, date de naissance) est volontairement immuable (docs/APDP_PROFIL_CANDIDAT.md § 8) | L'app suit l'API réelle : téléphone affiché en lecture seule (badge vérifié), seuls email et préférences de notification sont éditables (jour 4) |
 
 ## Consultation rapide (sans compte)
 
@@ -44,6 +45,7 @@ Le prompt de départ supposait plusieurs choses que le backend ne fait pas.
 | Modifier préférences | `PATCH /api/v1/candidat/me` |
 | Supprimer le compte | `DELETE /api/v1/candidat/me` |
 | Exporter mes données | `GET /api/v1/candidat/me/export` |
+| Journal d'accès (écran Sécurité) | `GET /api/v1/candidat/me/export` (champ `journal`, pas d'endpoint dédié) |
 | Liste des candidatures | `GET /api/v1/candidat/candidatures` |
 | Mes droits (contact DPO) | `GET /api/v1/public/droits-candidat` |
 

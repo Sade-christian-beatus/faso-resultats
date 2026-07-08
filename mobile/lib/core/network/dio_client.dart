@@ -7,6 +7,7 @@ import '../../config/env.dart';
 import '../storage/secure_storage.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/retry_interceptor.dart';
+import 'session_expiree.dart';
 
 /// Client HTTP unique de l'application. `onNonAutorise` est branché depuis
 /// `app.dart` pour forcer une déconnexion sur 401 sans que cette couche
@@ -32,5 +33,10 @@ Dio creerDioClient(SecureStorage secureStorage,
 }
 
 final dioProvider = Provider<Dio>((ref) {
-  return creerDioClient(ref.watch(secureStorageProvider));
+  return creerDioClient(
+    ref.watch(secureStorageProvider),
+    onNonAutorise: () async {
+      ref.read(sessionExpireeProvider.notifier).state = true;
+    },
+  );
 });
