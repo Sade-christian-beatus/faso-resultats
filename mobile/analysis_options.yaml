@@ -12,8 +12,8 @@ linter:
     # Imports relatifs à l'intérieur du package : idiomatique en Flutter, plus
     # lisible que `package:faso_resultats_mobile/...` pour un fichier voisin.
     always_use_package_imports: false
-    # dartfmt (95 colonnes par défaut sur ce projet) fait déjà ce travail ;
-    # cette règle en double imposerait un retour à la ligne manuel en plus.
+    # dart format (80 colonnes, non configurable dans cette version du SDK)
+    # fait déjà ce travail ; cette règle en double n'apporte rien.
     lines_longer_than_80_chars: false
     # pubspec.yaml est organisé par groupe fonctionnel commenté (réseau,
     # stockage, notifications...), plus lisible que l'ordre alphabétique strict.

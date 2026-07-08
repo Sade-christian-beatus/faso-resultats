@@ -6,7 +6,10 @@ utilisés par écran.
 
 ## Prérequis
 
-- Flutter 3.27.1 (channel stable), Dart 3.6.0
+- Flutter 3.44.5 (channel stable), Dart 3.12.2 — dernière version stable au
+  moment du développement (le prompt d'origine demande explicitement la
+  dernière stable ; la version installée au jour 1, 3.27.1, était obsolète et
+  a été corrigée au jour 2)
 - Un backend Faso Résultats accessible (voir `../backend/README.md`)
 
 ## Installation locale

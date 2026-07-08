@@ -25,6 +25,27 @@ fichier d'injection centralisé de type `get_it` : chaque provider Riverpod
 déclare directement ses dépendances via `ref.watch(...)`, ce que Riverpod
 permet nativement sans registre séparé.
 
+Génération de code (`@riverpod`, `riverpod_generator`) utilisée dès le jour 2
+plutôt que la syntaxe classique `Provider((ref) => ...)`, conformément aux
+dépendances listées dans le prompt d'origine. **Les fichiers `*.g.dart`
+générés sont committés** (pas dans `.gitignore`) — évite d'imposer une étape
+`build_runner` à chaque `git clone`/CI simplement pour analyser ou tester le
+code. Contrepartie assumée : après avoir modifié un provider annoté
+`@riverpod`, il faut relancer `dart run build_runner build
+--delete-conflicting-outputs` avant de committer, sans quoi le fichier généré
+reste silencieusement désynchronisé (aucune erreur immédiate, seulement un
+comportement runtime incohérent). Solo dev sur ce projet — risque jugé
+acceptable ; à reconsidérer si l'équipe grandit.
+
+**mockito n'est pas utilisé** : la version compatible avec l'analyzer actuel
+(`>=5.5.1`) exige `build ^3.0.0`, qui entre en conflit avec `riverpod_generator`
+2.x (`build ^2.0.0`) — les deux builders ne peuvent pas cohabiter dans le même
+`build_runner`. Les repositories ont peu de méthodes ; les tests utilisent des
+implémentations factices écrites à la main (`class _FakeXxxRepository
+implements XxxRepository`) plutôt que des mocks générés — voir
+`test/widget/consultation_rapide_screen_test.dart` pour un exemple. À
+reconsidérer si le nombre de dépendances à mocker grandit significativement.
+
 ## Navigation : go_router
 
 Choisi plutôt qu'`auto_route` : déclaratif, sans étape de génération de code

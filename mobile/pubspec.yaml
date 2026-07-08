@@ -51,7 +51,11 @@ dev_dependencies:
     sdk: flutter
   riverpod_generator: ^2.6.3
   build_runner: ^2.4.13
-  mockito: ^5.4.4
+  # Pas de mockito : son builder de génération de code entre en conflit de
+  # version avec riverpod_generator (mockito >=5.5 exige build ^3.0.0,
+  # riverpod_generator 2.x exige build ^2.0.0 — voir mobile/docs/ARCHITECTURE.md).
+  # Les tests utilisent des implémentations factices écrites à la main contre
+  # les interfaces de repository (peu nombreuses, pas besoin de génération).
   very_good_analysis: ^7.0.0
 
 flutter:

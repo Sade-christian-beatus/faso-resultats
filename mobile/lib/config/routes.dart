@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/storage/secure_storage.dart';
 import '../features/accueil/presentation/accueil_screen.dart';
 import '../features/accueil/presentation/splash_screen.dart';
+import '../features/consultation_rapide/presentation/consultation_rapide_screen.dart';
 
 /// go_router plutôt qu'auto_route (choix structurant) : déclaratif, sans
 /// génération de code obligatoire pour les cas simples de ce projet (peu
@@ -41,8 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // fonctionnelle dès aujourd'hui plutôt qu'un lien mort.
       GoRoute(
         path: AppRoutes.consultationRapide,
-        builder: (context, state) =>
-            const _EcranAVenir(titre: 'Consultation rapide'),
+        builder: (context, state) => const ConsultationRapideScreen(),
       ),
       GoRoute(
         path: AppRoutes.authCandidat,

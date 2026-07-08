@@ -14,6 +14,8 @@ Le prompt de départ supposait plusieurs choses que le backend ne fait pas.
 |---|---|
 | Pas d'endpoint public listant les administrations (nom, logo) | Ajouté : `GET /api/v1/public/administrations` |
 | La consultation publique n'utilise **pas** la date de naissance (choix de minimisation des données, CLAUDE.md backend, 2026-07-03) — le prompt supposait un flux à 2 facteurs récépissé + date de naissance | L'app suit l'API réelle : récépissé (+ jury optionnel) uniquement, comme le web |
+| `ResultatPublicOut` n'exposait pas `rang_numerique`/`rang_affiche`/`phase`/`phase_suivante_attendue` (existent sur le modèle depuis la Phase 1, jamais exposés publiquement) — le prompt attend un affichage « Rang / Phase / Prochaine étape » | Ajoutés à `ResultatPublicOut` (jour 2) |
+| Pas d'endpoint pour envoyer un résultat par SMS à un numéro arbitraire (hors compte candidat) | Bouton « Recevoir par SMS » présent dans l'UI (carte résultat) mais gated « bientôt disponible » (jour 2) — dépend de l'intégration SMS réelle, non démarrée |
 | Aucune infrastructure push (FCM) côté backend : pas de modèle, pas d'endpoint d'enregistrement de token | SDK FCM intégré côté client (jour 6), écrans gated « bientôt disponible » — aucun appel réseau vers un endpoint qui n'existe pas |
 | SMS jamais connecté à un vrai opérateur (stub backend uniquement) | Écran « Consulter par SMS » gated « bientôt disponible » (jour 7) |
 | Pas de liste de sessions actives / révocation côté candidat (JWT sans état) | Fonctionnalité non construite — noté comme limite connue |
