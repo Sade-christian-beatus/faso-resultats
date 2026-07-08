@@ -25,9 +25,9 @@ Le prompt de départ supposait plusieurs choses que le backend ne fait pas.
 
 | Écran | Endpoint |
 |---|---|
-| Sélection administration | `GET /api/v1/public/administrations` |
-| Sélection examen | `GET /api/v1/public/exams` (filtré côté client par `administration_id`) |
-| Résultat | `GET /api/v1/public/results?examen_id&numero_pv&jury` |
+| Sélection administration | `GET /api/v1/public/administrations` (cache client 1h, `dio_cache_interceptor`, jour 9) |
+| Sélection examen | `GET /api/v1/public/exams` (filtré côté client par `administration_id`, cache client 1h) |
+| Résultat | `GET /api/v1/public/results?examen_id&numero_pv&jury` (cache client 24h — « résultats déjà consultés », jour 9) |
 
 ## Authentification candidat
 

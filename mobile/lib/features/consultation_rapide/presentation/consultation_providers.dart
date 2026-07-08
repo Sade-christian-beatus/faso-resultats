@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/dio_client.dart';
+import '../../../core/network/http_cache.dart';
 import '../data/consultation_repository_impl.dart';
 import '../domain/administration.dart';
 import '../domain/consultation_repository.dart';
@@ -12,7 +13,8 @@ part 'consultation_providers.g.dart';
 
 @riverpod
 ConsultationRepository consultationRepository(Ref ref) {
-  return ConsultationRepositoryImpl(ref.watch(dioProvider));
+  return ConsultationRepositoryImpl(
+      ref.watch(dioProvider), ref.watch(cacheStoreProvider));
 }
 
 @riverpod

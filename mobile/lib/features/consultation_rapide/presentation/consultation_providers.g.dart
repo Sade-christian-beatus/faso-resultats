@@ -7,7 +7,7 @@ part of 'consultation_providers.dart';
 // **************************************************************************
 
 String _$consultationRepositoryHash() =>
-    r'31fe36835f08c22ebaa21d52805725260573d7d7';
+    r'65c0d50416bb7b1cbb68bca483b2d9ada7f83ada';
 
 /// See also [consultationRepository].
 @ProviderFor(consultationRepository)

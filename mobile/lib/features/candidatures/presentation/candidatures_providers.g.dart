@@ -41,7 +41,7 @@ final candidaturesProvider =
 );
 
 typedef _$Candidatures = AutoDisposeAsyncNotifier<List<Candidature>>;
-String _$ajoutCandidatureHash() => r'2a29c18b7e6be07adc00370c94b31c261da2a73b';
+String _$ajoutCandidatureHash() => r'7fd9302d8f870b09c98c6a6b94de4d26ab7bc1cc';
 
 /// État de l'ajout d'une candidature (jour 5) : soumission puis, le cas
 /// échéant, confirmation du mécanisme 3 (fallback OTP).

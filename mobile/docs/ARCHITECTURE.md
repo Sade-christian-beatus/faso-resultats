@@ -58,6 +58,22 @@ gain marginal ici pour un coût de complexité réel.
 
 Un seul client Dio (`lib/core/network/dio_client.dart`), avec :
 
+- `DioCacheInterceptor` (jour 9, `lib/core/network/http_cache.dart`) : policy
+  globale par défaut `CachePolicy.noCache` — n'agit que si un appel précise
+  explicitement des `CacheOptions` sur sa propre requête. Choix volontaire :
+  jamais de cache implicite sur un endpoint authentifié (dashboard, profil,
+  export), qui contiendrait des données personnelles. Seuls
+  `listerAdministrations`/`listerExamens` (`forceCache`, 1h,
+  `cacheOptionsListes`) et `rechercherResultats` (`forceCache`, 24h,
+  `cacheOptionsResultats`, conforme au prompt § 9) l'utilisent, via
+  `MemCacheStore` (en mémoire — perdu au redémarrage de l'app ; pas de store
+  disque type `dio_cache_interceptor_hive_store` pour éviter une dépendance
+  supplémentaire pour ce besoin). Le backend ne pose aucun en-tête
+  `Cache-Control` (cache serveur Redis interne, invisible en HTTP), d'où
+  `forceCache` plutôt que `request` : sans ça, l'intercepteur ne mettrait
+  jamais rien en cache faute de directives serveur à respecter.
+  `hitCacheOnErrorExcept: []` sert la version en cache dès qu'une requête
+  échoue (y compris hors ligne) plutôt que de propager l'erreur.
 - `AuthInterceptor` : ajoute le token de session à chaque requête, notifie un
   callback sur 401 (la couche réseau ne navigue jamais elle-même — séparation
   stricte avec la couche presentation).
@@ -67,9 +83,24 @@ Un seul client Dio (`lib/core/network/dio_client.dart`), avec :
 - `LogInterceptor` (uniquement en `kDebugMode`) : jamais de logs réseau en
   release, conforme à l'exigence « pas de logs de données sensibles ».
 
-`dio_cache_interceptor` est une dépendance déjà déclarée, câblée au jour 9
-(gestion hors-ligne) plutôt qu'au jour 1, pour ne pas construire une couche
-de cache avant d'avoir des données réelles à mettre en cache.
+## Connectivité et bandeau hors ligne (jour 9)
+
+`lib/core/network/connectivity_provider.dart` expose `enLigneProvider`
+(`Stream<bool>`, via `connectivity_plus`) — détecte l'interface réseau
+disponible (wifi/données/aucune), pas la joignabilité réelle d'internet
+(une sonde active serait une sur-ingénierie pour un simple bandeau
+d'information, CLAUDE.md). `app.dart` l'observe via `MaterialApp.builder`
+pour afficher un bandeau « Vous êtes hors ligne » au-dessus de tous les
+écrans sans dupliquer cette logique dans chacun d'eux. Combiné aux messages
+d'erreur déjà en place (`ReseauException`, message générique dès jour 1),
+ce bandeau couvre l'exigence « message clair si action nécessitant internet
+en hors ligne » sans mécanisme supplémentaire.
+
+**Gap de test connu (jour 9)** : `_AvecBandeauHorsLigne` (dans `app.dart`)
+n'a pas de test dédié — `Connectivity()` de `connectivity_plus` n'est pas
+injectable sans un wrapper d'interface dédié, qu'il n'a pas semblé
+justifié de construire seulement pour ce test avant le jour 10 (tests et
+polissage), où l'ensemble de la couverture sera revu.
 
 ## Erreurs : exceptions typées, propagées telles quelles jusqu'à la presentation
 
