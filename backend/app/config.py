@@ -18,6 +18,7 @@ _MESSAGE_CLE_CHIFFREMENT_INVALIDE = (
 _VALEURS_DEV_INSECURES = {
     "jwt_secret_key": "change-me-in-production",
     "candidat_hash_pepper": "change-me-in-production",
+    "api_key_pepper": "change-me-in-production",
 }
 
 
@@ -64,6 +65,11 @@ class Settings(BaseSettings):
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"
+
+    # API B2B (Phase 4, docs/ROADMAP.md) — pepper dédié : jamais le même que
+    # candidat_hash_pepper, un domaine de secret différent (clés API partenaires,
+    # pas des données candidat).
+    api_key_pepper: str = "change-me-in-production"
 
     uploads_dir: str = "/app/uploads"
     max_upload_size_mb: int = 20

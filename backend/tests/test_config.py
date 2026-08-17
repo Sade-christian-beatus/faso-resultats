@@ -19,9 +19,21 @@ def test_production_avec_secrets_surcharges_ne_leve_rien() -> None:
         environment="production",
         jwt_secret_key="une-vraie-cle-secrete-generee",
         candidat_hash_pepper="un-vrai-pepper-genere",
+        api_key_pepper="un-autre-vrai-pepper-genere",
     )
 
     _valider_secrets_production(settings)
+
+
+def test_production_avec_api_key_pepper_par_defaut_leve_une_erreur() -> None:
+    settings = Settings(
+        environment="production",
+        jwt_secret_key="une-vraie-cle-secrete-generee",
+        candidat_hash_pepper="un-vrai-pepper-genere",
+    )
+
+    with pytest.raises(RuntimeError, match="API_KEY_PEPPER"):
+        _valider_secrets_production(settings)
 
 
 def test_developpement_avec_secrets_par_defaut_ne_leve_rien() -> None:

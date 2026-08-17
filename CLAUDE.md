@@ -176,7 +176,7 @@ ces décisions sont prises.
 | **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
 | **Phase 2** | Intégration SMS (Orange Business, Bulk SMS) + RQ, notifications proactives | 🔒 À venir |
 | **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🟡 Démarrée et bien avancée (voir note du 2026-08-17 ci-dessous) — espace établissement non fait |
-| **Phase 4** | USSD (Orange Business), API B2B | 🔒 À venir |
+| **Phase 4** | USSD (Orange Business), API B2B | 🟡 Fondation API B2B démarrée (voir note du 2026-08-17) — USSD toujours bloqué par le contrat opérateur |
 
 **Hors périmètre (décision du 2026-07-03) :** guide d'orientation et expansion sous-régionale UEMOA — supprimés du projet. Faso Résultats reste scopé au Burkina Faso de façon permanente.
 
@@ -187,9 +187,13 @@ note : authentification candidat, dashboard, ajout/retrait de candidature,
 consultation rapide sans compte, gestion hors-ligne. Notifications push et
 consultation par SMS restent volontairement désactivées côté mobile (`gated`),
 dépendantes de la Phase 2 non démarrée. Espace établissement : pas commencé.
-Ne pas redémarrer un chantier de la Phase 2 (SMS) ou de la Phase 4 sans demande
-explicite — l'architecture laisse déjà la porte ouverte (table
-`notifications_preinscription` créée dès la Phase 1).
+
+**2026-08-17 — Fondation technique de l'API B2B (Phase 4) démarrée sur demande
+explicite**, pendant l'attente du contrat Orange Business qui bloque Phase 2 et le
+volet USSD de la Phase 4 (aucun des deux n'a de dépendance sur ce contrat). Voir
+`docs/ROADMAP.md` § Phase 4 pour le détail technique. Ne pas redémarrer la Phase 2
+(SMS) ou le volet USSD de la Phase 4 sans demande explicite — l'architecture laisse
+déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
 
 ---
 
@@ -355,6 +359,22 @@ Après chaque étape majeure, produire un résumé structuré :
   (`pytest`/`ruff`/`black` non automatisés) ; `/api/v1/public/results` et
   `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
   reprendre par priorité dans une prochaine session.
+- **2026-08-17 — Fondation technique de l'API B2B (Phase 4)**, sur demande
+  explicite pendant l'attente du contrat Orange Business (SMS/USSD). Décisions
+  actées après clarification : (1) mêmes champs que l'API publique pour les
+  partenaires B2B — pas d'accès élargi aux données sensibles (date de naissance,
+  CNIB) tant qu'aucun cadre contractuel/juridique ne le justifie ; (2) clés API
+  gérées uniquement par le SUPER_ADMIN (partenaires transversaux, pas liés à une
+  administration cliente) ; (3) pas de facturation automatisée — `tier`/
+  `quota_quotidien` configurables manuellement à l'émission de la clé, la grille
+  tarifaire réelle reste à trancher. Nouveaux modèles `Partenaire`/`ApiKey`
+  (migration `7d03f84b9299`, testée upgrade/downgrade/re-upgrade contre
+  PostgreSQL 16 réel, `alembic check` sans dérive), clé en clair générée une
+  seule fois et jamais stockée (hash HMAC avec un pepper dédié `api_key_pepper`,
+  distinct de celui des données candidat — même erreur de secret-par-défaut
+  oublié que les autres couverte par `_valider_secrets_production`). Quota
+  quotidien par clé via un compteur cache non atomique (même compromis assumé
+  que le verrouillage OTP candidat), pas un rate-limit IP.
 
 ---
 

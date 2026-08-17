@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import secrets
 from datetime import UTC, datetime, timedelta
 
 from jose import JWTError, jwt
@@ -33,6 +34,29 @@ def hash_deterministe(valeur: str) -> str:
     return hmac.new(
         settings.candidat_hash_pepper.encode(), valeur.encode(), hashlib.sha256
     ).hexdigest()
+
+
+_PREFIXE_CLE_API = "frb_live_"
+
+
+def generer_cle_api() -> str:
+    """Clé API B2B en clair (docs/ROADMAP.md § Phase 4) : générée une seule fois côté
+    serveur, jamais reconstructible ensuite — seul son hash est conservé (voir
+    `hash_cle_api`)."""
+    return f"{_PREFIXE_CLE_API}{secrets.token_urlsafe(32)}"
+
+
+def prefixe_affichable(cle_api: str) -> str:
+    """Fragment non sensible de la clé, conservé en clair pour que le partenaire
+    puisse identifier laquelle de ses clés est laquelle sans revoir le secret complet."""
+    return cle_api[: len(_PREFIXE_CLE_API) + 8]
+
+
+def hash_cle_api(cle_api: str) -> str:
+    """Hash HMAC-SHA256 stable, avec un pepper dédié (`api_key_pepper`) distinct de
+    celui des données candidat — permet la recherche en base sans jamais indexer la
+    clé en clair, comme `hash_deterministe` pour le CNIB/téléphone."""
+    return hmac.new(settings.api_key_pepper.encode(), cle_api.encode(), hashlib.sha256).hexdigest()
 
 
 def create_access_token(subject: str) -> str:

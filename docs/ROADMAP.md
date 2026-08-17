@@ -31,6 +31,9 @@
   (`purge_candidats.py`, à planifier via cron — pas de file de tâches en Phase 1)
 - UI candidat pour le mécanisme 3 de vérification (fallback OTP quand ni le CNIB ni la
   date de naissance ne figurent dans le résultat publié)
+- Fondation API B2B (Phase 4, § dédiée ci-dessous) : modèles `Partenaire`/`ApiKey`,
+  gestion super-admin, routes `/api/v1/b2b/exams` et `/api/v1/b2b/results` avec quota
+  par clé — pas encore de facturation ni de contrat partenaire réel
 
 ## 🚧 En cours / à faire avant un lancement pilote réel
 
@@ -86,14 +89,30 @@ commits `feat(mobile)` mergés sur `main`) sans que cette page ne soit tenue à 
   ou complément au portail unique actuel (`docs/PIVOT_SAAS_B2G.md` § 2.6, option
   A) : pas commencé.
 
-## 📅 Phase 4 — USSD, API B2B
+## 🟡 Phase 4 — USSD, API B2B (fondation API B2B démarrée)
 
-- USSD (Orange Business) : candidat compose un code, entre son numéro de PV, reçoit
-  sa décision à l'écran — pertinent pour les téléphones basiques et zones à
-  connectivité limitée
-- API B2B payante pour partenaires (écoles privées, médias, ONG) : nouveau modèle
-  `ApiKey`/`Partenaire`, rate limiting par clé plutôt que par IP, grille tarifaire à
-  définir
+**2026-08-17 :** l'USSD reste bloqué par le même prérequis que la Phase 2 (contrat
+Orange Business, non signé). La fondation technique de l'**API B2B**, elle,
+n'en dépendait pas — démarrée sur demande explicite pendant l'attente du contrat :
+
+- ✅ Modèles `Partenaire`/`ApiKey` : clé en clair générée une seule fois (jamais
+  stockée, seul son hash HMAC — pepper dédié `api_key_pepper`, distinct de celui du
+  candidat), préfixe non sensible pour l'identification.
+- ✅ Endpoints super-admin `POST/GET/PATCH /api/v1/admin/partenaires`,
+  `POST /api/v1/admin/partenaires/{id}/api-keys`, `.../revoke` — gestion
+  transversale (pas liée à une administration cliente), cohérent avec le modèle
+  actuel des `Administration`.
+- ✅ Routes `GET /api/v1/b2b/exams`, `GET /api/v1/b2b/results` : mêmes champs que
+  l'API publique (pas d'accès élargi aux données sensibles pour l'instant — décision
+  du 2026-08-17), authentifiées par `X-API-Key`, quota quotidien par clé (compteur
+  cache, non atomique — comme le verrouillage OTP candidat) au lieu d'un rate-limit
+  par IP.
+- 🔒 Pas de facturation automatisée : `tier`/`quota_quotidien` configurables
+  manuellement par le SUPER_ADMIN à l'émission de la clé, grille tarifaire toujours
+  non tranchée.
+- 📅 USSD (Orange Business) : candidat compose un code, entre son numéro de PV,
+  reçoit sa décision à l'écran — pertinent pour les téléphones basiques et zones à
+  connectivité limitée. Toujours bloqué par le contrat opérateur.
 
 ## Hors périmètre (décisions actées le 2026-07-03)
 
