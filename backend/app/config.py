@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,7 +24,7 @@ _VALEURS_DEV_INSECURES = {
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    environment: str = "development"
+    environment: Literal["development", "staging", "production"] = "development"
     cors_origins: str = "http://localhost:8080"
 
     database_url: str = "postgresql+asyncpg://faso:faso_secret@db:5432/faso_resultats"

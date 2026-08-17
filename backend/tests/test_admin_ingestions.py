@@ -188,6 +188,49 @@ async def test_correction_puis_publication_cree_les_resultats(
 
 
 @pytest.mark.asyncio
+async def test_correction_ignore_les_erreurs_envoyees_par_le_client(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """Régression (audit 2026-08-17) : le serveur ne doit jamais faire confiance au
+    champ `erreurs` envoyé par le client. Un payload qui prétend "erreurs: []" alors
+    que `donnees` est toujours incomplet (nom manquant) doit rester bloqué."""
+    examen_id = await _creer_examen(client, admin_headers)
+    contenu = _construire_xlsx([["001", "Ouaga 1", None, "Awa", None, "Admis", None]])
+
+    upload = await client.post(
+        "/api/v1/admin/ingestions",
+        data={"examen_id": examen_id, "type_fichier": "EXCEL"},
+        files={
+            "file": (
+                "resultats.xlsx",
+                contenu,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        headers=admin_headers,
+    )
+    ingestion = upload.json()
+
+    ligne_falsifiee = ingestion["lignes"][0]
+    # `nom` reste vide, mais le client affirme mensongèrement qu'il n'y a plus d'erreur.
+    ligne_falsifiee["erreurs"] = []
+
+    correction = await client.patch(
+        f"/api/v1/admin/ingestions/{ingestion['id']}",
+        json={"lignes": [ligne_falsifiee]},
+        headers=admin_headers,
+    )
+    assert correction.status_code == 200
+    assert correction.json()["nombre_erreurs"] == 1
+    assert "nom manquant" in correction.json()["lignes"][0]["erreurs"]
+
+    publish = await client.post(
+        f"/api/v1/admin/ingestions/{ingestion['id']}/publish", headers=admin_headers
+    )
+    assert publish.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_reject_ingestion(client: AsyncClient, admin_headers: dict) -> None:
     examen_id = await _creer_examen(client, admin_headers)
     contenu = _construire_xlsx([["001", "Ouaga 1", "Traore", "Awa", None, "Admis", None]])

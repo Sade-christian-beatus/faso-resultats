@@ -31,7 +31,14 @@ class PhasePublication(str, enum.Enum):
 class Resultat(TimestampMixin, Base):
     __tablename__ = "resultats"
     __table_args__ = (
-        Index("ix_resultats_examen_pv_jury_phase", "examen_id", "numero_pv", "jury", "phase"),
+        Index(
+            "ix_resultats_examen_pv_jury_phase",
+            "examen_id",
+            "numero_pv",
+            "jury",
+            "phase",
+            unique=True,
+        ),
         Index("ix_resultats_administration", "administration_id"),
     )
 

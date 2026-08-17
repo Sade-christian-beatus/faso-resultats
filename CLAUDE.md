@@ -175,12 +175,21 @@ ces décisions sont prises.
 |-------|---------|--------|
 | **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
 | **Phase 2** | Intégration SMS (Orange Business, Bulk SMS) + RQ, notifications proactives | 🔒 À venir |
-| **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🔒 À venir |
+| **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🟡 Démarrée et bien avancée (voir note du 2026-08-17 ci-dessous) — espace établissement non fait |
 | **Phase 4** | USSD (Orange Business), API B2B | 🔒 À venir |
 
 **Hors périmètre (décision du 2026-07-03) :** guide d'orientation et expansion sous-régionale UEMOA — supprimés du projet. Faso Résultats reste scopé au Burkina Faso de façon permanente.
 
-**Phase 1 terminée.** Ne pas démarrer la Phase 2 (SMS) ou une phase suivante sauf demande explicite — l'architecture laisse déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
+**2026-08-17 — Mise à jour de statut (audit) : la Phase 3 avait en réalité déjà
+démarré et était bien avancée sans que cette section ne soit mise à jour.** 12
+commits `feat(mobile)` (« jour 1 » à « jour 10 »), mergés sur `main` avant cette
+note : authentification candidat, dashboard, ajout/retrait de candidature,
+consultation rapide sans compte, gestion hors-ligne. Notifications push et
+consultation par SMS restent volontairement désactivées côté mobile (`gated`),
+dépendantes de la Phase 2 non démarrée. Espace établissement : pas commencé.
+Ne pas redémarrer un chantier de la Phase 2 (SMS) ou de la Phase 4 sans demande
+explicite — l'architecture laisse déjà la porte ouverte (table
+`notifications_preinscription` créée dès la Phase 1).
 
 ---
 
@@ -298,6 +307,54 @@ Après chaque étape majeure, produire un résumé structuré :
   `confirmer_otp()` marquait la candidature vérifiée sans jamais peupler le
   cache `dernier_resultat_*`, donc le dashboard candidat continuait
   d'afficher « résultat pas encore publié » après confirmation.
+- **2026-08-17 — Audit complet du projet (2 passes indépendantes) et
+  correction des 5 bugs critiques trouvés**, avant un test réel en
+  conditions proches du terrain :
+  1. `scan_pdf_parser.py` : "NON ADMIS"/"NON ADMISSIBLE" détecté comme
+     "ADMIS"/"ADMISSIBLE" (le mot "ADMIS" matchait dans la négation) —
+     inversion silencieuse de décision sur les communiqués scannés de la
+     Fonction publique. Corrigé (formes négatives testées en priorité) et
+     couvert par un test de régression.
+  2. `verification_service.py` : le rapprochement candidat↔résultat ne
+     filtrait pas par `jury`, alors que `numero_pv` n'est unique que par
+     `(examen_id, jury)` — risque de faux positif/négatif entre deux
+     candidats de jurys différents partageant le même numéro. Corrigé par
+     désambiguïsation CNIB/date de naissance quand plusieurs résultats
+     correspondent, fallback OTP si aucun ne peut être confirmé sans
+     équivoque (jamais de choix arbitraire). Limitation connue : `Candidature`
+     ne stocke toujours pas de `jury` — une vraie disambiguïsation en amont
+     nécessiterait de le demander au candidat à l'inscription (non fait, hors
+     scope de ce correctif).
+  3. `admin/ingestions.py` (`correct_ingestion`) : la validation humaine
+     obligatoire n'était pas revalidée côté serveur — le champ `erreurs` du
+     payload client faisait foi tel quel. Corrigé : `nombre_erreurs` est
+     désormais recalculé côté serveur à partir des données (`normalizer.
+     valider_ligne_normalisee`), jamais du payload client.
+  4. `config.py` : `environment` était un `str` libre comparé littéralement
+     à `"production"` — une variante de casse (`Production`) contournait
+     silencieusement à la fois le garde-fou anti-secrets-par-défaut et le
+     masquage du code OTP de debug dans les réponses API. Typé en
+     `Literal["development", "staging", "production"]`.
+  5. Index `resultats(examen_id, numero_pv, jury, phase)` jamais `unique`
+     depuis sa création — rien n'empêchait une double ingestion de créer deux
+     `Resultat` contradictoires pour le même candidat. Rendu unique
+     (migration `8f2cc3339226`, testée upgrade/downgrade/re-upgrade contre
+     PostgreSQL 16 réel, `alembic check` sans dérive).
+
+  Points majeurs identifiés par l'audit mais **non corrigés dans cette
+  session** (hors urgence du test du lendemain) : pas de verrouillage de
+  compte admin après échecs de connexion ni de journalisation de ces
+  échecs ; pas de révocation JWT (token candidat valable 30 jours) ; CNIB et
+  date de naissance en clair dans `resultats` (chiffrés dans
+  `profils_candidats`, incohérence à trancher) ; `erreurs_fichier` (écart de
+  comptage OCR) non bloquant à la publication ; notifications perdues sans
+  retry en heure silencieuse (22h-6h) ; alias `"mention"` → champ `decision`
+  sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
+  `innerHTML` non échappé sur `frontend/public/js/public.js` (nom/prénom/
+  établissement affichés sans échappement) ; absence de CI backend
+  (`pytest`/`ruff`/`black` non automatisés) ; `/api/v1/public/results` et
+  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
+  reprendre par priorité dans une prochaine session.
 
 ---
 

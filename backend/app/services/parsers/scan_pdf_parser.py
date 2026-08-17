@@ -43,7 +43,10 @@ _RE_NOMBRE_DECLARE = re.compile(
     re.IGNORECASE,
 )
 
-_RE_DECISION = re.compile(r"\bADMISSIBLES?\b|\bADMIS\b", re.IGNORECASE)
+_RE_DECISION = re.compile(
+    r"\bNON[\s-]+ADMISSIBLES?\b|\bNON[\s-]+ADMIS\b|\bADMISSIBLES?\b|\bADMIS\b",
+    re.IGNORECASE,
+)
 
 
 def _pretraiter_image(image_pil) -> np.ndarray:
@@ -77,13 +80,19 @@ def _normaliser_date_naissance(texte_date: str) -> str | None:
 
 
 def _detecter_decision(texte: str, decision_par_defaut: str | None) -> str | None:
-    """Le communiqué déclare la phase dans son titre ("ADMISSIBLES", "ADMIS") — elle
-    s'applique à toutes les lignes du document, comme `decision_par_defaut` pour les
-    autres parsers, mais détectée automatiquement plutôt que saisie par l'admin."""
+    """Le communiqué déclare la phase dans son titre ("ADMISSIBLES", "ADMIS", ou leur
+    négation "NON ADMIS(SIBLES)") — elle s'applique à toutes les lignes du document,
+    comme `decision_par_defaut` pour les autres parsers, mais détectée automatiquement
+    plutôt que saisie par l'admin. Les formes négatives sont vérifiées en premier :
+    dans "LISTE DES NON ADMIS", il ne faut jamais retenir "ADMIS" seul."""
     trouve = _RE_DECISION.search(texte)
-    if trouve:
-        return "ADMISSIBLE" if "ADMISSIBLE" in trouve.group(0).upper() else "ADMIS"
-    return decision_par_defaut
+    if not trouve:
+        return decision_par_defaut
+    valeur = re.sub(r"\s+", " ", trouve.group(0).upper()).strip()
+    est_admissible = "ADMISSIBLE" in valeur
+    if valeur.startswith("NON"):
+        return "NON ADMISSIBLE" if est_admissible else "NON ADMIS"
+    return "ADMISSIBLE" if est_admissible else "ADMIS"
 
 
 def parser_pdf_scan(

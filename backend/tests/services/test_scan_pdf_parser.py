@@ -111,6 +111,23 @@ def test_parser_pdf_scan_utilise_la_decision_par_defaut_si_phase_indetectable(tm
     assert resultat.lignes[0].donnees["decision"] == "ADMIS"
 
 
+def test_parser_pdf_scan_liste_non_admis_nest_pas_confondue_avec_admis(tmp_path) -> None:
+    """Régression (audit 2026-08-17) : "NON ADMIS" contient le mot "ADMIS" — la
+    détection de décision ne doit pas retenir la forme positive quand le titre du
+    communiqué est en réalité une négation."""
+    chemin = tmp_path / "communique.pdf"
+    _construire_pdf_scan(
+        chemin,
+        ["LISTE DES CANDIDATS NON ADMIS"],
+        ["1° TRAORE AWA 000042-120-03 B19876543 15/05/98"],
+        "Fin de liste. Total : 1.",
+    )
+
+    resultat = parser_pdf_scan(str(chemin))
+
+    assert resultat.lignes[0].donnees["decision"] == "NON ADMIS"
+
+
 def test_parser_pdf_scan_aucune_ligne_reconnue(tmp_path) -> None:
     chemin = tmp_path / "communique.pdf"
     _construire_pdf_scan(chemin, ["TITRE SANS TABLEAU"], [], "")

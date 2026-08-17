@@ -10,6 +10,14 @@ from app.models.candidature import MethodeVerification, StatutVerificationCandid
 from app.models.profil_candidat import ProfilCandidat
 
 
+def _identite_correspond(resultat: Resultat, profil: ProfilCandidat) -> bool:
+    if resultat.numero_cnib:
+        return hash_deterministe(resultat.numero_cnib) == profil.numero_cnib_hash
+    if resultat.date_naissance:
+        return resultat.date_naissance.isoformat() == profil.date_naissance
+    return False
+
+
 class DecisionVerification(str, enum.Enum):
     """Issue de la tentative de vérification (docs/PROFIL_CANDIDAT_UNIFIE.md § 5)."""
 
@@ -28,9 +36,9 @@ class VerificationService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def trouver_resultat_publie(
+    async def _trouver_resultats_publies(
         self, administration_id: uuid.UUID, examen_id: uuid.UUID, numero_recepisse: str
-    ) -> Resultat | None:
+    ) -> list[Resultat]:
         query = (
             select(Resultat)
             .join(Examen, Examen.id == Resultat.examen_id)
@@ -42,7 +50,33 @@ class VerificationService:
                 | (Resultat.numero_pv == numero_recepisse),
             )
         )
-        return (await self.db.execute(query)).scalars().first()
+        return list((await self.db.execute(query)).scalars().all())
+
+    async def trouver_resultat_publie(
+        self,
+        administration_id: uuid.UUID,
+        examen_id: uuid.UUID,
+        numero_recepisse: str,
+        profil: ProfilCandidat | None = None,
+    ) -> Resultat | None:
+        """`numero_pv` n'est unique que par (`examen_id`, `jury`) : plusieurs jurys du
+        même examen peuvent réutiliser le même numéro. S'il n'y a qu'un seul résultat
+        correspondant, pas d'ambiguïté. S'il y en a plusieurs, on ne peut pas deviner
+        lequel appartient au candidat sans risquer de renvoyer celui d'un autre —
+        on ne retient que celui confirmé sans équivoque par CNIB/date de naissance
+        (si `profil` est fourni) ; sinon on ne renvoie rien plutôt qu'un choix arbitraire.
+        """
+        resultats = await self._trouver_resultats_publies(
+            administration_id, examen_id, numero_recepisse
+        )
+        if not resultats:
+            return None
+        if len(resultats) == 1:
+            return resultats[0]
+        if profil is None:
+            return None
+        confirmes = [r for r in resultats if _identite_correspond(r, profil)]
+        return confirmes[0] if len(confirmes) == 1 else None
 
     async def verifier(
         self,
@@ -51,12 +85,28 @@ class VerificationService:
         examen_id: uuid.UUID,
         numero_recepisse: str,
     ) -> tuple[DecisionVerification, MethodeVerification | None, Resultat | None]:
-        resultat = await self.trouver_resultat_publie(
+        resultats = await self._trouver_resultats_publies(
             administration_id, examen_id, numero_recepisse
         )
-        if resultat is None:
+        if not resultats:
             return DecisionVerification.EN_ATTENTE, None, None
 
+        if len(resultats) > 1:
+            confirmes = [r for r in resultats if _identite_correspond(r, profil)]
+            if len(confirmes) == 1:
+                resultat = confirmes[0]
+                methode = (
+                    MethodeVerification.CNIB_MATCH_AUTO
+                    if resultat.numero_cnib
+                    else MethodeVerification.DATE_NAISSANCE
+                )
+                return DecisionVerification.VERIFIEE, methode, resultat
+            # Plusieurs jurys partagent ce numéro et aucun résultat ne peut être
+            # confirmé sans équivoque : fallback OTP obligatoire, jamais de choix au
+            # hasard entre les candidats.
+            return DecisionVerification.OTP_REQUIS, None, None
+
+        resultat = resultats[0]
         if resultat.numero_cnib:
             if hash_deterministe(resultat.numero_cnib) == profil.numero_cnib_hash:
                 return DecisionVerification.VERIFIEE, MethodeVerification.CNIB_MATCH_AUTO, resultat

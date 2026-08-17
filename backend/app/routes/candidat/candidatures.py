@@ -243,7 +243,10 @@ async def confirmer_otp(
     # create_candidature) : sans ça, la candidature passe vérifiée mais le dashboard
     # continue d'afficher « résultat pas encore publié ».
     resultat = await VerificationService(db).trouver_resultat_publie(
-        candidature.administration_id, candidature.examen_id, candidature.numero_recepisse
+        candidature.administration_id,
+        candidature.examen_id,
+        candidature.numero_recepisse,
+        profil=profil,
     )
     if resultat is not None:
         candidature.dernier_resultat_id = resultat.id

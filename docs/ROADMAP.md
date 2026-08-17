@@ -62,16 +62,29 @@ Ce qui existe déjà côté code, prêt à être branché à un vrai fournisseur
 d'une notification tombant dans la plage silencieuse 22h-6h (aujourd'hui abandonnée,
 pas mise en file).
 
-## 📅 Phase 3 — Application mobile Android puis iOS, espace établissement
+## 🟡 Phase 3 — Application mobile Android puis iOS, espace établissement (démarrée, partielle)
 
-- App Flutter (Android puis iOS depuis la même base) réutilisant l'API candidat
-  existante (`/api/v1/candidat/*`) et publique (`/api/v1/public/*`)
-- Mode hors-ligne : cache local des résultats déjà consultés
-- Espace établissement : nouvelle table normalisée + vérification automatique contre
-  une liste officielle d'établissements (liste des établissements privés déjà reçue,
-  liste des établissements publics encore à obtenir)
-- Portails cobrandés par administration (sous-domaines dédiés) — alternative ou
-  complément au portail unique actuel (`docs/PIVOT_SAAS_B2G.md` § 2.6, option A)
+**Mise à jour du 2026-08-17 (audit) :** ce chantier a en fait déjà démarré (12
+commits `feat(mobile)` mergés sur `main`) sans que cette page ne soit tenue à jour.
+État réel :
+
+- ✅ App Flutter (`mobile/`) : authentification candidat (OTP), dashboard, ajout/
+  retrait de candidature, consultation rapide sans compte, cache hors-ligne des
+  résultats déjà consultés. Réutilise l'API candidat (`/api/v1/candidat/*`) et
+  publique (`/api/v1/public/*`) existante.
+- 🔒 Notifications push et consultation par SMS : écrans présents mais
+  volontairement désactivés (`gated`), dépendants de la Phase 2 (SMS) non
+  démarrée.
+- 🔒 Build release Android : infrastructure de signature en place, pas de
+  keystore de production généré. iOS jamais testé (pas d'environnement Xcode
+  disponible en session).
+- 📅 Espace établissement : pas commencé — nouvelle table normalisée +
+  vérification automatique contre une liste officielle d'établissements (liste
+  des établissements privés déjà reçue, liste des établissements publics
+  encore à obtenir).
+- 📅 Portails cobrandés par administration (sous-domaines dédiés) — alternative
+  ou complément au portail unique actuel (`docs/PIVOT_SAAS_B2G.md` § 2.6, option
+  A) : pas commencé.
 
 ## 📅 Phase 4 — USSD, API B2B
 
