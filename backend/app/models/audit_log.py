@@ -13,6 +13,7 @@ from app.models.guid import GUID
 
 class ActionAuditLog(str, enum.Enum):
     LOGIN = "LOGIN"
+    LOGIN_FAILED = "LOGIN_FAILED"
     CREATE_UTILISATEUR = "CREATE_UTILISATEUR"
     CREATE_EXAMEN = "CREATE_EXAMEN"
     PUBLISH_EXAMEN = "PUBLISH_EXAMEN"

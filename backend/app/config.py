@@ -65,6 +65,11 @@ class Settings(BaseSettings):
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"
+    # Verrouillage de compte admin après échecs répétés (audit 2026-08-17) :
+    # indépendant du rate-limit IP ci-dessus, qui ne protège pas contre un
+    # brute-force distribué sur plusieurs IP visant un seul compte.
+    admin_login_max_tentatives: int = 5
+    admin_login_lockout_minutes: int = 15
 
     # API B2B (Phase 4, docs/ROADMAP.md) — pepper dédié : jamais le même que
     # candidat_hash_pepper, un domaine de secret différent (clés API partenaires,
