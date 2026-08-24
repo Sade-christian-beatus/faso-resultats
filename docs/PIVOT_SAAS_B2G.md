@@ -259,17 +259,17 @@ Cela permet à chaque administration de calibrer son propre template sans affect
 
 ---
 
-## 6. Impact sur la conformité APDP
+## 6. Impact sur la conformité CIL
 
-Le nouveau modèle **clarifie considérablement** la position vis-à-vis de l'APDP :
+Le nouveau modèle **clarifie considérablement** la position vis-à-vis de la CIL (Commission de l'Informatique et des Libertés, l'autorité burkinabè de protection des données à caractère personnel) :
 
-- **Faso Résultats est sous-traitant au sens APDP**, pas responsable de traitement
+- **Faso Résultats est sous-traitant au sens de la réglementation CIL**, pas responsable de traitement
 - Chaque administration reste **responsable de traitement** de ses propres données
-- Une **convention de sous-traitance conforme APDP** doit être signée avec chaque administration cliente (obligatoire, non négociable)
+- Une **convention de sous-traitance conforme aux exigences de la CIL** doit être signée avec chaque administration cliente (obligatoire, non négociable)
 - Faso Résultats fournit des **garanties techniques** : chiffrement au repos, chiffrement en transit, isolation multi-tenant, journal des accès, purge sur demande, notification en cas de violation
 - Chaque administration conserve la **maîtrise éditoriale** : quand publier, quoi publier, quoi purger
 
-Cela simplifie énormément le rendez-vous APDP et la communication institutionnelle.
+Cela simplifie énormément le rendez-vous avec la CIL et la communication institutionnelle.
 
 ---
 
@@ -284,7 +284,7 @@ Avec ce pivot, la priorité n°1 change : ce n'est plus la consultation publique
 3. **Espace administration** : création d'examens, upload de PDF, validation, publication
 4. **Pipeline d'ingestion PDF-scan** (parser Fonction Publique déjà validé, extensible)
 5. **Consultation publique unifiée** (Option A : portail unique avec sélection d'administration)
-6. **Journal d'audit** de toutes les actions sensibles (obligation APDP)
+6. **Journal d'audit** de toutes les actions sensibles (obligation CIL)
 
 ### Repoussé en phase 2
 
@@ -336,7 +336,7 @@ Priorité : refondre l'architecture actuelle en multi-tenant AVANT d'aller plus 
 - Pipeline d'ingestion PDF (le parser Fonction Publique reste pertinent)
 - Contraintes de performance et de sécurité
 - Hébergement sur serveurs burkinabè
-- Conformité APDP (mais clarifiée : sous-traitance au lieu de responsable direct)
+- Conformité CIL (mais clarifiée : sous-traitance au lieu de responsable direct)
 
 ---
 

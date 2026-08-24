@@ -41,7 +41,7 @@
 - Intégration réelle des passerelles SMS (Orange Business en priorité, voir détail
   technique ci-dessous) — l'envoi reste un stub journalisé
 - Durées de rétention (`candidat_purge_inactivite_jours`, 2 ans par défaut) non
-  validées par l'APDP — voir `docs/APDP_PROFIL_CANDIDAT.md` § 5
+  validées par la CIL — voir `docs/APDP_PROFIL_CANDIDAT.md` § 5
 
 ## 📅 Phase 2 — Intégration SMS et notifications proactives
 

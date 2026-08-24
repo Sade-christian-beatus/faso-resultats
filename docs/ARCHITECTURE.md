@@ -567,7 +567,7 @@ et examen) sont des étapes distinctes, contrôlées séparément.
   déjà été).
 - **Champs sensibles non exposés** : `date_naissance` et `lieu_naissance` sont
   volontairement absents de `ResultatPublicOut`, par principe de minimisation
-  des données (APDP). Décision actée — voir « Historique des décisions
+  des données (exigence CIL). Décision actée — voir « Historique des décisions
   techniques importantes » dans `CLAUDE.md`.
 - **Pas de second facteur anti-scraping en Phase 1** : la recherche ne demande
   que `numero_pv` (+ `jury`), protégée par le rate limiting (30 req/min/IP) et
@@ -654,7 +654,7 @@ tableau de bord). Le même filet de sécurité `.hidden` a été ajouté à
 ## Profil candidat unifié
 
 Voir `docs/PROFIL_CANDIDAT_UNIFIE.md` pour la spécification complète et
-`docs/APDP_PROFIL_CANDIDAT.md` pour la conformité APDP dédiée. Résumé
+`docs/APDP_PROFIL_CANDIDAT.md` pour la conformité CIL dédiée. Résumé
 architectural :
 
 - **Modèles** (`app/models/profil_candidat.py`, `app/models/candidature.py`,
@@ -727,6 +727,6 @@ La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
 est complète et validée de bout en bout (code + Docker Compose + rendu
 visuel). Pistes restantes avant une vraie mise en production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- Faire valider `docs/APDP.md` par l'APDP / un professionnel du droit —
+- Faire valider `docs/APDP.md` par la CIL / un professionnel du droit —
   plusieurs points (base légale, durée de conservation, responsable de
   traitement) y sont explicitement marqués comme non tranchés.

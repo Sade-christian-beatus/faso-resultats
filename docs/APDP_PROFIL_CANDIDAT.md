@@ -1,8 +1,8 @@
-# Documentation de traitement — Profil candidat unifié (conformité APDP)
+# Documentation de traitement — Profil candidat unifié (conformité CIL)
 
 > Document de travail technique, à faire valider par un professionnel du
-> droit et/ou directement par l'Autorité de Protection des Données à
-> caractère Personnel du Burkina Faso (APDP, https://www.cil.bf) avant toute
+> droit et/ou directement par la Commission de l'Informatique et des
+> Libertés du Burkina Faso (CIL, https://www.cil.bf) avant toute
 > mise en production réelle. Il décrit ce que fait le système aujourd'hui ;
 > il ne constitue pas à lui seul une déclaration de traitement officielle.
 > Les points marqués ⚠️ nécessitent une confirmation juridique.
@@ -85,7 +85,7 @@ non démarrés.
 
 ## 4. Base légale
 
-⚠️ À confirmer avec l'APDP / un juriste. Piste de travail : **consentement
+⚠️ À confirmer avec la CIL / un juriste. Piste de travail : **consentement
 explicite** de la personne concernée (case non pré-cochée, horodatée et
 versionnée — `consentement_apdp_date`/`consentement_apdp_version`), recueilli
 à l'inscription (`POST /api/v1/candidat/inscription`).
@@ -107,7 +107,7 @@ versionnée — `consentement_apdp_date`/`consentement_apdp_version`), recueilli
   politique de conservation (`docs/APDP.md`).
 - Durée de conservation par défaut (compte inactif, jamais supprimé
   explicitement) : `candidat_purge_inactivite_jours` (2 ans par défaut).
-  ⚠️ Valeur provisoire, non validée par l'APDP — à trancher avant mise en
+  ⚠️ Valeur provisoire, non validée par la CIL — à trancher avant mise en
   production réelle. Purge effective via `purge_candidats.py`
   (`app/services/candidat/purge_service.py`), à planifier via cron côté
   infrastructure (pas de file de tâches en Phase 1, voir CLAUDE.md).
@@ -216,7 +216,7 @@ Limites connues, à traiter avant une mise en production réelle :
 
 ## 9. Prochaines étapes avant une vraie mise en production
 
-1. Faire valider ce document par l'APDP ou un professionnel du droit (base
+1. Faire valider ce document par la CIL ou un professionnel du droit (base
    légale, durée de conservation par défaut — notamment
    `candidat_purge_inactivite_jours`, actuellement une valeur provisoire non
    validée — responsable de traitement).

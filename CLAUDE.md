@@ -22,7 +22,7 @@
 - Utilisateurs souvent sur **connexions 3G faibles ou instables**
 - Beaucoup n'ont pas de smartphone → le canal SMS est aussi important que le web
 - Français langue principale de l'interface, avec messages clairs et rassurants
-- Les données personnelles des candidats sont **sensibles** : conformité APDP (Autorité de Protection des Données Personnelles du Burkina Faso) obligatoire
+- Les données personnelles des candidats sont **sensibles** : conformité CIL (Commission de l'Informatique et des Libertés du Burkina Faso, l'autorité burkinabè de protection des données à caractère personnel) obligatoire
 - Hébergement final sur **serveurs burkinabè** (souveraineté des données) → éviter les dépendances lourdes à AWS, GCP, Azure
 
 ### 2. Simplicité > sophistication
@@ -157,7 +157,7 @@ Tables principales : `examens`, `resultats`, `ingestions`, `admins`, `notificati
 - CORS restreint aux domaines connus en production
 - Variables sensibles uniquement via `.env`, jamais dans le code
 
-### Conformité APDP
+### Conformité CIL
 - Collecter le minimum de données nécessaires
 - Prévoir mécanisme de purge des données après période légale de conservation
 - Documentation de traitement à jour dans `docs/APDP.md`
@@ -241,7 +241,7 @@ Après chaque étape majeure, produire un résumé structuré :
 
 ## Ressources et références
 
-- **APDP Burkina Faso :** https://www.cil.bf (à vérifier au moment de la conformité)
+- **CIL (Commission de l'Informatique et des Libertés) Burkina Faso :** https://www.cil.bf (à vérifier au moment de la conformité)
 - **Opérateurs télécom :** Orange Burkina, Moov Africa Burkina Faso, Telecel Faso
 - **Organismes d'examens :** OCECOS (Office Central des Examens et Concours du Secondaire), DGEC (Direction Générale des Examens et Concours)
 - **Documentation FastAPI :** https://fastapi.tiangolo.com
@@ -257,7 +257,8 @@ Après chaque étape majeure, produire un résumé structuré :
 - **2026-07-03 — `date_naissance` et `lieu_naissance` exclus de l'API publique**
   (`/api/v1/public/results`). Le candidat retrouve déjà son résultat via son
   numéro de PV ; il n'a pas besoin de se voir confirmer sa date/lieu de
-  naissance pour ça. Minimisation des données conforme à l'esprit APDP.
+  naissance pour ça. Minimisation des données conforme à l'esprit de la
+  réglementation CIL.
   Décision assumée sans étude produit formelle — à revoir si un usage
   démontre le besoin (ex. vérification d'identité renforcée).
 - **2026-07-03 — Pas de second facteur anti-scraping en Phase 1** sur la
@@ -375,6 +376,35 @@ Après chaque étape majeure, produire un résumé structuré :
   oublié que les autres couverte par `_valider_secrets_production`). Quota
   quotidien par clé via un compteur cache non atomique (même compromis assumé
   que le verrouillage OTP candidat), pas un rate-limit IP.
+- **2026-08-17 — Verrouillage de compte admin après échecs de connexion +
+  échappement XSS sur les données publiques**, les deux points bloquants
+  identifiés pour une démo publique. `/admin/login` verrouille désormais le
+  **compte** (indépendamment de l'IP) après `admin_login_max_tentatives`
+  échecs, journalise chaque échec dans `AuditLog` (nouvelle action
+  `LOGIN_FAILED`, migration `0694461c8902`) ; même schéma que le
+  verrouillage OTP candidat existant. `frontend/public/js/public.js`
+  échappe désormais systématiquement les données affichées côté public
+  (nom/prénom/établissement/décision/jury), qui proviennent de fichiers
+  importés et non d'un formulaire validé. Vérifié contre un vrai navigateur
+  (Chromium/Playwright), pas seulement relu : un résultat contenant un
+  payload `<img onerror=...>` uploadé via le vrai flux admin s'affiche en
+  texte inerte, sans exécution.
+- **2026-08-17 — Correction de terminologie : l'autorité burkinabè de
+  protection des données s'appelle la CIL** (Commission de l'Informatique
+  et des Libertés), pas « APDP » — « APDP » était utilisé à tort dans les
+  docs comme s'il s'agissait du nom de l'institution. Corrigé dans tous les
+  documents du projet (prose uniquement — les noms de fichiers
+  `docs/APDP.md`/`docs/APDP_PROFIL_CANDIDAT.md` et les identifiants de code
+  existants, ex. `consentement_apdp_date`, sont volontairement laissés
+  inchangés pour ne pas casser les références croisées et le schéma pour un
+  simple problème de nommage). `docs/APDP.md` entièrement réécrit dans la
+  foulée : structure plus présentable (résumé non technique en tête, rôles
+  clarifiés sous-traitant/responsable de traitement conformément au pivot
+  SaaS B2G), contenu remis à jour avec l'état réel de la plateforme
+  (`numero_cnib` désormais documenté dans le registre — l'audit du
+  2026-08-17 avait signalé son absence —, mesures de sécurité courantes
+  listées avec les manques restants), pensé pour être montré tel quel lors
+  d'un rendez-vous avec la CIL.
 
 ---
 
