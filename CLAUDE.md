@@ -405,6 +405,19 @@ Après chaque étape majeure, produire un résumé structuré :
   2026-08-17 avait signalé son absence —, mesures de sécurité courantes
   listées avec les manques restants), pensé pour être montré tel quel lors
   d'un rendez-vous avec la CIL.
+- **2026-08-17 — Premières données fournisseurs réelles pour les Phases 2/4 et
+  la mise en production.** Grille tarifaire et conditions Orange Business
+  consultées (offres « API SMS » et « USSD », distinctes l'une de l'autre) :
+  révèle un nouveau prérequis bloquant non anticipé — souscrire nécessite un
+  RCCM/IFU, donc une structure juridique enregistrée pour Faso Résultats (ou
+  une souscription directe par l'administration cliente au titre de
+  « structure publique »). L'USSD ajoute un code dédié à obtenir auprès de
+  l'ARCEP et des frais d'infrastructure dédiée (VPN, internet dédié) plus
+  lourds qu'un simple abonnement API. Côté hébergement, une première piste
+  burkinabè identifiée (IKA Cloud, datacenter Tier III Ouagadougou, offres
+  VPS et domaine `.bf`) — reste à comparer à d'autres devis et à vérifier les
+  conditions d'accès root avant de s'engager. Détail complet dans
+  `docs/ROADMAP.md` § Phase 2, § Phase 4 et § Chantiers transverses.
 
 ---
 

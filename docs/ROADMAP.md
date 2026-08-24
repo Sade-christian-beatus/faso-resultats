@@ -47,9 +47,40 @@
 
 **Objectif :** notifier un candidat par SMS dès que son résultat est publié.
 
-**Fournisseur retenu : Orange Business (API Bulk SMS).** ⚠️ À vérifier avant de
-s'engager : couverture Moov/Telecel via l'interconnexion inter-opérateurs, et si
-l'API SMS et l'API USSD (Phase 4) sont un seul contrat ou deux chez ce fournisseur.
+**Fournisseur retenu : Orange Business, offre « API SMS » (sans engagement).**
+
+**2026-08-17 — Grille tarifaire et conditions consultées sur le site Orange Business.**
+Confirme que l'API SMS et l'USSD (Phase 4) sont bien **deux offres distinctes** chez
+ce fournisseur, pas un seul contrat — la question laissée ouverte plus haut est
+tranchée.
+
+| Volume | Durée | Prix unitaire TTC |
+|---|---|---|
+| 100 SMS | 7 jours | 9 F |
+| 1 000 SMS | 30 jours | 8 F |
+| 5 000 SMS | 30 jours | 18 F |
+| 10 000 SMS | 30 jours | 17 F |
+
+⚠️ Le palier « 5 000 SMS » (18 F) est plus cher que le palier inférieur (1 000 SMS,
+8 F) et le palier supérieur (10 000 SMS, 17 F) — ne suit pas la dégressivité attendue
+par volume. Probable coquille sur la page Orange, à faire confirmer avant de
+bâtir un budget dessus. Le prix de revente prévu (~50 F/SMS, `docs/PIVOT_SAAS_B2G.md`
+§ 3) laisse dans tous les cas une marge confortable sur ces tarifs.
+
+**Conditions à réunir pour souscrire** (documents à fournir à la demande) :
+- Courriel de demande du client, RCCM, IFU, pièce d'identité du premier responsable
+- Selon le statut du souscripteur : récépissé (association/fondation/ONG), **acte de
+  création** (structure publique), accord de siège (représentation diplomatique), ou
+  attestation d'ordre professionnel (profession libérale)
+- Contrat d'1 an avec tacite reconduction
+
+**⚠️ Nouveau point bloquant identifié : RCCM et IFU supposent une structure
+juridique enregistrée.** Faso Résultats n'en a pas encore (voir `docs/PIVOT_SAAS_B2G.md`
+§ 9, SARL/SAS non tranché) — la question de la structure juridique n'est donc plus
+une simple case à cocher mais un **prérequis pour signer ce contrat**. Deux options :
+créer la structure avant de signer, ou faire souscrire directement par la première
+administration cliente (OCECOS) au titre de « structure publique » (acte de création),
+Faso Résultats opérant alors l'intégration technique pour son compte.
 
 **File de tâches retenue : RQ** (Redis Queue) — Redis est déjà dans la stack (cache),
 RQ s'appuie dessus sans nouvelle brique d'infrastructure.
@@ -110,9 +141,22 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
 - 🔒 Pas de facturation automatisée : `tier`/`quota_quotidien` configurables
   manuellement par le SUPER_ADMIN à l'émission de la clé, grille tarifaire toujours
   non tranchée.
-- 📅 USSD (Orange Business) : candidat compose un code, entre son numéro de PV,
-  reçoit sa décision à l'écran — pertinent pour les téléphones basiques et zones à
-  connectivité limitée. Toujours bloqué par le contrat opérateur.
+- 📅 USSD (Orange Business, offre « USSD » — distincte de l'API SMS, voir Phase 2) :
+  candidat compose un code, entre son numéro de PV, reçoit sa décision à l'écran —
+  pertinent pour les téléphones basiques et zones à connectivité limitée. Toujours
+  bloqué par le contrat opérateur, avec des prérequis plus lourds qu'un simple
+  abonnement API :
+  - **Code USSD dédié à obtenir auprès de l'ARCEP** (régulateur télécom burkinabè) —
+    démarche administrative distincte du contrat Orange lui-même, à démarrer tôt car
+    son délai n'est pas connu.
+  - **Connexion sécurisée dédiée (HTTPS ou VPN)**, avec des frais de mise en place
+    significatifs : 500 000 F (mise en service) + 200 000 F (VPN) + 400 000 F/mois
+    (internet dédié 2 Mbps) — un engagement d'infrastructure, pas juste un abonnement.
+  - Coût à la transaction, une fois en service : 2 F/transaction USSD ; 1 F/SMS on-net
+    et 2 F/SMS off-net pour les SMS envoyés via ce canal (tarification différente de
+    l'offre API SMS de la Phase 2).
+  - Mêmes conditions administratives que l'API SMS (RCCM/IFU ou acte de création,
+    voir Phase 2) pour souscrire.
 
 ## Hors périmètre (décisions actées le 2026-07-03)
 
@@ -150,11 +194,32 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
    à explorer (ex. `uvicorn --workers N`).
 3. **Mise en production réelle** : hébergement burkinabè (souveraineté des données),
    HTTPS, rotation des mots de passe par défaut créés par `seed.py`.
+
+   **2026-08-17 — Piste d'hébergeur burkinabè identifiée : IKA Cloud.**
+   Datacenter Tier III à Ouagadougou, architecture haute disponibilité N+2. Offres
+   VPS consultées (tarifs mensuels) :
+
+   | Offre | Prix/mois | Disque | CPU | RAM |
+   |---|---|---|---|---|
+   | VPS Starter | 45 700 F | 30 Go SSD | 1 cœur | 2 Go |
+   | VPS Pro | 70 800 F | 60 Go SSD | 2 cœurs | 4 Go |
+   | VPS Premium | 83 300 F | 80 Go SSD | 4 cœurs | 8 Go |
+
+   Commun aux trois : IPv4 fixe dédiée, firewall managé, sauvegarde globale du VPS,
+   bande passante illimitée, supervision 24/7, gestion infogérée. Le nom de domaine
+   `faso-resultats.bf` est disponible chez le même prestataire (16 900 F, à confirmer
+   si prix d'enregistrement ou annuel). Reste à faire : confirmer que la stack Docker
+   Compose (PostgreSQL + Redis + backend + frontend) tient dans le tier Starter pour
+   un pilote, et vérifier les conditions d'accès root/SSH (« infogéré » peut signifier
+   accès restreint selon les offres — à clarifier avant de s'engager). Aucun autre
+   devis burkinabè comparé à ce stade — à mettre en concurrence si le temps le permet.
 4. **Calibrage OCR** : aucun spécimen de PV scanné/photo n'est disponible actuellement
    pour calibrer le parser OCR — à refaire dès qu'un nouveau spécimen sera fourni.
 5. **Intégration SMS réelle (Orange Business)** : nécessite un contrat et des
    identifiants API que ce projet n'a pas encore — `NotificationEngine.envoyer_sms`
-   reste un stub journalisé en attendant.
+   reste un stub journalisé en attendant. Voir Phase 2 pour la grille tarifaire
+   consultée et le nouveau prérequis de structure juridique (RCCM/IFU) identifiés le
+   2026-08-17.
 
 Chaque phase reste conditionnée à une demande explicite avant de démarrer le code,
 conformément à `CLAUDE.md`, même si les choix techniques ci-dessus sont déjà actés.
