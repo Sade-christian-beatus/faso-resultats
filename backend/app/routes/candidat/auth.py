@@ -211,7 +211,7 @@ async def me(
     summary="Exporter mes données (droit à la portabilité)",
     description="Renvoie l'intégralité des données du profil connecté (identité, "
     "candidatures, journal de consultation) dans un format structuré — droit à la "
-    "portabilité (docs/APDP_PROFIL_CANDIDAT.md § 8), distinct de GET /me qui n'expose "
+    "portabilité (docs/CIL_PROFIL_CANDIDAT.md § 8), distinct de GET /me qui n'expose "
     "que les champs utiles au dashboard courant.",
 )
 async def export_me(

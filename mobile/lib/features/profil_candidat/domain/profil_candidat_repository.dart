@@ -6,7 +6,7 @@ abstract class ProfilCandidatRepository {
 
   /// Seuls email et préférences de notification sont modifiables — l'identité
   /// (CNIB, nom, date de naissance) ne l'est volontairement pas, y compris
-  /// côté backend (voir docs/APDP_PROFIL_CANDIDAT.md § 8).
+  /// côté backend (voir docs/CIL_PROFIL_CANDIDAT.md § 8).
   Future<ProfilCandidat> mettreAJour({
     String? email,
     bool? notificationsSms,

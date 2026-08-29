@@ -41,7 +41,7 @@
 - Intégration réelle des passerelles SMS (Orange Business en priorité, voir détail
   technique ci-dessous) — l'envoi reste un stub journalisé
 - Durées de rétention (`candidat_purge_inactivite_jours`, 2 ans par défaut) non
-  validées par la CIL — voir `docs/APDP_PROFIL_CANDIDAT.md` § 5
+  validées par la CIL — voir `docs/CIL_PROFIL_CANDIDAT.md` § 5
 
 ## 📅 Phase 2 — Intégration SMS et notifications proactives
 
@@ -168,9 +168,26 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
 
 ## Chantiers transverses (indépendants des phases)
 
-1. **Validation juridique de `docs/APDP.md` et `docs/APDP_PROFIL_CANDIDAT.md`** —
+1. **Validation juridique de `docs/CIL.md` et `docs/CIL_PROFIL_CANDIDAT.md`** —
    plusieurs points (base légale, responsable de traitement, durée de conservation)
    explicitement marqués comme non tranchés.
+
+   **2026-08-29 — Premier rendez-vous à la CIL effectué.** Deux actions concrètes
+   demandées, à traiter avant toute mise en production réelle :
+   - **Déclaration en ligne obligatoire** sur le portail CIL, formulaire
+     « collecte de données sur site web » :
+     https://plainte-declaration.cil.bf/statements/create/website-data-collection.
+     Cette déclaration attend probablement les mêmes informations que celles déjà
+     réunies dans `docs/CIL.md` (finalités, catégories de données, mesures de
+     sécurité, durée de conservation, responsable de traitement) — reste à
+     confirmer le contenu exact des champs du formulaire une fois ouvert.
+   - **Démarche complémentaire auprès de l'ANSSI** (Agence Nationale de Sécurité
+     des Systèmes d'Information, https://anssi.bf/) pour obtenir les exigences de
+     sécurité applicables à une plateforme traitant des données d'examens
+     officiels. L'ANSSI a recommandé un **courrier officiel** de saisine plutôt
+     qu'une simple prise de contact — voir la lettre type préparée pour ce
+     courrier (à finaliser avec l'identité juridique de l'expéditeur, encore non
+     tranchée, voir `docs/PIVOT_SAAS_B2G.md` § 9).
 2. **Tests de charge à grande échelle** — première mesure réelle effectuée le
    2026-07-07 (client `httpx` async local contre un serveur `uvicorn` mono-processus,
    sur `GET /api/v1/public/results` en cache chaud) :

@@ -54,12 +54,12 @@ class Settings(BaseSettings):
     candidat_abus_seuil_rejets_par_jour: int = 5
     candidat_abus_taux_rejet_suspension: float = 0.3
     candidat_abus_minimum_tentatives: int = 5
-    # Rétention (docs/PROFIL_CANDIDAT_UNIFIE.md § 7, docs/APDP_PROFIL_CANDIDAT.md § 5) :
-    # durées provisoires, à valider avec l'APDP avant mise en production réelle.
+    # Rétention (docs/PROFIL_CANDIDAT_UNIFIE.md § 7, docs/CIL_PROFIL_CANDIDAT.md § 5) :
+    # durées provisoires, à valider avec la CIL avant mise en production réelle.
     candidat_purge_candidature_resiliee_jours: int = 180  # 6 mois, § 7
-    candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée APDP
+    candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée CIL
     # Canal de contact dédié aux demandes d'exercice de droits qui ne passent pas par
-    # les endpoints existants (docs/APDP_PROFIL_CANDIDAT.md § 8) — à remplacer par une
+    # les endpoints existants (docs/CIL_PROFIL_CANDIDAT.md § 8) — à remplacer par une
     # vraie adresse avant mise en production.
     candidat_dpo_contact_email: str = "dpo@fasoresultats.bf"
 

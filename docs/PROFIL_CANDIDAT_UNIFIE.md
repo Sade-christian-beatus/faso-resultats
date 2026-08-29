@@ -517,7 +517,7 @@ Ordre de travail recommandé, à réaliser **après le pivot multi-tenant** déc
     - Un profil candidat NE peut PAS voir les résultats d'un autre candidat ❌
     - Une administration NE peut PAS lister les profils candidats plateforme ❌
     - La suppression d'un profil purge bien toutes ses candidatures et son journal ✅
-11. **Créer `docs/APDP_PROFIL_CANDIDAT.md`** documentant la conformité CIL pour ce périmètre spécifique (base légale, finalité, durée de conservation, exercice des droits)
+11. **Créer `docs/CIL_PROFIL_CANDIDAT.md`** documentant la conformité CIL pour ce périmètre spécifique (base légale, finalité, durée de conservation, exercice des droits)
 12. **Mettre à jour le seed** avec 3 profils candidat fictifs et 5-6 candidatures liées aux administrations du seed (dont une qui matche automatiquement par CNIB avec un résultat déjà publié)
 
 ### Points d'attention pour l'implémentation

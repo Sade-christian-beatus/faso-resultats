@@ -21,7 +21,7 @@ class ActionJournalConsultation(str, enum.Enum):
 
 
 class JournalConsultationProfil(Base):
-    """Journal d'audit du profil candidat, immuable (append-only) — conformité APDP
+    """Journal d'audit du profil candidat, immuable (append-only) — conformité CIL
     (docs/PROFIL_CANDIDAT_UNIFIE.md § 3, § 7). Jamais modifié ni supprimé, sauf lors de
     la purge complète d'un profil (droit à l'oubli)."""
 

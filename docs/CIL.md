@@ -2,7 +2,7 @@
 
 **Projet :** Faso Résultats
 **Périmètre couvert :** données de résultats et d'ingestion gérées pour le compte des administrations clientes (`examens`, `resultats`, `ingestions`, `administrations`, `utilisateurs`)
-**Périmètre exclu :** le compte candidat plateforme (authentification, profil, candidatures) suit un régime différent — voir `docs/APDP_PROFIL_CANDIDAT.md`
+**Périmètre exclu :** le compte candidat plateforme (authentification, profil, candidatures) suit un régime différent — voir `docs/CIL_PROFIL_CANDIDAT.md`
 **Dernière mise à jour :** 2026-08-17
 **Statut :** document de travail technique — voir avertissement ci-dessous
 
@@ -203,7 +203,7 @@ responsable de traitement et validé avec la CIL.
 - **Chiffrement au repos du CNIB et de la date de naissance** dans
   `resultats` : ces champs sont aujourd'hui en clair en base, alors que les
   mêmes catégories de données sont chiffrées côté profil candidat
-  (`docs/APDP_PROFIL_CANDIDAT.md`) — incohérence à résoudre.
+  (`docs/CIL_PROFIL_CANDIDAT.md`) — incohérence à résoudre.
 - **Purge des données** au terme de la durée de conservation (§6), une fois
   celle-ci définie.
 - **HTTPS** — la plateforme tourne aujourd'hui en environnement de

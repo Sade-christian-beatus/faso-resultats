@@ -1,7 +1,7 @@
 """Tests de NotificationEngine — respect de la plage silencieuse 22h-6h.
 
 Note de fidélité au comportement réel (voir rapport BLOC B) : sans file de tâches (RQ,
-Phase 2 — voir le docstring de NotificationEngine et docs/APDP_PROFIL_CANDIDAT.md § 6),
+Phase 2 — voir le docstring de NotificationEngine et docs/CIL_PROFIL_CANDIDAT.md § 6),
 une notification tombant dans la plage silencieuse est abandonnée, pas mise en file pour
 un envoi différé à 6h. Les tests ci-dessous vérifient ce comportement réel plutôt qu'un
 report différé qui n'est pas implémenté."""

@@ -654,7 +654,7 @@ tableau de bord). Le même filet de sécurité `.hidden` a été ajouté à
 ## Profil candidat unifié
 
 Voir `docs/PROFIL_CANDIDAT_UNIFIE.md` pour la spécification complète et
-`docs/APDP_PROFIL_CANDIDAT.md` pour la conformité CIL dédiée. Résumé
+`docs/CIL_PROFIL_CANDIDAT.md` pour la conformité CIL dédiée. Résumé
 architectural :
 
 - **Modèles** (`app/models/profil_candidat.py`, `app/models/candidature.py`,
@@ -684,7 +684,7 @@ architectural :
 - **Isolation** : aucune route admin ne permet de lister les profils
   candidats ; un candidat ne peut jamais voir les candidatures d'un autre
   candidat — voir `tests/test_isolation_profil_candidat.py`.
-- **Non implémenté à ce jour** (voir `docs/APDP_PROFIL_CANDIDAT.md` § 6) :
+- **Non implémenté à ce jour** (voir `docs/CIL_PROFIL_CANDIDAT.md` § 6) :
   détection d'abus avancée (seuil de 30 % de rejets), alerte de prise de
   contrôle de compte, purge automatique des comptes inactifs, traitement
   des candidatures orphelines à la résiliation d'une administration.
@@ -727,6 +727,6 @@ La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
 est complète et validée de bout en bout (code + Docker Compose + rendu
 visuel). Pistes restantes avant une vraie mise en production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- Faire valider `docs/APDP.md` par la CIL / un professionnel du droit —
+- Faire valider `docs/CIL.md` par la CIL / un professionnel du droit —
   plusieurs points (base légale, durée de conservation, responsable de
   traitement) y sont explicitement marqués comme non tranchés.

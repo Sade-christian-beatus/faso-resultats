@@ -160,7 +160,7 @@ Tables principales : `examens`, `resultats`, `ingestions`, `admins`, `notificati
 ### Conformité CIL
 - Collecter le minimum de données nécessaires
 - Prévoir mécanisme de purge des données après période légale de conservation
-- Documentation de traitement à jour dans `docs/APDP.md`
+- Documentation de traitement à jour dans `docs/CIL.md`
 - Consentement explicite pour les notifications SMS (case à cocher, pas pré-cochée)
 
 ---
@@ -418,6 +418,34 @@ Après chaque étape majeure, produire un résumé structuré :
   VPS et domaine `.bf`) — reste à comparer à d'autres devis et à vérifier les
   conditions d'accès root avant de s'engager. Détail complet dans
   `docs/ROADMAP.md` § Phase 2, § Phase 4 et § Chantiers transverses.
+- **2026-08-29 — Fichiers `docs/APDP.md`/`docs/APDP_PROFIL_CANDIDAT.md`
+  renommés en `docs/CIL.md`/`docs/CIL_PROFIL_CANDIDAT.md`**, sur demande
+  explicite après le premier rendez-vous à la CIL (voir entrée suivante) —
+  le nommage neutre n'avait plus de raison d'être une fois le rendez-vous
+  passé et les documents appelés à être montrés tels quels à l'institution.
+  Toutes les références croisées corrigées en cohérence (docs, docstrings
+  Python, doc-comments Dart, et deux chaînes utilisateur réelles : le
+  message d'erreur de consentement dans `backend/app/schemas/candidat.py`
+  et le texte de l'écran politique de confidentialité de l'app mobile).
+  Identifiants de code laissés inchangés (`consentement_apdp_date` etc.) —
+  toujours hors périmètre, nécessiteraient une migration Alembic pour un
+  simple renommage.
+- **2026-08-29 — Premier rendez-vous à la CIL effectué : déclaration en
+  ligne obligatoire + démarche ANSSI recommandée.** La CIL a demandé de
+  déposer une déclaration sur son portail (formulaire « collecte de
+  données sur site web »,
+  https://plainte-declaration.cil.bf/statements/create/website-data-collection)
+  plutôt qu'une simple validation informelle du dossier déjà préparé. La
+  CIL a aussi orienté vers l'ANSSI (Agence Nationale de Sécurité des
+  Systèmes d'Information, https://anssi.bf/) pour les exigences de sécurité
+  applicables à une plateforme traitant des données d'examens officiels ;
+  l'ANSSI recommande de formaliser la demande par courrier plutôt que par
+  simple prise de contact. Les deux démarches restent bloquées sur la même
+  question non tranchée que le RCCM/IFU pour Orange Business : la structure
+  juridique de Faso Résultats (`docs/PIVOT_SAAS_B2G.md` § 9) — nécessaire
+  pour signer une déclaration CIL et un courrier ANSSI en tant qu'entité
+  identifiée plutôt qu'à titre personnel. Détail complet dans
+  `docs/ROADMAP.md` § Chantiers transverses.
 
 ---
 

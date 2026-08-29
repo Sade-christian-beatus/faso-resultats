@@ -1,5 +1,5 @@
 """Purge quotidienne des données candidat (docs/PROFIL_CANDIDAT_UNIFIE.md § 7,
-docs/APDP_PROFIL_CANDIDAT.md § 5) : candidatures orphelines expirées (administration
+docs/CIL_PROFIL_CANDIDAT.md § 5) : candidatures orphelines expirées (administration
 résiliée depuis plus de 6 mois) et profils candidats inactifs.
 
 Pas de file de tâches en Phase 1 (RQ prévu en Phase 2, voir CLAUDE.md) : ce script

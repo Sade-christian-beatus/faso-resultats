@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Contenu affiché directement dans l'app plutôt qu'un lien externe : aucune
 /// page web dédiée n'est encore publiée pour ce document (voir
-/// `docs/APDP_PROFIL_CANDIDAT.md`, qui reste la source de référence
+/// `docs/CIL_PROFIL_CANDIDAT.md`, qui reste la source de référence
 /// technique — ce texte en est un résumé en langage clair). Un lien vers
 /// une URL inexistante induirait l'utilisateur en erreur, comme pour la
 /// consultation SMS du jour 7.
@@ -54,7 +54,7 @@ class PolitiqueConfidentialiteScreen extends StatelessWidget {
           SizedBox(height: 8),
           Text(
             'Document de référence technique complet : '
-            'docs/APDP_PROFIL_CANDIDAT.md (dépôt du projet).',
+            'docs/CIL_PROFIL_CANDIDAT.md (dépôt du projet).',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],

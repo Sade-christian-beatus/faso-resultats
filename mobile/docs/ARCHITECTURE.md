@@ -139,7 +139,7 @@ aucune page publique n'est encore déployée pour ces documents. Lier vers une
 URL inexistante induirait l'utilisateur en erreur — même raisonnement que
 pour l'écran de consultation SMS gated (jour 7). Le contenu de la politique
 de confidentialité est un résumé en langage clair de
-`docs/APDP_PROFIL_CANDIDAT.md`, qui reste la source de référence technique
+`docs/CIL_PROFIL_CANDIDAT.md`, qui reste la source de référence technique
 à maintenir à jour en premier.
 
 ## Lint : very_good_analysis

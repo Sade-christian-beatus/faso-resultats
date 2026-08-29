@@ -1,5 +1,5 @@
 """Purge des données candidat (docs/PROFIL_CANDIDAT_UNIFIE.md § 7,
-docs/APDP_PROFIL_CANDIDAT.md § 5) : candidatures orphelines à la résiliation d'une
+docs/CIL_PROFIL_CANDIDAT.md § 5) : candidatures orphelines à la résiliation d'une
 administration, et comptes inactifs."""
 
 import uuid
