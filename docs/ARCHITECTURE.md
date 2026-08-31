@@ -290,7 +290,7 @@ reste du travail esthétique.
 ## Pipeline d'ingestion
 
 Toute importation suit strictement : **upload → prévisualisation → correction
-manuelle possible → publication explicite**, conformément à CLAUDE.md.
+manuelle possible → publication explicite** .
 
 ### Parsers (`app/services/ingestion/`)
 
