@@ -1,8 +1,10 @@
 # Architecture — Faso Résultats
 
 > Maintenu à jour à chaque évolution du schéma ou de la structure applicative.
-> Dernière mise à jour : Phase 1 complète et validée de bout en bout
-> (fondations, auth, ingestion, API publique, frontend, Docker Compose réel).
+> Dernière mise à jour : 2026-08-17 — couvre la Phase 1 (fondations, auth,
+> ingestion, API publique, frontend, Docker Compose réel), le pivot multi-tenant
+> et le profil candidat unifié. La Phase 3 (mobile, `mobile/`) est documentée
+> séparément dans `mobile/docs/`.
 
 ## Structure du dépôt
 
@@ -288,7 +290,7 @@ reste du travail esthétique.
 ## Pipeline d'ingestion
 
 Toute importation suit strictement : **upload → prévisualisation → correction
-manuelle possible → publication explicite**, conformément à CLAUDE.md.
+manuelle possible → publication explicite** .
 
 ### Parsers (`app/services/ingestion/`)
 
@@ -565,7 +567,7 @@ et examen) sont des étapes distinctes, contrôlées séparément.
   déjà été).
 - **Champs sensibles non exposés** : `date_naissance` et `lieu_naissance` sont
   volontairement absents de `ResultatPublicOut`, par principe de minimisation
-  des données (APDP). Décision actée — voir « Historique des décisions
+  des données (exigence CIL). Décision actée — voir « Historique des décisions
   techniques importantes » dans `CLAUDE.md`.
 - **Pas de second facteur anti-scraping en Phase 1** : la recherche ne demande
   que `numero_pv` (+ `jury`), protégée par le rate limiting (30 req/min/IP) et
@@ -652,7 +654,7 @@ tableau de bord). Le même filet de sécurité `.hidden` a été ajouté à
 ## Profil candidat unifié
 
 Voir `docs/PROFIL_CANDIDAT_UNIFIE.md` pour la spécification complète et
-`docs/APDP_PROFIL_CANDIDAT.md` pour la conformité APDP dédiée. Résumé
+`docs/CIL_PROFIL_CANDIDAT.md` pour la conformité CIL dédiée. Résumé
 architectural :
 
 - **Modèles** (`app/models/profil_candidat.py`, `app/models/candidature.py`,
@@ -682,7 +684,7 @@ architectural :
 - **Isolation** : aucune route admin ne permet de lister les profils
   candidats ; un candidat ne peut jamais voir les candidatures d'un autre
   candidat — voir `tests/test_isolation_profil_candidat.py`.
-- **Non implémenté à ce jour** (voir `docs/APDP_PROFIL_CANDIDAT.md` § 6) :
+- **Non implémenté à ce jour** (voir `docs/CIL_PROFIL_CANDIDAT.md` § 6) :
   détection d'abus avancée (seuil de 30 % de rejets), alerte de prise de
   contrôle de compte, purge automatique des comptes inactifs, traitement
   des candidatures orphelines à la résiliation d'une administration.
@@ -725,6 +727,6 @@ La Phase 1 (fondations : API + base + ingestion + web public + admin minimal)
 est complète et validée de bout en bout (code + Docker Compose + rendu
 visuel). Pistes restantes avant une vraie mise en production :
 - Calibrer les parsers PDF natif et OCR sur de vrais spécimens OCECOS/DGEC.
-- Faire valider `docs/APDP.md` par l'APDP / un professionnel du droit —
+- Faire valider `docs/CIL.md` par la CIL / un professionnel du droit —
   plusieurs points (base légale, durée de conservation, responsable de
   traitement) y sont explicitement marqués comme non tranchés.

@@ -71,10 +71,11 @@ async def _publier_resultat(
     numero_cnib: str | None = None,
     date_naissance: date | None = None,
     decision: str = "ADMISSIBLE",
+    jury: str = "03",
 ) -> Resultat:
     utilisateur = Utilisateur(
         administration_id=administration.id,
-        email=f"admin-{numero_recepisse}@{administration.code}.bf",
+        email=f"admin-{numero_recepisse}-{jury}@{administration.code}.bf",
         mot_de_passe_hash=hash_password("x"),
         nom_complet="Admin",
         role=RoleUtilisateur.ADMIN_ADMINISTRATION,
@@ -102,7 +103,7 @@ async def _publier_resultat(
         ingestion_id=ingestion.id,
         numero_pv=numero_recepisse,
         numero_recepisse=numero_recepisse,
-        jury="03",
+        jury=jury,
         nom="TRAORE",
         prenom="Awa",
         numero_cnib=numero_cnib,
@@ -265,6 +266,50 @@ async def test_publication_avec_recepisse_introuvable_reste_en_attente(
 
     assert candidature.statut_verification == StatutVerificationCandidature.EN_ATTENTE
     assert candidature.derniere_notification_envoyee is None
+
+
+@pytest.mark.asyncio
+async def test_publication_avec_meme_numero_pv_dans_deux_jurys_ne_confond_pas_les_candidats(
+    db_session: AsyncSession,
+) -> None:
+    """Régression (audit 2026-08-17) : `numero_pv` n'est unique que par (examen_id,
+    jury) — deux jurys du même examen peuvent réutiliser le même numéro. Le
+    rapprochement doit retrouver le bon candidat par CNIB plutôt que de prendre le
+    premier résultat trouvé au hasard."""
+    administration = await _creer_administration(db_session, "double-jury")
+    examen = await _creer_examen(db_session, administration, statut=StatutExamen.DRAFT)
+    profil = await _creer_profil(db_session, numero_cnib="B00000050", telephone="+22670000050")
+    candidature = await _creer_candidature_en_attente(
+        db_session, profil, administration, examen, "000050"
+    )
+
+    examen.statut = StatutExamen.PUBLISHED
+    resultat_autre_jury = await _publier_resultat(
+        db_session,
+        administration,
+        examen,
+        numero_recepisse="000050",
+        numero_cnib="B00000099",  # candidat homonyme d'un autre jury, CNIB différent
+        jury="03",
+    )
+    resultat_bon_jury = await _publier_resultat(
+        db_session,
+        administration,
+        examen,
+        numero_recepisse="000050",
+        numero_cnib="B00000050",  # correspond au profil du candidat
+        jury="07",
+    )
+
+    with patch("app.services.candidat.notification_engine.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2026, 7, 6, 14, 0, tzinfo=UTC)
+        await MatchingService(db_session).traiter_publication_examen(examen)
+    await db_session.commit()
+    await db_session.refresh(candidature)
+
+    assert candidature.statut_verification == StatutVerificationCandidature.VERIFIE_AUTO
+    assert candidature.dernier_resultat_id == resultat_bon_jury.id
+    assert candidature.dernier_resultat_id != resultat_autre_jury.id
 
 
 @pytest.mark.asyncio

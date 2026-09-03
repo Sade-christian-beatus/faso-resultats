@@ -11,6 +11,16 @@ const LIBELLES_EXAMEN = {
   CONCOURS_DIRECT: "Concours direct",
 };
 
+const CARACTERES_HTML = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+// Les données affichées ici (nom, établissement, décision...) viennent de fichiers
+// importés par un admin (Excel/PDF/OCR), pas d'un formulaire validé — un caractère
+// HTML dans une ligne source ne doit jamais s'exécuter chez un visiteur public non
+// authentifié.
+function escapeHtml(valeur) {
+  return String(valeur ?? "").replace(/[&<>"']/g, (caractere) => CARACTERES_HTML[caractere]);
+}
+
 const ICONE_ERREUR = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>`;
 const ICONE_CHARGEMENT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-9-9" /></svg>`;
 
@@ -47,16 +57,16 @@ function renderExamensDisponibles(examens) {
     .map(
       ([libelleType, listeExamens]) => `
       <div class="border-l-2 border-emerald-200 pl-3">
-        <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">${libelleType}</h3>
+        <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">${escapeHtml(libelleType)}</h3>
         <div class="flex flex-wrap gap-2">
           ${listeExamens
             .map(
               (examen) => `
             <button
               type="button"
-              data-examen-id="${examen.id}"
+              data-examen-id="${escapeHtml(examen.id)}"
               class="btn-choisir-examen text-sm border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-full px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-300 active:scale-[0.98] transition"
-            >${examen.annee} — ${examen.libelle}</button>`
+            >${examen.annee} — ${escapeHtml(examen.libelle)}</button>`
             )
             .join("")}
         </div>
@@ -84,7 +94,7 @@ async function chargerExamens() {
     selectExamen.innerHTML = examens
       .map(
         (examen) =>
-          `<option value="${examen.id}">${LIBELLES_EXAMEN[examen.type_examen] || examen.type_examen} ${examen.annee} — ${examen.libelle}</option>`
+          `<option value="${escapeHtml(examen.id)}">${escapeHtml(LIBELLES_EXAMEN[examen.type_examen] || examen.type_examen)} ${examen.annee} — ${escapeHtml(examen.libelle)}</option>`
       )
       .join("");
     renderExamensDisponibles(examens);
@@ -110,13 +120,13 @@ function afficherResultats(resultats) {
       const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
       return `
       <div class="carte-resultat border-l-4 ${style.bordure} bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
-        <p class="text-lg font-semibold text-slate-900">${r.nom} ${r.prenom}</p>
-        <p class="text-sm text-slate-500">PV n° ${r.numero_pv} — ${r.jury}</p>
+        <p class="text-lg font-semibold text-slate-900">${escapeHtml(r.nom)} ${escapeHtml(r.prenom)}</p>
+        <p class="text-sm text-slate-500">PV n° ${escapeHtml(r.numero_pv)} — ${escapeHtml(r.jury)}</p>
         <p class="mt-2.5">
-          <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${style.badge}">${r.decision}</span>
-          ${r.moyenne !== null ? `<span class="ml-2 text-sm text-slate-600">Moyenne : ${r.moyenne}</span>` : ""}
+          <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${style.badge}">${escapeHtml(r.decision)}</span>
+          ${r.moyenne !== null ? `<span class="ml-2 text-sm text-slate-600">Moyenne : ${escapeHtml(r.moyenne)}</span>` : ""}
         </p>
-        ${r.etablissement ? `<p class="text-sm text-slate-500 mt-1.5">${r.etablissement}</p>` : ""}
+        ${r.etablissement ? `<p class="text-sm text-slate-500 mt-1.5">${escapeHtml(r.etablissement)}</p>` : ""}
       </div>`;
     })
     .join("");

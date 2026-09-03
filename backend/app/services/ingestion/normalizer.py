@@ -112,6 +112,37 @@ def _parser_moyenne(valeur: Any) -> tuple[float | None, str | None]:
         return None, f"moyenne illisible : '{texte}'"
 
 
+def valider_ligne_normalisee(donnees: dict[str, Any]) -> list[str]:
+    """Revalide une ligne déjà en forme canonique (ex. après correction manuelle par un
+    admin), en rejouant les mêmes règles que `normaliser_ligne` sur les champs
+    individuels. Contrairement à `normaliser_ligne`, ne fait aucun mapping d'en-têtes :
+    suppose que les clés de `donnees` sont déjà les champs canoniques (numero_pv, jury,
+    nom, ...). Sert de garde-fou serveur : on ne peut jamais faire confiance à la liste
+    `erreurs` telle qu'envoyée par le client (validation humaine obligatoire = revalidée
+    côté serveur, pas seulement affichée côté client).
+    """
+    erreurs: list[str] = []
+    for champ in CHAMPS_OBLIGATOIRES:
+        if not donnees.get(champ):
+            erreurs.append(f"{champ} manquant")
+
+    date_naissance = donnees.get("date_naissance")
+    if date_naissance:
+        try:
+            date.fromisoformat(str(date_naissance))
+        except ValueError:
+            erreurs.append(f"date de naissance illisible : '{date_naissance}'")
+
+    moyenne = donnees.get("moyenne")
+    if moyenne is not None and not isinstance(moyenne, int | float):
+        try:
+            float(str(moyenne).replace(",", "."))
+        except ValueError:
+            erreurs.append(f"moyenne illisible : '{moyenne}'")
+
+    return erreurs
+
+
 @dataclass
 class ResultatNormalisation:
     donnees: dict[str, Any]

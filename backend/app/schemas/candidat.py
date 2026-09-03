@@ -18,7 +18,7 @@ class InscriptionRequest(BaseModel):
     @classmethod
     def _consentement_obligatoire(cls, valeur: bool) -> bool:
         if not valeur:
-            raise ValueError("Le consentement APDP est obligatoire pour créer un compte")
+            raise ValueError("Le consentement CIL est obligatoire pour créer un compte")
         return valeur
 
 
@@ -124,7 +124,7 @@ class JournalEntreeExport(BaseModel):
 
 
 class ProfilCandidatExport(BaseModel):
-    """Droit à la portabilité (docs/APDP_PROFIL_CANDIDAT.md § 8) : l'intégralité des
+    """Droit à la portabilité (docs/CIL_PROFIL_CANDIDAT.md § 8) : l'intégralité des
     données du profil connecté, dans un format structuré et exploitable — contrairement
     à `ProfilCandidatOut` (§ Droit d'accès), qui expose volontairement moins de champs
     pour l'usage courant du dashboard."""

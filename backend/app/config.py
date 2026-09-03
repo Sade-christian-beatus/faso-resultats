@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,13 +18,14 @@ _MESSAGE_CLE_CHIFFREMENT_INVALIDE = (
 _VALEURS_DEV_INSECURES = {
     "jwt_secret_key": "change-me-in-production",
     "candidat_hash_pepper": "change-me-in-production",
+    "api_key_pepper": "change-me-in-production",
 }
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    environment: str = "development"
+    environment: Literal["development", "staging", "production"] = "development"
     cors_origins: str = "http://localhost:8080"
 
     database_url: str = "postgresql+asyncpg://faso:faso_secret@db:5432/faso_resultats"
@@ -52,17 +54,27 @@ class Settings(BaseSettings):
     candidat_abus_seuil_rejets_par_jour: int = 5
     candidat_abus_taux_rejet_suspension: float = 0.3
     candidat_abus_minimum_tentatives: int = 5
-    # Rétention (docs/PROFIL_CANDIDAT_UNIFIE.md § 7, docs/APDP_PROFIL_CANDIDAT.md § 5) :
-    # durées provisoires, à valider avec l'APDP avant mise en production réelle.
+    # Rétention (docs/PROFIL_CANDIDAT_UNIFIE.md § 7, docs/CIL_PROFIL_CANDIDAT.md § 5) :
+    # durées provisoires, à valider avec la CIL avant mise en production réelle.
     candidat_purge_candidature_resiliee_jours: int = 180  # 6 mois, § 7
-    candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée APDP
+    candidat_purge_inactivite_jours: int = 730  # 2 ans, valeur provisoire non validée CIL
     # Canal de contact dédié aux demandes d'exercice de droits qui ne passent pas par
-    # les endpoints existants (docs/APDP_PROFIL_CANDIDAT.md § 8) — à remplacer par une
+    # les endpoints existants (docs/CIL_PROFIL_CANDIDAT.md § 8) — à remplacer par une
     # vraie adresse avant mise en production.
     candidat_dpo_contact_email: str = "dpo@fasoresultats.bf"
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"
+    # Verrouillage de compte admin après échecs répétés (audit 2026-08-17) :
+    # indépendant du rate-limit IP ci-dessus, qui ne protège pas contre un
+    # brute-force distribué sur plusieurs IP visant un seul compte.
+    admin_login_max_tentatives: int = 5
+    admin_login_lockout_minutes: int = 15
+
+    # API B2B (Phase 4, docs/ROADMAP.md) — pepper dédié : jamais le même que
+    # candidat_hash_pepper, un domaine de secret différent (clés API partenaires,
+    # pas des données candidat).
+    api_key_pepper: str = "change-me-in-production"
 
     uploads_dir: str = "/app/uploads"
     max_upload_size_mb: int = 20

@@ -22,7 +22,7 @@
 - Utilisateurs souvent sur **connexions 3G faibles ou instables**
 - Beaucoup n'ont pas de smartphone → le canal SMS est aussi important que le web
 - Français langue principale de l'interface, avec messages clairs et rassurants
-- Les données personnelles des candidats sont **sensibles** : conformité APDP (Autorité de Protection des Données Personnelles du Burkina Faso) obligatoire
+- Les données personnelles des candidats sont **sensibles** : conformité CIL (Commission de l'Informatique et des Libertés du Burkina Faso, l'autorité burkinabè de protection des données à caractère personnel) obligatoire
 - Hébergement final sur **serveurs burkinabè** (souveraineté des données) → éviter les dépendances lourdes à AWS, GCP, Azure
 
 ### 2. Simplicité > sophistication
@@ -157,10 +157,10 @@ Tables principales : `examens`, `resultats`, `ingestions`, `admins`, `notificati
 - CORS restreint aux domaines connus en production
 - Variables sensibles uniquement via `.env`, jamais dans le code
 
-### Conformité APDP
+### Conformité CIL
 - Collecter le minimum de données nécessaires
 - Prévoir mécanisme de purge des données après période légale de conservation
-- Documentation de traitement à jour dans `docs/APDP.md`
+- Documentation de traitement à jour dans `docs/CIL.md`
 - Consentement explicite pour les notifications SMS (case à cocher, pas pré-cochée)
 
 ---
@@ -175,12 +175,25 @@ ces décisions sont prises.
 |-------|---------|--------|
 | **Phase 1** | Fondations : API + base + ingestion + web public + admin minimal | ✅ Terminée (validée bout en bout, Docker Compose inclus) |
 | **Phase 2** | Intégration SMS (Orange Business, Bulk SMS) + RQ, notifications proactives | 🔒 À venir |
-| **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🔒 À venir |
-| **Phase 4** | USSD (Orange Business), API B2B | 🔒 À venir |
+| **Phase 3** | App mobile Android/iOS (Flutter), espace établissement (auto-inscription avec vérification) | 🟡 Démarrée et bien avancée (voir note du 2026-08-17 ci-dessous) — espace établissement non fait |
+| **Phase 4** | USSD (Orange Business), API B2B | 🟡 Fondation API B2B démarrée (voir note du 2026-08-17) — USSD toujours bloqué par le contrat opérateur |
 
 **Hors périmètre (décision du 2026-07-03) :** guide d'orientation et expansion sous-régionale UEMOA — supprimés du projet. Faso Résultats reste scopé au Burkina Faso de façon permanente.
 
-**Phase 1 terminée.** Ne pas démarrer la Phase 2 (SMS) ou une phase suivante sauf demande explicite — l'architecture laisse déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
+**2026-08-17 — Mise à jour de statut (audit) : la Phase 3 avait en réalité déjà
+démarré et était bien avancée sans que cette section ne soit mise à jour.** 12
+commits `feat(mobile)` (« jour 1 » à « jour 10 »), mergés sur `main` avant cette
+note : authentification candidat, dashboard, ajout/retrait de candidature,
+consultation rapide sans compte, gestion hors-ligne. Notifications push et
+consultation par SMS restent volontairement désactivées côté mobile (`gated`),
+dépendantes de la Phase 2 non démarrée. Espace établissement : pas commencé.
+
+**2026-08-17 — Fondation technique de l'API B2B (Phase 4) démarrée sur demande
+explicite**, pendant l'attente du contrat Orange Business qui bloque Phase 2 et le
+volet USSD de la Phase 4 (aucun des deux n'a de dépendance sur ce contrat). Voir
+`docs/ROADMAP.md` § Phase 4 pour le détail technique. Ne pas redémarrer la Phase 2
+(SMS) ou le volet USSD de la Phase 4 sans demande explicite — l'architecture laisse
+déjà la porte ouverte (table `notifications_preinscription` créée dès la Phase 1).
 
 ---
 
@@ -228,7 +241,7 @@ Après chaque étape majeure, produire un résumé structuré :
 
 ## Ressources et références
 
-- **APDP Burkina Faso :** https://www.cil.bf (à vérifier au moment de la conformité)
+- **CIL (Commission de l'Informatique et des Libertés) Burkina Faso :** https://www.cil.bf (à vérifier au moment de la conformité)
 - **Opérateurs télécom :** Orange Burkina, Moov Africa Burkina Faso, Telecel Faso
 - **Organismes d'examens :** OCECOS (Office Central des Examens et Concours du Secondaire), DGEC (Direction Générale des Examens et Concours)
 - **Documentation FastAPI :** https://fastapi.tiangolo.com
@@ -244,7 +257,8 @@ Après chaque étape majeure, produire un résumé structuré :
 - **2026-07-03 — `date_naissance` et `lieu_naissance` exclus de l'API publique**
   (`/api/v1/public/results`). Le candidat retrouve déjà son résultat via son
   numéro de PV ; il n'a pas besoin de se voir confirmer sa date/lieu de
-  naissance pour ça. Minimisation des données conforme à l'esprit APDP.
+  naissance pour ça. Minimisation des données conforme à l'esprit de la
+  réglementation CIL.
   Décision assumée sans étude produit formelle — à revoir si un usage
   démontre le besoin (ex. vérification d'identité renforcée).
 - **2026-07-03 — Pas de second facteur anti-scraping en Phase 1** sur la
@@ -298,6 +312,140 @@ Après chaque étape majeure, produire un résumé structuré :
   `confirmer_otp()` marquait la candidature vérifiée sans jamais peupler le
   cache `dernier_resultat_*`, donc le dashboard candidat continuait
   d'afficher « résultat pas encore publié » après confirmation.
+- **2026-08-17 — Audit complet du projet (2 passes indépendantes) et
+  correction des 5 bugs critiques trouvés**, avant un test réel en
+  conditions proches du terrain :
+  1. `scan_pdf_parser.py` : "NON ADMIS"/"NON ADMISSIBLE" détecté comme
+     "ADMIS"/"ADMISSIBLE" (le mot "ADMIS" matchait dans la négation) —
+     inversion silencieuse de décision sur les communiqués scannés de la
+     Fonction publique. Corrigé (formes négatives testées en priorité) et
+     couvert par un test de régression.
+  2. `verification_service.py` : le rapprochement candidat↔résultat ne
+     filtrait pas par `jury`, alors que `numero_pv` n'est unique que par
+     `(examen_id, jury)` — risque de faux positif/négatif entre deux
+     candidats de jurys différents partageant le même numéro. Corrigé par
+     désambiguïsation CNIB/date de naissance quand plusieurs résultats
+     correspondent, fallback OTP si aucun ne peut être confirmé sans
+     équivoque (jamais de choix arbitraire). Limitation connue : `Candidature`
+     ne stocke toujours pas de `jury` — une vraie disambiguïsation en amont
+     nécessiterait de le demander au candidat à l'inscription (non fait, hors
+     scope de ce correctif).
+  3. `admin/ingestions.py` (`correct_ingestion`) : la validation humaine
+     obligatoire n'était pas revalidée côté serveur — le champ `erreurs` du
+     payload client faisait foi tel quel. Corrigé : `nombre_erreurs` est
+     désormais recalculé côté serveur à partir des données (`normalizer.
+     valider_ligne_normalisee`), jamais du payload client.
+  4. `config.py` : `environment` était un `str` libre comparé littéralement
+     à `"production"` — une variante de casse (`Production`) contournait
+     silencieusement à la fois le garde-fou anti-secrets-par-défaut et le
+     masquage du code OTP de debug dans les réponses API. Typé en
+     `Literal["development", "staging", "production"]`.
+  5. Index `resultats(examen_id, numero_pv, jury, phase)` jamais `unique`
+     depuis sa création — rien n'empêchait une double ingestion de créer deux
+     `Resultat` contradictoires pour le même candidat. Rendu unique
+     (migration `8f2cc3339226`, testée upgrade/downgrade/re-upgrade contre
+     PostgreSQL 16 réel, `alembic check` sans dérive).
+
+  Points majeurs identifiés par l'audit mais **non corrigés dans cette
+  session** (hors urgence du test du lendemain) : pas de verrouillage de
+  compte admin après échecs de connexion ni de journalisation de ces
+  échecs ; pas de révocation JWT (token candidat valable 30 jours) ; CNIB et
+  date de naissance en clair dans `resultats` (chiffrés dans
+  `profils_candidats`, incohérence à trancher) ; `erreurs_fichier` (écart de
+  comptage OCR) non bloquant à la publication ; notifications perdues sans
+  retry en heure silencieuse (22h-6h) ; alias `"mention"` → champ `decision`
+  sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
+  `innerHTML` non échappé sur `frontend/public/js/public.js` (nom/prénom/
+  établissement affichés sans échappement) ; absence de CI backend
+  (`pytest`/`ruff`/`black` non automatisés) ; `/api/v1/public/results` et
+  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
+  reprendre par priorité dans une prochaine session.
+- **2026-08-17 — Fondation technique de l'API B2B (Phase 4)**, sur demande
+  explicite pendant l'attente du contrat Orange Business (SMS/USSD). Décisions
+  actées après clarification : (1) mêmes champs que l'API publique pour les
+  partenaires B2B — pas d'accès élargi aux données sensibles (date de naissance,
+  CNIB) tant qu'aucun cadre contractuel/juridique ne le justifie ; (2) clés API
+  gérées uniquement par le SUPER_ADMIN (partenaires transversaux, pas liés à une
+  administration cliente) ; (3) pas de facturation automatisée — `tier`/
+  `quota_quotidien` configurables manuellement à l'émission de la clé, la grille
+  tarifaire réelle reste à trancher. Nouveaux modèles `Partenaire`/`ApiKey`
+  (migration `7d03f84b9299`, testée upgrade/downgrade/re-upgrade contre
+  PostgreSQL 16 réel, `alembic check` sans dérive), clé en clair générée une
+  seule fois et jamais stockée (hash HMAC avec un pepper dédié `api_key_pepper`,
+  distinct de celui des données candidat — même erreur de secret-par-défaut
+  oublié que les autres couverte par `_valider_secrets_production`). Quota
+  quotidien par clé via un compteur cache non atomique (même compromis assumé
+  que le verrouillage OTP candidat), pas un rate-limit IP.
+- **2026-08-17 — Verrouillage de compte admin après échecs de connexion +
+  échappement XSS sur les données publiques**, les deux points bloquants
+  identifiés pour une démo publique. `/admin/login` verrouille désormais le
+  **compte** (indépendamment de l'IP) après `admin_login_max_tentatives`
+  échecs, journalise chaque échec dans `AuditLog` (nouvelle action
+  `LOGIN_FAILED`, migration `0694461c8902`) ; même schéma que le
+  verrouillage OTP candidat existant. `frontend/public/js/public.js`
+  échappe désormais systématiquement les données affichées côté public
+  (nom/prénom/établissement/décision/jury), qui proviennent de fichiers
+  importés et non d'un formulaire validé. Vérifié contre un vrai navigateur
+  (Chromium/Playwright), pas seulement relu : un résultat contenant un
+  payload `<img onerror=...>` uploadé via le vrai flux admin s'affiche en
+  texte inerte, sans exécution.
+- **2026-08-17 — Correction de terminologie : l'autorité burkinabè de
+  protection des données s'appelle la CIL** (Commission de l'Informatique
+  et des Libertés), pas « APDP » — « APDP » était utilisé à tort dans les
+  docs comme s'il s'agissait du nom de l'institution. Corrigé dans tous les
+  documents du projet (prose uniquement — les noms de fichiers
+  `docs/APDP.md`/`docs/APDP_PROFIL_CANDIDAT.md` et les identifiants de code
+  existants, ex. `consentement_apdp_date`, sont volontairement laissés
+  inchangés pour ne pas casser les références croisées et le schéma pour un
+  simple problème de nommage). `docs/APDP.md` entièrement réécrit dans la
+  foulée : structure plus présentable (résumé non technique en tête, rôles
+  clarifiés sous-traitant/responsable de traitement conformément au pivot
+  SaaS B2G), contenu remis à jour avec l'état réel de la plateforme
+  (`numero_cnib` désormais documenté dans le registre — l'audit du
+  2026-08-17 avait signalé son absence —, mesures de sécurité courantes
+  listées avec les manques restants), pensé pour être montré tel quel lors
+  d'un rendez-vous avec la CIL.
+- **2026-08-17 — Premières données fournisseurs réelles pour les Phases 2/4 et
+  la mise en production.** Grille tarifaire et conditions Orange Business
+  consultées (offres « API SMS » et « USSD », distinctes l'une de l'autre) :
+  révèle un nouveau prérequis bloquant non anticipé — souscrire nécessite un
+  RCCM/IFU, donc une structure juridique enregistrée pour Faso Résultats (ou
+  une souscription directe par l'administration cliente au titre de
+  « structure publique »). L'USSD ajoute un code dédié à obtenir auprès de
+  l'ARCEP et des frais d'infrastructure dédiée (VPN, internet dédié) plus
+  lourds qu'un simple abonnement API. Côté hébergement, une première piste
+  burkinabè identifiée (IKA Cloud, datacenter Tier III Ouagadougou, offres
+  VPS et domaine `.bf`) — reste à comparer à d'autres devis et à vérifier les
+  conditions d'accès root avant de s'engager. Détail complet dans
+  `docs/ROADMAP.md` § Phase 2, § Phase 4 et § Chantiers transverses.
+- **2026-08-29 — Fichiers `docs/APDP.md`/`docs/APDP_PROFIL_CANDIDAT.md`
+  renommés en `docs/CIL.md`/`docs/CIL_PROFIL_CANDIDAT.md`**, sur demande
+  explicite après le premier rendez-vous à la CIL (voir entrée suivante) —
+  le nommage neutre n'avait plus de raison d'être une fois le rendez-vous
+  passé et les documents appelés à être montrés tels quels à l'institution.
+  Toutes les références croisées corrigées en cohérence (docs, docstrings
+  Python, doc-comments Dart, et deux chaînes utilisateur réelles : le
+  message d'erreur de consentement dans `backend/app/schemas/candidat.py`
+  et le texte de l'écran politique de confidentialité de l'app mobile).
+  Identifiants de code laissés inchangés (`consentement_apdp_date` etc.) —
+  toujours hors périmètre, nécessiteraient une migration Alembic pour un
+  simple renommage.
+- **2026-08-29 — Premier rendez-vous à la CIL effectué : déclaration en
+  ligne obligatoire + démarche ANSSI recommandée.** La CIL a demandé de
+  déposer une déclaration sur son portail (formulaire « collecte de
+  données sur site web »,
+  https://plainte-declaration.cil.bf/statements/create/website-data-collection)
+  plutôt qu'une simple validation informelle du dossier déjà préparé. La
+  CIL a aussi orienté vers l'ANSSI (Agence Nationale de Sécurité des
+  Systèmes d'Information, https://anssi.bf/) pour les exigences de sécurité
+  applicables à une plateforme traitant des données d'examens officiels ;
+  l'ANSSI recommande de formaliser la demande par courrier plutôt que par
+  simple prise de contact. Les deux démarches restent bloquées sur la même
+  question non tranchée que le RCCM/IFU pour Orange Business : la structure
+  juridique de Faso Résultats (`docs/PIVOT_SAAS_B2G.md` § 9) — nécessaire
+  pour signer une déclaration CIL et un courrier ANSSI en tant qu'entité
+  identifiée plutôt qu'à titre personnel. Détail complet dans
+  `docs/ROADMAP.md` § Chantiers transverses.
 
 ---
 

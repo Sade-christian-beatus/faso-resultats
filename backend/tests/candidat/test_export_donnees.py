@@ -1,4 +1,4 @@
-"""Droit à la portabilité (docs/APDP_PROFIL_CANDIDAT.md § 8) :
+"""Droit à la portabilité (docs/CIL_PROFIL_CANDIDAT.md § 8) :
 GET /api/v1/candidat/me/export renvoie l'intégralité des données du profil connecté,
 dans un format structuré et exploitable — distinct de GET /me qui n'expose que les
 champs utiles au dashboard courant."""

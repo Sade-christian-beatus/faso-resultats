@@ -22,6 +22,7 @@ from app.models import (
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
 from app.services.audit_service import journaliser_audit
 from app.services.ingestion.dispatch import parser_fichier
+from app.services.ingestion.normalizer import valider_ligne_normalisee
 from app.services.ingestion.publication import construire_resultats
 from app.services.ingestion.template import construire_modele_excel
 
@@ -210,9 +211,22 @@ async def correct_ingestion(
             detail="Cette ingestion n'est plus modifiable (déjà publiée ou rejetée)",
         )
 
-    ingestion.apercu_donnees = [ligne.model_dump() for ligne in payload.lignes]
-    ingestion.nombre_lignes_detectees = len(payload.lignes)
-    ingestion.nombre_erreurs = sum(1 for ligne in payload.lignes if ligne.erreurs)
+    # La liste `erreurs` envoyée par le client n'est jamais fiable (bug/désync front,
+    # payload manuel) : on revalide chaque ligne côté serveur à partir de ses données,
+    # sans jamais faire confiance à ce que le client prétend avoir corrigé.
+    lignes_revalidees = [
+        LigneApercu(
+            ligne=ligne.ligne,
+            donnees=ligne.donnees,
+            brut=ligne.brut,
+            erreurs=valider_ligne_normalisee(ligne.donnees),
+        )
+        for ligne in payload.lignes
+    ]
+
+    ingestion.apercu_donnees = [ligne.model_dump() for ligne in lignes_revalidees]
+    ingestion.nombre_lignes_detectees = len(lignes_revalidees)
+    ingestion.nombre_erreurs = sum(1 for ligne in lignes_revalidees if ligne.erreurs)
     await journaliser_audit(
         db,
         utilisateur_id=current_utilisateur.id,

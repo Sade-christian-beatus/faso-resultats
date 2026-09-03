@@ -1,15 +1,15 @@
-# Documentation de traitement — Profil candidat unifié (conformité APDP)
+# Documentation de traitement — Profil candidat unifié (conformité CIL)
 
 > Document de travail technique, à faire valider par un professionnel du
-> droit et/ou directement par l'Autorité de Protection des Données à
-> caractère Personnel du Burkina Faso (APDP, https://www.cil.bf) avant toute
+> droit et/ou directement par la Commission de l'Informatique et des
+> Libertés du Burkina Faso (CIL, https://www.cil.bf) avant toute
 > mise en production réelle. Il décrit ce que fait le système aujourd'hui ;
 > il ne constitue pas à lui seul une déclaration de traitement officielle.
 > Les points marqués ⚠️ nécessitent une confirmation juridique.
 
 Ce document couvre spécifiquement le **profil candidat plateforme**
 (`docs/PROFIL_CANDIDAT_UNIFIE.md`), transversal à toutes les administrations.
-Voir `docs/APDP.md` pour le traitement des données de résultats côté
+Voir `docs/CIL.md` pour le traitement des données de résultats côté
 administration (tenant), qui reste distinct.
 
 Maintenu à jour à chaque évolution touchant ce périmètre, conformément à
@@ -20,7 +20,7 @@ Maintenu à jour à chaque évolution touchant ce périmètre, conformément à
 ## 1. Différence de statut avec les données d'examens
 
 Sur les données d'examens (`resultats`, `ingestions`), Faso Résultats est
-**sous-traitant** de l'administration cliente (voir `docs/APDP.md`).
+**sous-traitant** de l'administration cliente (voir `docs/CIL.md`).
 
 Sur le **profil candidat**, la situation change : Faso Résultats est
 **responsable de traitement** au sens de la loi n°001-2021/AN du Burkina
@@ -29,7 +29,7 @@ directement ces données (compte candidat, authentification, notifications),
 indépendamment de toute administration.
 
 ⚠️ À compléter avec l'entité officielle porteuse du projet, comme pour
-`docs/APDP.md` § 1.
+`docs/CIL.md` § 1.
 
 ---
 
@@ -85,7 +85,7 @@ non démarrés.
 
 ## 4. Base légale
 
-⚠️ À confirmer avec l'APDP / un juriste. Piste de travail : **consentement
+⚠️ À confirmer avec la CIL / un juriste. Piste de travail : **consentement
 explicite** de la personne concernée (case non pré-cochée, horodatée et
 versionnée — `consentement_apdp_date`/`consentement_apdp_version`), recueilli
 à l'inscription (`POST /api/v1/candidat/inscription`).
@@ -104,10 +104,10 @@ versionnée — `consentement_apdp_date`/`consentement_apdp_version`), recueilli
   `tests/test_isolation_profil_candidat.py`).
 - La suppression **n'affecte pas** les résultats publiés par les
   administrations, qui restent leur propriété et suivent leur propre
-  politique de conservation (`docs/APDP.md`).
+  politique de conservation (`docs/CIL.md`).
 - Durée de conservation par défaut (compte inactif, jamais supprimé
   explicitement) : `candidat_purge_inactivite_jours` (2 ans par défaut).
-  ⚠️ Valeur provisoire, non validée par l'APDP — à trancher avant mise en
+  ⚠️ Valeur provisoire, non validée par la CIL — à trancher avant mise en
   production réelle. Purge effective via `purge_candidats.py`
   (`app/services/candidat/purge_service.py`), à planifier via cron côté
   infrastructure (pas de file de tâches en Phase 1, voir CLAUDE.md).
@@ -189,7 +189,7 @@ Limites connues, à traiter avant une mise en production réelle :
   téléphone dès l'intégration SMS réelle (Phase 2) — non applicable tant
   que `NotificationEngine.envoyer_sms` reste un stub.
 - **Hébergeur** : ⚠️ à préciser une fois l'infrastructure de production
-  choisie (doit être burkinabè, cf. `CLAUDE.md`), comme pour `docs/APDP.md`.
+  choisie (doit être burkinabè, cf. `CLAUDE.md`), comme pour `docs/CIL.md`.
 
 ---
 
@@ -216,7 +216,7 @@ Limites connues, à traiter avant une mise en production réelle :
 
 ## 9. Prochaines étapes avant une vraie mise en production
 
-1. Faire valider ce document par l'APDP ou un professionnel du droit (base
+1. Faire valider ce document par la CIL ou un professionnel du droit (base
    légale, durée de conservation par défaut — notamment
    `candidat_purge_inactivite_jours`, actuellement une valeur provisoire non
    validée — responsable de traitement).

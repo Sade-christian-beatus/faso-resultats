@@ -329,7 +329,7 @@ Puisque un candidat passe généralement plusieurs examens et concours dans sa v
 - Les futures fonctionnalités d'orientation post-résultat
 - Un service B2B d'analyse de parcours pour les écoles
 
-À prévoir dans le modèle de données mais à ne pas exposer côté utilisateur avant qu'une politique claire de gestion du consentement APDP soit établie.
+À prévoir dans le modèle de données mais à ne pas exposer côté utilisateur avant qu'une politique claire de gestion du consentement, conforme aux exigences de la CIL, soit établie.
 
 ---
 

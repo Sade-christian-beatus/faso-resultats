@@ -1,5 +1,5 @@
 """Purge des données candidat (docs/PROFIL_CANDIDAT_UNIFIE.md § 7,
-docs/APDP_PROFIL_CANDIDAT.md § 5) : candidatures orphelines à la résiliation d'une
+docs/CIL_PROFIL_CANDIDAT.md § 5) : candidatures orphelines à la résiliation d'une
 administration, et comptes inactifs.
 
 Pas de file de tâches en Phase 1 (RQ prévu en Phase 2, voir CLAUDE.md) : ces
@@ -63,7 +63,7 @@ async def purger_candidatures_administration_resiliee_expirees(db: AsyncSession)
 
 async def purger_profils_inactifs(db: AsyncSession) -> int:
     """Supprime les profils candidats sans activité depuis `candidat_purge_inactivite_jours`
-    (durée provisoire, non validée par l'APDP — voir docs/APDP_PROFIL_CANDIDAT.md § 5).
+    (durée provisoire, non validée par la CIL — voir docs/CIL_PROFIL_CANDIDAT.md § 5).
     L'inactivité se mesure depuis la dernière connexion, ou depuis l'inscription si le
     profil ne s'est jamais reconnecté. Passe par l'ORM (pas un DELETE en masse) pour
     déclencher les cascades `all, delete-orphan` vers les candidatures et le journal."""

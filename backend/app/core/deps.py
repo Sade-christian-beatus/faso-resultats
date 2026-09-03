@@ -1,16 +1,30 @@
 import uuid
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import decode_access_token, decode_candidat_access_token
+from app.core.security import decode_access_token, decode_candidat_access_token, hash_cle_api
 from app.database import get_db
-from app.models import Administration, RoleUtilisateur, Utilisateur
+from app.models import (
+    Administration,
+    ApiKey,
+    Partenaire,
+    RoleUtilisateur,
+    StatutApiKey,
+    StatutPartenaire,
+    Utilisateur,
+)
 from app.models.profil_candidat import ProfilCandidat, StatutProfilCandidat
 
 _bearer_scheme = HTTPBearer()
+
+_CLE_API_INVALIDE = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Clé API manquante, invalide ou révoquée (en-tête X-API-Key)",
+)
 
 _CREDENTIALS_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -91,3 +105,26 @@ async def get_current_profil_candidat(
     if profil is None or profil.statut != StatutProfilCandidat.ACTIF:
         raise _CREDENTIALS_ERROR
     return profil
+
+
+async def get_current_api_key(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> ApiKey:
+    """Authentification B2B (docs/ROADMAP.md § Phase 4) : totalement distincte des
+    deux dépendances ci-dessus (pas de JWT). La clé est hashée avant recherche —
+    jamais comparée ni indexée en clair, comme le mot de passe admin ou le CNIB
+    candidat."""
+    if not x_api_key:
+        raise _CLE_API_INVALIDE
+
+    resultat = await db.execute(select(ApiKey).where(ApiKey.cle_hash == hash_cle_api(x_api_key)))
+    api_key = resultat.scalars().first()
+    if api_key is None or api_key.statut != StatutApiKey.ACTIVE:
+        raise _CLE_API_INVALIDE
+
+    partenaire = await db.get(Partenaire, api_key.partenaire_id)
+    if partenaire is None or partenaire.statut != StatutPartenaire.ACTIF:
+        raise _CLE_API_INVALIDE
+
+    return api_key

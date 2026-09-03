@@ -185,7 +185,7 @@ async def test_liste_administrations_publiques_expose_les_champs_utiles(
 
 @pytest.mark.asyncio
 async def test_droits_candidat_expose_un_contact_et_les_droits(client: AsyncClient) -> None:
-    """Canal de contact dédié (docs/APDP_PROFIL_CANDIDAT.md § 8) pour les demandes qui
+    """Canal de contact dédié (docs/CIL_PROFIL_CANDIDAT.md § 8) pour les demandes qui
     ne passent pas par les endpoints candidat en libre-service."""
     response = await client.get("/api/v1/public/droits-candidat")
 

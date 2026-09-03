@@ -180,7 +180,7 @@ class Candidature(Base):
 
 ### Table de journalisation `JournalConsultationProfil`
 
-Pour la conformité APDP, chaque consultation du profil doit être tracée :
+Pour la conformité CIL, chaque consultation du profil doit être tracée :
 
 ```python
 class JournalConsultationProfil(Base):
@@ -212,7 +212,7 @@ Le parcours est **léger et mobile-first**. Aucun besoin d'email, aucun besoin d
    ↓
 Étape 6 : Validation OTP → compte créé
    ↓
-Étape 7 : Acceptation des CGU/APDP (une seule case, texte clair)
+Étape 7 : Acceptation des CGU / consentement protection des données (une seule case, texte clair)
    ↓
 Étape 8 : Redirection vers le dashboard vide
    ↓
@@ -353,7 +353,7 @@ Le lien court `fasoresultats.bf/r/AB12` mène directement au résultat détaill�
 
 ---
 
-## 7. Conformité APDP
+## 7. Conformité CIL
 
 ### Statut de Faso Résultats vis-à-vis du profil candidat
 
@@ -361,11 +361,11 @@ Ici, la situation change par rapport aux données d'examens (où Faso Résultats
 
 Cela implique :
 
-- **Déclaration obligatoire à l'APDP** avant tout lancement en production
+- **Déclaration obligatoire à la CIL** avant tout lancement en production
 - **Politique de confidentialité** claire et accessible
 - **Consentement explicite** du candidat au moment de l'inscription (horodaté et versionné)
 - **Droit d'accès, de rectification, de portabilité et de suppression** activables depuis le compte
-- **Notification de violation** à l'APDP dans les 72 heures en cas d'incident
+- **Notification de violation** à la CIL dans les 72 heures en cas d'incident
 
 ### Données particulièrement sensibles
 
@@ -435,7 +435,7 @@ Le service est **gratuit et opt-in**. Cela évite toute perception de contrainte
 
 ### Monétisation possible en phase avancée
 
-En phase 3+ , le profil candidat peut ouvrir des services annexes payants (opt-in), toujours dans le respect APDP :
+En phase 3+ , le profil candidat peut ouvrir des services annexes payants (opt-in), toujours dans le respect des exigences de la CIL :
 
 - **Alertes sur nouveaux concours à venir** : *"Un concours ENAM catégorie B est ouvert du 15/07 au 30/07. Inscrivez-vous."*
 - **Orientation post-résultat** : recommandations d'écoles, aide au dossier
@@ -517,7 +517,7 @@ Ordre de travail recommandé, à réaliser **après le pivot multi-tenant** déc
     - Un profil candidat NE peut PAS voir les résultats d'un autre candidat ❌
     - Une administration NE peut PAS lister les profils candidats plateforme ❌
     - La suppression d'un profil purge bien toutes ses candidatures et son journal ✅
-11. **Créer `docs/APDP_PROFIL_CANDIDAT.md`** documentant la conformité APDP pour ce périmètre spécifique (base légale, finalité, durée de conservation, exercice des droits)
+11. **Créer `docs/CIL_PROFIL_CANDIDAT.md`** documentant la conformité CIL pour ce périmètre spécifique (base légale, finalité, durée de conservation, exercice des droits)
 12. **Mettre à jour le seed** avec 3 profils candidat fictifs et 5-6 candidatures liées aux administrations du seed (dont une qui matche automatiquement par CNIB avec un résultat déjà publié)
 
 ### Points d'attention pour l'implémentation

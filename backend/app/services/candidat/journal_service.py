@@ -15,7 +15,7 @@ async def journaliser(
     action: ActionJournalConsultation,
     request: Request,
 ) -> None:
-    """Trace chaque accès au profil candidat (append-only, conformité APDP —
+    """Trace chaque accès au profil candidat (append-only, conformité CIL —
     docs/PROFIL_CANDIDAT_UNIFIE.md § 3, § 7)."""
     db.add(
         JournalConsultationProfil(
