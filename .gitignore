@@ -14,7 +14,9 @@ htmlcov/
 
 # Env
 .env
+.env.production
 !.env.example
+!.env.production.example
 
 # Uploads (never commit real data)
 backend/uploads/

@@ -101,6 +101,43 @@ python seed.py
 uvicorn app.main:app --reload
 ```
 
+## Déploiement d'un site de démo public (données fictives)
+
+`docker-compose.prod.yml` + `Caddyfile` fournissent un déploiement minimal
+mais réellement public (HTTPS automatique via Caddy/Let's Encrypt, base de
+données et Redis jamais exposés à l'extérieur du serveur) — à utiliser sur un
+VPS avec accès root (Docker), **pas** un hébergement mutualisé classique.
+
+```bash
+# 1. Sur le serveur : cloner le dépôt, pointer le sous-domaine choisi
+#    (ex. demo.faso-resultats.votredomaine.bf) vers l'IP du serveur (DNS A).
+
+# 2. Préparer les secrets backend
+cp backend/.env.production.example backend/.env.production
+# Compléter JWT_SECRET_KEY, CANDIDAT_ENCRYPTION_KEY, CANDIDAT_HASH_PEPPER,
+# API_KEY_PEPPER, DATABASE_URL, CORS_ORIGINS — voir les commandes de
+# génération dans le fichier lui-même.
+
+# 3. Variables lues par docker-compose.prod.yml (fichier .env à la racine)
+cat > .env <<'EOF'
+POSTGRES_PASSWORD=<mot de passe généré, identique à celui dans DATABASE_URL>
+DEMO_DOMAIN=demo.faso-resultats.votredomaine.bf
+EOF
+
+# 4. Lancer, migrer, peupler avec les données fictives du seed
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+docker compose -f docker-compose.prod.yml exec backend python seed.py
+
+# 5. Changer immédiatement les mots de passe admin créés par seed.py
+#    (ChangeMe123! par défaut, voir tableau ci-dessus) avant toute
+#    communication publique du lien de démo.
+```
+
+Caddy détecte automatiquement `DEMO_DOMAIN` et obtient un certificat HTTPS
+sans configuration supplémentaire, à condition que le DNS pointe déjà vers le
+serveur avant le premier démarrage.
+
 ## Tests
 
 ```powershell
