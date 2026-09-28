@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_delete
 from app.core.deps import get_current_administration, get_current_utilisateur
 from app.database import get_db
 from app.models import (
@@ -16,6 +17,7 @@ from app.models import (
     StatutIngestion,
     Utilisateur,
 )
+from app.routes.public.results import CLE_CACHE_EXAMENS
 from app.schemas.examen import ExamenCreate, ExamenOut
 from app.services.audit_service import journaliser_audit
 from app.services.candidat.matching_service import MatchingService
@@ -126,6 +128,9 @@ async def publish_exam(
     )
     await db.commit()
     await db.refresh(examen)
+    # Otherwise the newly published exam stays missing from the public list for up to
+    # cache_ttl_seconds.
+    await cache_delete(CLE_CACHE_EXAMENS)
     return examen
 
 

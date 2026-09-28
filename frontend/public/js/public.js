@@ -110,15 +110,70 @@ async function chargerExamens() {
 
 const STYLE_DECISION = {
   ADMIS: { badge: "bg-faso-600 text-white", bordure: "border-faso-500" },
+  APTE: { badge: "bg-faso-600 text-white", bordure: "border-faso-500" },
   ADMISSIBLE: { badge: "bg-sky-600 text-white", bordure: "border-sky-500" },
 };
 const STYLE_DECISION_DEFAUT = { badge: "bg-amber-500 text-white", bordure: "border-amber-400" };
 
-function afficherResultats(resultats) {
-  zoneResultats.innerHTML = resultats
-    .map((r) => {
+// Publication par phase (docs/CONTEXTE_METIER.md § 2.4) — la situation de chaque phase
+// est calculée côté serveur (GET /results/progress) : « ne figure pas sur la liste »
+// n'est annoncé qu'une fois la phase clôturée par l'administration.
+const LIBELLES_PHASE = {
+  RESULTAT_UNIQUE: "Résultat",
+  EPREUVES_SPORTIVES: "Épreuves sportives",
+  ADMISSIBILITE: "Admissibilité",
+  ADMISSION_DEFINITIVE: "Admission définitive",
+  SECOND_TOUR: "Second tour",
+};
+
+const DATE_FR = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+function renderEtape(etape) {
+  const libelle = escapeHtml(LIBELLES_PHASE[etape.phase] || etape.phase);
+  const r = etape.resultat;
+  let pastille;
+  let detail;
+  switch (etape.situation) {
+    case "RESULTAT": {
       const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
-      return `
+      pastille = "bg-faso-600";
+      const date = r.date_publication_phase ? ` · publié le ${DATE_FR.format(new Date(r.date_publication_phase))}` : "";
+      const suite = r.phase_suivante_attendue
+        ? `<p class="text-xs text-slate-500 mt-1">Prochaine étape : ${escapeHtml(LIBELLES_PHASE[r.phase_suivante_attendue])}</p>`
+        : "";
+      detail = `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.badge}">${escapeHtml(r.decision)}</span>
+        ${r.rang_affiche ? `<span class="text-xs text-slate-500 ml-1">Rang : ${escapeHtml(r.rang_affiche)}</span>` : ""}
+        <span class="text-xs text-slate-400">${date}</span>${suite}`;
+      break;
+    }
+    case "EN_ATTENTE":
+      pastille = "bg-amber-400";
+      detail = `<p class="text-sm text-slate-600">Publication en cours : votre nom ne figure pas sur les listes publiées à ce jour. D'autres listes peuvent encore paraître.</p>`;
+      break;
+    case "NE_FIGURE_PAS":
+      pastille = "bg-slate-400";
+      detail = `<p class="text-sm text-slate-700">Toutes les listes de cette phase sont publiées : vous n'y figurez pas.</p>
+        <p class="text-xs text-slate-500 mt-0.5">En cas de doute, rapprochez-vous de l'organisateur du concours.</p>`;
+      break;
+    case "NON_CONCERNE":
+      pastille = "bg-slate-200";
+      detail = `<p class="text-sm text-slate-400">Non concerné</p>`;
+      break;
+    default:
+      pastille = "bg-slate-200";
+      detail = `<p class="text-sm text-slate-400">Pas encore publiée</p>`;
+  }
+  return `
+    <li class="relative pl-6 pb-4 last:pb-0">
+      <span class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full ring-2 ring-white ${pastille}"></span>
+      <p class="text-sm font-semibold text-slate-800">${libelle}</p>
+      <div class="mt-0.5">${detail}</div>
+    </li>`;
+}
+
+function renderResultatUnique(r) {
+  const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
+  return `
       <div class="carte-resultat border-l-4 ${style.bordure} bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
         <p class="text-lg font-semibold text-slate-900">${escapeHtml(r.nom)} ${escapeHtml(r.prenom)}</p>
         <p class="text-sm text-slate-500">PV n° ${escapeHtml(r.numero_pv)} — ${escapeHtml(r.jury)}</p>
@@ -127,6 +182,19 @@ function afficherResultats(resultats) {
           ${r.moyenne !== null ? `<span class="ml-2 text-sm text-slate-600">Moyenne : ${escapeHtml(r.moyenne)}</span>` : ""}
         </p>
         ${r.etablissement ? `<p class="text-sm text-slate-500 mt-1.5">${escapeHtml(r.etablissement)}</p>` : ""}
+      </div>`;
+}
+
+function afficherParcours(listeParcours) {
+  zoneResultats.innerHTML = listeParcours
+    .map((parcours) => {
+      if (parcours.etapes.length === 1) return renderResultatUnique(parcours.etapes[0].resultat);
+      const identite = parcours.etapes.find((e) => e.resultat).resultat;
+      return `
+      <div class="carte-resultat bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
+        <p class="text-lg font-semibold text-slate-900">${escapeHtml(identite.nom)} ${escapeHtml(identite.prenom)}</p>
+        <p class="text-sm text-slate-500 mb-3">PV n° ${escapeHtml(parcours.numero_pv)} — ${escapeHtml(parcours.jury)}</p>
+        <ol class="border-l border-slate-200 ml-1.5">${parcours.etapes.map(renderEtape).join("")}</ol>
       </div>`;
     })
     .join("");
@@ -151,9 +219,9 @@ form.addEventListener("submit", async (event) => {
 
   afficherMessage("Recherche en cours…", "info");
   try {
-    const resultats = await apiFetch(`/api/v1/public/results?${params.toString()}`);
+    const parcours = await apiFetch(`/api/v1/public/results/progress?${params.toString()}`);
     viderMessage();
-    afficherResultats(resultats);
+    afficherParcours(parcours);
   } catch (erreur) {
     afficherMessage(
       erreur.message.includes("Aucun résultat")

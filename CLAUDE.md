@@ -502,6 +502,32 @@ Après chaque étape majeure, produire un résumé structuré :
   `docs/CIL.md` § 7.2 : les fichiers sources sur disque (restent en clair) et
   la sauvegarde de la clé (sa perte rend ces données définitivement
   illisibles) ; pas de rotation de clé.
+- **2026-09-28 — Publication par phase rendue opérationnelle** (concours
+  paramilitaires, `docs/CONTEXTE_METIER.md` § 2.4). Le modèle existait en base
+  depuis la Phase 1 mais rien ne l'alimentait : toute liste était
+  `RESULTAT_UNIQUE`, donc publier une 2e phase d'un même concours cassait sur
+  l'index unique (erreur 500). Décisions prises avec le développeur : (1) un
+  candidat n'est déclaré « ne figure pas sur la liste » **qu'après clôture
+  explicite** de la phase par un admin — une phase peut arriver en plusieurs
+  listes (un centre après l'autre) et une absence avant clôture n'est pas un
+  échec ; (2) **ordre des phases imposé** : une phase n'accepte de listes que si
+  les précédentes sont clôturées. Règles isolées dans `app/services/phases.py`,
+  nouvel endpoint public `GET /results/progress` (parcours calculé côté serveur,
+  réutilisable par mobile/SMS/USSD), migration `9c1d7e3a5f20`. Corrigés au
+  passage : la vérification candidat prenait les lignes de plusieurs phases
+  d'un même candidat pour des jurys distincts (OTP forcé) ; dans l'admin, après
+  chaque import le sélecteur d'examen revenait sur le premier examen de la
+  liste (`form.reset()`), la liste suivante pouvait donc être importée dans le
+  mauvais examen — trouvé en testant dans un vrai navigateur ; publier un
+  examen ne vidait pas le cache de la liste publique (examen invisible jusqu'à
+  5 min) ; valeurs importées non échappées dans l'aperçu admin et le dashboard
+  candidat web. Reste : app mobile à brancher sur `/results/progress`,
+  notification SMS d'absence (dépend de la Phase 2).
+- **2026-09-28 — Build APK release ajouté à la CI mobile** : seul le build
+  debug était vérifié, alors que `flutter build apk` produit un build release
+  (R8). Debug et release passent en CI (Flutter 3.44.5) ; un échec de build
+  rapporté par le développeur n'a pas pu être reproduit — en attente du message
+  d'erreur exact.
 
 ---
 
