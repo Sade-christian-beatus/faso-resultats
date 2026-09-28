@@ -656,7 +656,9 @@ et le slogan, et sert aussi de filet de sécurité si le CDN Tailwind ne charge
 pas (pages lisibles et aux couleurs de la marque même sans utilitaires).
 
 - **`index.html` + `js/public.js`** : consultation publique. Charge la liste
-  des examens publiés (`/api/v1/public/exams`), recherche un résultat par
+  des examens publiés (`/api/v1/public/exams`) — affichée en bande défilante
+  de droite à gauche (CSS pur dans `css/brand.css`, pause au survol/au toucher,
+  bande statique défilable si l'utilisateur demande moins d'animations), recherche un résultat par
   numéro de PV (+ jury optionnel), affiche la décision/moyenne/établissement.
 - **`admin.html` + `js/admin.js`** : connexion (JWT stocké en
   `sessionStorage`, jamais en `localStorage`, pour limiter la durée de vie

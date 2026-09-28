@@ -46,33 +46,42 @@ function renderExamensDisponibles(examens) {
     return;
   }
 
-  const parType = new Map();
-  examens.forEach((examen) => {
-    const libelleType = LIBELLES_EXAMEN[examen.type_examen] || examen.type_examen;
-    if (!parType.has(libelleType)) parType.set(libelleType, []);
-    parType.get(libelleType).push(examen);
-  });
+  // Band scrolling right to left (css/brand.css). The list is repeated so each half of
+  // the track is wide enough to loop without a gap even with very few exams, then
+  // doubled; the second copy is hidden from screen readers and keyboard navigation.
+  const carte = (examen, copie) => `
+    <button
+      type="button"
+      data-examen-id="${escapeHtml(examen.id)}"
+      class="btn-choisir-examen carte-examen"
+      ${copie ? 'aria-hidden="true" tabindex="-1"' : ""}
+    >
+      <span class="carte-examen__type">${escapeHtml(LIBELLES_EXAMEN[examen.type_examen] || examen.type_examen)}</span>
+      <span class="carte-examen__libelle">${escapeHtml(examen.annee)} — ${escapeHtml(examen.libelle)}</span>
+    </button>`;
+  const repetitions = Math.max(1, Math.ceil(6 / examens.length));
+  const moitie = Array.from({ length: repetitions }, () => examens).flat();
+  const cartes = [
+    ...moitie.map((examen, index) => carte(examen, index >= examens.length)),
+    ...moitie.map((examen) => carte(examen, true)),
+  ].join("");
 
-  zoneExamensDisponibles.innerHTML = [...parType.entries()]
-    .map(
-      ([libelleType, listeExamens]) => `
-      <div class="border-l-2 border-faso-200 pl-3">
-        <h3 class="text-xs font-semibold text-faso-700 uppercase tracking-wide mb-2">${escapeHtml(libelleType)}</h3>
-        <div class="flex flex-wrap gap-2">
-          ${listeExamens
-            .map(
-              (examen) => `
-            <button
-              type="button"
-              data-examen-id="${escapeHtml(examen.id)}"
-              class="btn-choisir-examen text-sm border border-faso-200 bg-faso-50 text-faso-800 rounded-full px-3 py-1.5 hover:bg-faso-100 hover:border-faso-300 active:scale-[0.98] transition"
-            >${examen.annee} — ${escapeHtml(examen.libelle)}</button>`
-            )
-            .join("")}
-        </div>
-      </div>`
-    )
-    .join("");
+  zoneExamensDisponibles.innerHTML = `
+    <div class="bande-examens" role="region" aria-label="Examens et concours disponibles, défilement automatique (survolez pour mettre en pause)">
+      <div class="bande-examens__piste" style="--duree-defilement: ${moitie.length * 5}s">${cartes}</div>
+    </div>
+    <p class="text-xs text-slate-400 mt-2">Touchez un examen pour le sélectionner.</p>`;
+
+  // No hover on phones: pause while a finger is on the band, resume shortly after.
+  const bande = zoneExamensDisponibles.querySelector(".bande-examens");
+  let repriseDefilement;
+  bande.addEventListener("pointerdown", () => {
+    clearTimeout(repriseDefilement);
+    bande.classList.add("en-pause");
+  });
+  bande.addEventListener("pointerup", () => {
+    repriseDefilement = setTimeout(() => bande.classList.remove("en-pause"), 3000);
+  });
 
   zoneExamensDisponibles.querySelectorAll(".btn-choisir-examen").forEach((bouton) => {
     bouton.addEventListener("click", () => {
