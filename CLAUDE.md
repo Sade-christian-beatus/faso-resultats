@@ -357,7 +357,7 @@ Après chaque étape majeure, produire un résumé structuré :
   sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
   `innerHTML` non échappé sur `frontend/public/js/public.js` (nom/prénom/
   établissement affichés sans échappement) ; absence de CI backend
-  (`pytest`/`ruff`/`black` non automatisés) ; `/api/v1/public/results` et
+  (`pytest`/`ruff`/`black` non automatisés — corrigé le 2026-09-28) ; `/api/v1/public/results` et
   `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
   reprendre par priorité dans une prochaine session.
 - **2026-08-17 — Fondation technique de l'API B2B (Phase 4)**, sur demande
@@ -459,6 +459,15 @@ Après chaque étape majeure, produire un résumé structuré :
   écran d'accueil mobile et icônes d'app Android/iOS. Éléments de la planche
   volontairement non repris : « Recherche par nom » (contredit la décision
   anti-énumération du 2026-07-03) et « Universités » (hors périmètre).
+- **2026-09-28 — CI backend** (`.github/workflows/backend-ci.yml`), point
+  ouvert de l'audit du 2026-08-17. Trois jobs sur chaque push/PR touchant
+  `backend/` : lint (`ruff`, `black --check`), tests (`pytest` sur SQLite en
+  mémoire avec tesseract/poppler installés comme dans le Dockerfile, couverture
+  minimale 60 % — 92 % au moment de l'ajout), migrations sur un vrai PostgreSQL
+  16 (`upgrade head`, `alembic check`, `downgrade base`, ré-`upgrade`). Ce
+  dernier job a immédiatement révélé un vrai bug : la migration initiale ne
+  supprimait pas ses types enum PostgreSQL au downgrade, rendant impossible
+  un aller-retour complet — corrigé.
 
 ---
 
