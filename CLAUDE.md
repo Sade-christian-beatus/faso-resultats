@@ -528,6 +528,21 @@ Après chaque étape majeure, produire un résumé structuré :
   (R8). Debug et release passent en CI (Flutter 3.44.5) ; un échec de build
   rapporté par le développeur n'a pas pu être reproduit — en attente du message
   d'erreur exact.
+- **2026-09-28 — App mobile : accès réseau corrigé.** Le manifeste Android
+  principal ne déclarait pas la permission `INTERNET` (seuls les manifestes debug/
+  profile l'avaient, pour l'outillage Flutter) : un APK release ne pouvait pas
+  joindre l'API. Et Android refuse le HTTP en clair par défaut alors que l'API de
+  dev est en `http://` : autorisé **en debug uniquement**
+  (`android/app/src/debug/AndroidManifest.xml`), la release reste HTTPS seule ;
+  iOS : `NSAllowsLocalNetworking` pour le simulateur. Procédure de lancement
+  (émulateur, téléphone physique sur le même Wi-Fi, simulateur iOS) dans
+  `mobile/README.md`. Non vérifié sur appareil réel (pas de SDK Android dans
+  l'environnement de développement).
+- **2026-09-28 — Page publique : examens disponibles en bande défilante**
+  (droite → gauche, demandé par le développeur), pastilles compactes d'une ligne.
+  CSS pur sans bibliothèque (léger en 3G), pause au survol et au toucher, copies
+  de la boucle masquées aux lecteurs d'écran, bande statique si l'utilisateur
+  demande moins d'animations (`prefers-reduced-motion`).
 
 ---
 

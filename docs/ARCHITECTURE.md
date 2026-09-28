@@ -1,9 +1,10 @@
 # Architecture — Faso Résultats
 
 > Maintenu à jour à chaque évolution du schéma ou de la structure applicative.
-> Dernière mise à jour : 2026-08-17 — couvre la Phase 1 (fondations, auth,
-> ingestion, API publique, frontend, Docker Compose réel), le pivot multi-tenant
-> et le profil candidat unifié. La Phase 3 (mobile, `mobile/`) est documentée
+> Dernière mise à jour : 2026-09-28 — couvre la Phase 1 (fondations, auth,
+> ingestion, API publique, frontend, Docker Compose réel), le pivot multi-tenant,
+> le profil candidat unifié, le chiffrement de l'identité dans `resultats`, la
+> publication par phase et la charte graphique. La Phase 3 (mobile, `mobile/`) est documentée
 > séparément dans `mobile/docs/`.
 
 ## Structure du dépôt

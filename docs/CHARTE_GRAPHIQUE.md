@@ -71,6 +71,17 @@ illisible.
 ⚠️ Le logo n'existe qu'en version pour **fond clair** (« Faso » en bleu nuit).
 Ne pas le poser sur un fond sombre ou vert sans une variante dédiée.
 
+## Composants de la page publique
+
+- **Bande « Examens et concours disponibles »** : pastilles compactes (≈ 31 px de
+  haut, type en petites capitales vertes puis année et libellé) qui défilent de
+  droite à gauche en boucle. CSS pur (`css/brand.css`, `.bande-examens`), pause au
+  survol/au toucher, statique et défilable à la main si l'utilisateur demande moins
+  d'animations.
+- **Frise des phases** (concours paramilitaires) : une pastille par phase — verte
+  pour un résultat, ambre pour « publication en cours », grise pour « ne figure pas »
+  ou « à venir ».
+
 ## Éléments de la planche volontairement **non** repris
 
 La planche est une maquette de communication ; certains éléments contredisent
