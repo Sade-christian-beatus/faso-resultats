@@ -49,3 +49,22 @@ jobs:
           java-version: "17"
       - run: flutter pub get
       - run: flutter build apk --debug
+
+  # Release build (what `flutter build apk` produces by default): goes through R8
+  # minification/shrinking, which the debug build above never exercises. Signed
+  # with the debug key when android/key.properties is absent (see build.gradle).
+  build-apk-release:
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.5"
+          channel: "stable"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+      - run: flutter pub get
+      - run: flutter build apk --release
