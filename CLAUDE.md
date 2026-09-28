@@ -357,8 +357,9 @@ Après chaque étape majeure, produire un résumé structuré :
   sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
   `innerHTML` non échappé sur `frontend/public/js/public.js` (nom/prénom/
   établissement affichés sans échappement) ; absence de CI backend
-  (`pytest`/`ruff`/`black` non automatisés) ; `/api/v1/public/results` et
-  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
+  (`pytest`/`ruff`/`black` non automatisés — corrigé le 2026-09-28) ; `/api/v1/public/results` et
+  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE` (corrigé
+  le 2026-09-28). À
   reprendre par priorité dans une prochaine session.
 - **2026-08-17 — Fondation technique de l'API B2B (Phase 4)**, sur demande
   explicite pendant l'attente du contrat Orange Business (SMS/USSD). Décisions
@@ -446,6 +447,41 @@ Après chaque étape majeure, produire un résumé structuré :
   pour signer une déclaration CIL et un courrier ANSSI en tant qu'entité
   identifiée plutôt qu'à titre personnel. Détail complet dans
   `docs/ROADMAP.md` § Chantiers transverses.
+- **2026-09-28 — Adoption de la charte graphique officielle**
+  (`docs/CHARTE_GRAPHIQUE.md`, planche de référence dans
+  `docs/brand/charte-graphique.webp`). Palette vert Faso `#00A651` / rouge
+  `#E30613` / jaune `#FFD000` / bleu nuit `#0B1F2D` / gris clair `#F4F6F8`,
+  police Poppins, slogan « Vos résultats en un clic ». Appliquée au web
+  (palette Tailwind `faso-*` partagée via `js/theme.js`, `css/brand.css`,
+  logotype, favicon) et au thème Flutter (le bleu foncé/orange précédent est
+  remplacé). Texte et boutons en vert foncé `#007A3D` : le vert officiel sur
+  blanc n'atteint pas le contraste WCAG AA. Logo officiel
+  (`docs/brand/logo-faso-resultats.webp`) décliné en en-têtes web, favicon,
+  écran d'accueil mobile et icônes d'app Android/iOS. Éléments de la planche
+  volontairement non repris : « Recherche par nom » (contredit la décision
+  anti-énumération du 2026-07-03) et « Universités » (hors périmètre).
+- **2026-09-28 — CI backend** (`.github/workflows/backend-ci.yml`), point
+  ouvert de l'audit du 2026-08-17. Trois jobs sur chaque push/PR touchant
+  `backend/` : lint (`ruff`, `black --check`), tests (`pytest` sur SQLite en
+  mémoire avec tesseract/poppler installés comme dans le Dockerfile, couverture
+  minimale 60 % — 92 % au moment de l'ajout), migrations sur un vrai PostgreSQL
+  16 (`upgrade head`, `alembic check`, `downgrade base`, ré-`upgrade`). Ce
+  dernier job a immédiatement révélé un vrai bug : la migration initiale ne
+  supprimait pas ses types enum PostgreSQL au downgrade, rendant impossible
+  un aller-retour complet — corrigé.
+- **2026-09-28 — Administrations `SUSPENDU`/`RESILIE` masquées côté public
+  et B2B**, point ouvert de l'audit du 2026-08-17. `/exams` et `/results`
+  (public et B2B) appliquent désormais la même règle que
+  `/public/administrations` : seuls les tenants `ACTIF`/`PILOTE`
+  (`STATUTS_ADMINISTRATION_VISIBLES`) sont visibles. Conséquence assumée : un
+  candidat d'une administration suspendue (ex. impayé) ne voit plus son
+  résultat sur la plateforme tant que la suspension dure — c'est la
+  signification de la suspension, et la décision de suspendre reste humaine
+  (SUPER_ADMIN). Listes en cache invalidées au changement de statut ;
+  recherches de résultat en cache servies au plus `cache_ttl_seconds`
+  (5 min). Hors périmètre de ce correctif : le résultat déjà dénormalisé dans
+  le dashboard candidat (`dernier_resultat_*`) reste affiché pour une
+  administration suspendue (seule la résiliation est traitée, par la purge).
 
 ---
 

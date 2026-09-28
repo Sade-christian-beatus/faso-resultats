@@ -1,0 +1,88 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Same pinned versions as requirements.txt, without installing the whole stack.
+      - run: pip install "$(grep '^ruff==' requirements.txt)" "$(grep '^black==' requirements.txt)"
+      - run: ruff check .
+      - run: black --check .
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      # OCR / PDF-to-image system tools, same as the Dockerfile: the scanned-PDF
+      # parser tests (docs/PARSER_PDF_FONCTION_PUBLIQUE.md) run the real tesseract.
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra poppler-utils
+      - run: pip install -r requirements.txt
+      # Tests run on in-memory SQLite (tests/conftest.py) and fall back to the
+      # in-memory cache without Redis. The encryption key is a throwaway one
+      # generated per run: config.py refuses to start without a valid key.
+      - name: pytest
+        run: |
+          export CANDIDAT_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          pytest -q --cov=app --cov-report=term --cov-fail-under=60
+
+  # Migrations against a real PostgreSQL (SQLite tests use create_all and never
+  # run Alembic): full upgrade, no drift between models and migrations, then a
+  # full downgrade/re-upgrade round-trip.
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: faso
+          POSTGRES_PASSWORD: faso_ci
+          POSTGRES_DB: faso_resultats
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U faso"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://faso:faso_ci@localhost:5432/faso_resultats
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: alembic upgrade / check / downgrade / re-upgrade
+        run: |
+          export CANDIDAT_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          alembic upgrade head
+          alembic check
+          alembic downgrade base
+          alembic upgrade head

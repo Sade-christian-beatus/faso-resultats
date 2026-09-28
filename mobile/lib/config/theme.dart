@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
 
-/// Thème sobre mobile-first (prompt app mobile § UX) : bleu foncé en primaire,
-/// jaune/orange en accent, contraste élevé pour une utilisation en plein
-/// soleil fréquente au Burkina Faso.
+/// Charte graphique Faso Résultats (docs/CHARTE_GRAPHIQUE.md) : vert Faso en
+/// primaire, jaune en accent, bleu nuit pour le texte. Contraste élevé pour
+/// une utilisation en plein soleil fréquente au Burkina Faso.
 class AppColors {
   const AppColors._();
 
-  static const Color bleuFonce = Color(0xFF0B3D6B);
-  static const Color bleuFonceClair = Color(0xFF1A5A94);
-  static const Color accentOrange = Color(0xFFE8871E);
-  static const Color succes = Color(0xFF1E7A3D);
-  static const Color erreur = Color(0xFFC0341D);
-  static const Color fond = Color(0xFFF7F8FA);
+  /// Official brand green (#00A651). White text on it is below WCAG AA, so
+  /// filled surfaces carrying text use [vertFonce].
+  static const Color vertFaso = Color(0xFF00A651);
+  static const Color vertFonce = Color(0xFF007A3D);
+  static const Color rougeFaso = Color(0xFFE30613);
+  static const Color jauneFaso = Color(0xFFFFD000);
+  static const Color bleuNuit = Color(0xFF0B1F2D);
+
+  /// Status colours (kept distinct from the brand palette on purpose: a
+  /// "pending" badge must not look like a decorative yellow).
+  static const Color avertissement = Color(0xFFB45309);
+  static const Color succes = Color(0xFF007A3D);
+  static const Color erreur = Color(0xFFC62828);
+
+  static const Color fond = Color(0xFFF4F6F8);
   static const Color surface = Colors.white;
-  static const Color texte = Color(0xFF1A1D21);
+  static const Color texte = bleuNuit;
   static const Color texteAttenue = Color(0xFF5B6572);
 }
 
@@ -22,9 +31,10 @@ class AppTheme {
 
   static ThemeData get clair {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.bleuFonce,
-      primary: AppColors.bleuFonce,
-      secondary: AppColors.accentOrange,
+      seedColor: AppColors.vertFaso,
+      primary: AppColors.vertFonce,
+      secondary: AppColors.jauneFaso,
+      onSecondary: AppColors.bleuNuit,
       error: AppColors.erreur,
       surface: AppColors.surface,
     );
@@ -38,14 +48,14 @@ class AppTheme {
         displayColor: AppColors.texte,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.bleuFonce,
+        backgroundColor: AppColors.vertFonce,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.bleuFonce,
+          backgroundColor: AppColors.vertFonce,
           foregroundColor: Colors.white,
           // Boutons gros et espacés (prompt § UX) : écrans tactiles imprécis
           // sur les téléphones bas de gamme.
@@ -59,7 +69,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          side: const BorderSide(color: AppColors.bleuFonce, width: 1.5),
+          side: const BorderSide(color: AppColors.vertFonce, width: 1.5),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -76,7 +86,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.bleuFonce, width: 2),
+          borderSide: const BorderSide(color: AppColors.vertFonce, width: 2),
         ),
       ),
       cardTheme: CardThemeData(

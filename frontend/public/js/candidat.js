@@ -22,7 +22,7 @@ function enTeteAuth() {
 
 function afficherMessageAuth(texte, estErreur = true) {
   messageAuth.innerHTML = `<p class="text-sm rounded-lg px-3 py-2.5 border ${
-    estErreur ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+    estErreur ? "bg-red-50 text-red-700 border-red-200" : "bg-faso-50 text-faso-700 border-faso-200"
   }">${texte}</p>`;
 }
 
@@ -54,11 +54,11 @@ function activerOnglet(inscription) {
   viderMessageAuth();
   formConnexion.classList.toggle("hidden", inscription);
   formInscription.classList.toggle("hidden", !inscription);
-  ongletConnexion.classList.toggle("bg-emerald-700", !inscription);
+  ongletConnexion.classList.toggle("bg-faso-700", !inscription);
   ongletConnexion.classList.toggle("text-white", !inscription);
   ongletConnexion.classList.toggle("bg-slate-100", inscription);
   ongletConnexion.classList.toggle("text-slate-600", inscription);
-  ongletInscription.classList.toggle("bg-emerald-700", inscription);
+  ongletInscription.classList.toggle("bg-faso-700", inscription);
   ongletInscription.classList.toggle("text-white", inscription);
   ongletInscription.classList.toggle("bg-slate-100", !inscription);
   ongletInscription.classList.toggle("text-slate-600", !inscription);
@@ -156,8 +156,8 @@ formOtp.addEventListener("submit", async (event) => {
 // --- Dashboard ---
 
 const STYLE_STATUT = {
-  VERIFIE_AUTO: { texte: "Vérifiée", classe: "bg-emerald-100 text-emerald-800" },
-  VERIFIE_MANUEL: { texte: "Vérifiée", classe: "bg-emerald-100 text-emerald-800" },
+  VERIFIE_AUTO: { texte: "Vérifiée", classe: "bg-faso-100 text-faso-800" },
+  VERIFIE_MANUEL: { texte: "Vérifiée", classe: "bg-faso-100 text-faso-800" },
   EN_ATTENTE: { texte: "En attente de publication", classe: "bg-amber-100 text-amber-800" },
   REJETE: { texte: "Non vérifiée", classe: "bg-red-100 text-red-800" },
 };
@@ -198,8 +198,8 @@ function rendreCandidatures(candidatures) {
             ? `
         <form class="form-confirmer-otp mt-3 flex gap-2" data-id="${c.id}">
           <input type="text" inputmode="numeric" maxlength="6" required placeholder="Code reçu par SMS"
-            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm tracking-[0.3em] text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" />
-          <button type="submit" class="bg-emerald-700 text-white text-sm font-medium rounded-lg px-3 py-2 hover:bg-emerald-800 active:bg-emerald-900 transition shadow-sm">
+            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm tracking-[0.3em] text-center focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition" />
+          <button type="submit" class="bg-faso-700 text-white text-sm font-medium rounded-lg px-3 py-2 hover:bg-faso-800 active:bg-faso-900 transition shadow-sm">
             Confirmer
           </button>
         </form>

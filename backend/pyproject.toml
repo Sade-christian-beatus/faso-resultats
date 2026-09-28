@@ -17,6 +17,8 @@ ignore = ["B008"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+# Makes plain `pytest` (as documented in README) find the `app` package.
+pythonpath = ["."]
 
 [tool.coverage.run]
 # SQLAlchemy 2.0 async bridges sync DBAPI calls through greenlet; without this,

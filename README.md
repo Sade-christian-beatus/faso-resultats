@@ -108,6 +108,15 @@ cd backend
 pytest
 ```
 
+Les tests d'OCR nécessitent `tesseract` (avec la langue `fra`) et `poppler`
+installés sur la machine, comme dans l'image Docker. `CANDIDAT_ENCRYPTION_KEY`
+doit être définie (dans `backend/.env` ou l'environnement).
+
+Chaque push touchant `backend/` déclenche la CI (`.github/workflows/backend-ci.yml`) :
+`ruff` + `black --check`, la suite `pytest` avec une couverture minimale de
+60 %, et les migrations Alembic sur un vrai PostgreSQL 16 (upgrade, `alembic
+check`, downgrade complet, ré-upgrade).
+
 ## Structure
 
 ```

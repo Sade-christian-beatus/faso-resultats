@@ -21,6 +21,16 @@ slug), `nom_officiel`, `sigle`, `ministere_tutelle`, personnalisation
 référent, `plan_abonnement`, `statut` (`ACTIF` / `SUSPENDU` / `PILOTE` /
 `RESILIE`).
 
+**Visibilité publique selon le statut** : seules les administrations `ACTIF`
+et `PILOTE` (`STATUTS_ADMINISTRATION_VISIBLES`) apparaissent côté public et B2B
+— liste des administrations, examens (`/exams`) et résultats (`/results`).
+Un tenant `SUSPENDU` ou `RESILIE` disparaît entièrement de ces routes (un
+résultat recherché renvoie le même 404 qu'un examen non publié, sans révéler
+le statut). Les listes en cache sont invalidées au changement de statut ; une
+recherche de résultat déjà en cache peut rester servie jusqu'à
+`cache_ttl_seconds` (5 min par défaut). Une réactivation (`ACTIF`) rend tout à
+nouveau visible, rien n'est supprimé.
+
 ### `Utilisateur` (anciennement `Admin`)
 Tout compte de connexion à l'espace admin. `administration_id` est
 **nullable** — c'est le seul cas où NULL est légitime dans tout le

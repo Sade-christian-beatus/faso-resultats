@@ -9,7 +9,15 @@ from app.config import get_settings
 from app.core.cache import cache_get, cache_set
 from app.core.deps import get_current_api_key
 from app.database import get_db
-from app.models import ApiKey, Examen, Resultat, StatutExamen
+from app.models import (
+    STATUTS_ADMINISTRATION_VISIBLES,
+    Administration,
+    ApiKey,
+    Examen,
+    Resultat,
+    StatutExamen,
+)
+from app.routes.public.results import CLE_CACHE_EXAMENS
 from app.schemas.public import ExamenPublicOut, ResultatPublicOut
 from app.services.b2b.quota_service import consommer_quota
 
@@ -42,14 +50,18 @@ async def list_b2b_exams(
 ) -> list[ExamenPublicOut]:
     await _appliquer_quota(api_key, db)
 
-    cle_cache = "public:exams"
+    cle_cache = CLE_CACHE_EXAMENS
     cache = await cache_get(cle_cache)
     if cache is not None:
         return [ExamenPublicOut.model_validate(item) for item in cache]
 
     result = await db.execute(
         select(Examen)
-        .where(Examen.statut == StatutExamen.PUBLISHED)
+        .join(Administration, Examen.administration_id == Administration.id)
+        .where(
+            Examen.statut == StatutExamen.PUBLISHED,
+            Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES),
+        )
         .order_by(Examen.annee.desc(), Examen.type_examen)
     )
     examens = [ExamenPublicOut.model_validate(e) for e in result.scalars().all()]
@@ -85,8 +97,10 @@ async def search_b2b_results(
     query = (
         select(Resultat)
         .join(Examen, Resultat.examen_id == Examen.id)
+        .join(Administration, Examen.administration_id == Administration.id)
         .where(
             Examen.statut == StatutExamen.PUBLISHED,
+            Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES),
             Resultat.examen_id == examen_id,
             Resultat.numero_pv == numero_pv,
         )

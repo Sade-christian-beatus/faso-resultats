@@ -8,7 +8,13 @@ from app.config import get_settings
 from app.core.cache import cache_get, cache_set
 from app.core.rate_limit import limiter
 from app.database import get_db
-from app.models import Administration, Examen, Resultat, StatutAdministration, StatutExamen
+from app.models import (
+    STATUTS_ADMINISTRATION_VISIBLES,
+    Administration,
+    Examen,
+    Resultat,
+    StatutExamen,
+)
 from app.schemas.public import (
     AdministrationPublicOut,
     DroitsCandidatOut,
@@ -18,6 +24,11 @@ from app.schemas.public import (
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
 settings = get_settings()
+
+# Cache keys invalidated when an administration's status changes
+# (routes/admin/administrations.py). Shared with the B2B routes.
+CLE_CACHE_ADMINISTRATIONS = "public:administrations"
+CLE_CACHE_EXAMENS = "public:exams"
 
 
 @router.get(
@@ -31,14 +42,14 @@ settings = get_settings()
 async def list_public_administrations(
     request: Request, db: AsyncSession = Depends(get_db)
 ) -> list[AdministrationPublicOut]:
-    cle_cache = "public:administrations"
+    cle_cache = CLE_CACHE_ADMINISTRATIONS
     cache = await cache_get(cle_cache)
     if cache is not None:
         return [AdministrationPublicOut.model_validate(item) for item in cache]
 
     result = await db.execute(
         select(Administration)
-        .where(Administration.statut.in_([StatutAdministration.ACTIF, StatutAdministration.PILOTE]))
+        .where(Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES))
         .order_by(Administration.nom_officiel)
     )
     administrations = [AdministrationPublicOut.model_validate(a) for a in result.scalars().all()]
@@ -54,21 +65,25 @@ async def list_public_administrations(
     "/exams",
     response_model=list[ExamenPublicOut],
     summary="Lister les examens publiés",
-    description="Examens visibles publiquement (statut PUBLISHED uniquement). Résultat mis en "
-    "cache.",
+    description="Examens visibles publiquement (statut PUBLISHED uniquement, administration "
+    "ACTIF ou PILOTE). Résultat mis en cache.",
 )
 @limiter.limit(settings.rate_limit_public)
 async def list_public_exams(
     request: Request, db: AsyncSession = Depends(get_db)
 ) -> list[ExamenPublicOut]:
-    cle_cache = "public:exams"
+    cle_cache = CLE_CACHE_EXAMENS
     cache = await cache_get(cle_cache)
     if cache is not None:
         return [ExamenPublicOut.model_validate(item) for item in cache]
 
     result = await db.execute(
         select(Examen)
-        .where(Examen.statut == StatutExamen.PUBLISHED)
+        .join(Administration, Examen.administration_id == Administration.id)
+        .where(
+            Examen.statut == StatutExamen.PUBLISHED,
+            Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES),
+        )
         .order_by(Examen.annee.desc(), Examen.type_examen)
     )
     examens = [ExamenPublicOut.model_validate(e) for e in result.scalars().all()]
@@ -83,7 +98,7 @@ async def list_public_exams(
     response_model=list[ResultatPublicOut],
     summary="Consulter un résultat",
     description="Recherche par numéro de PV (et jury en option pour désambiguïser). Ne renvoie "
-    "que les résultats appartenant à un examen publié.",
+    "que les résultats appartenant à un examen publié d'une administration ACTIF ou PILOTE.",
 )
 @limiter.limit(settings.rate_limit_public)
 async def search_public_results(
@@ -101,8 +116,10 @@ async def search_public_results(
     query = (
         select(Resultat)
         .join(Examen, Resultat.examen_id == Examen.id)
+        .join(Administration, Examen.administration_id == Administration.id)
         .where(
             Examen.statut == StatutExamen.PUBLISHED,
+            Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES),
             Resultat.examen_id == examen_id,
             Resultat.numero_pv == numero_pv,
         )

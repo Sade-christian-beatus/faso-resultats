@@ -26,6 +26,12 @@ class StatutAdministration(str, enum.Enum):
     RESILIE = "RESILIE"
 
 
+# Only these tenants are visible to the public and B2B partners (administrations list,
+# exams, results). SUSPENDU/RESILIE tenants disappear entirely from those routes, the
+# same rule as for adding a candidature (routes/candidat/candidatures.py).
+STATUTS_ADMINISTRATION_VISIBLES = (StatutAdministration.ACTIF, StatutAdministration.PILOTE)
+
+
 class Administration(TimestampMixin, Base):
     """Un tenant du SaaS B2G = une administration publique cliente (OCECOS, Office du
     BAC, AGRE...). Voir docs/PIVOT_SAAS_B2G.md § 2.2."""

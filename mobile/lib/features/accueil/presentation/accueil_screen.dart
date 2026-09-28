@@ -76,15 +76,13 @@ class _AccueilScreenState extends ConsumerState<AccueilScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const _Logo(),
-              const SizedBox(height: 16),
-              const Text(
-                'Faso Résultats',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.texte,
-                ),
+              // Official logo (symbol + wordmark + tagline), see
+              // docs/CHARTE_GRAPHIQUE.md.
+              Image.asset(
+                'assets/images/logo.webp',
+                width: 280,
+                height: 138,
+                semanticLabel: 'Faso Résultats — Vos résultats en un clic',
               ),
               const SizedBox(height: 8),
               const Text(
@@ -111,23 +109,6 @@ class _AccueilScreenState extends ConsumerState<AccueilScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        color: AppColors.bleuFonce,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Icon(Icons.school_outlined, color: Colors.white, size: 36),
     );
   }
 }
