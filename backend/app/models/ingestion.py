@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.encrypted_str import EncryptedJSON
 from app.models.guid import GUID
+from app.models.resultat import PhasePublication
 
 if TYPE_CHECKING:
     from app.models.examen import Examen
@@ -53,6 +54,12 @@ class Ingestion(TimestampMixin, Base):
     type_fichier: Mapped[TypeFichier] = mapped_column(Enum(TypeFichier, name="type_fichier"))
     statut: Mapped[StatutIngestion] = mapped_column(
         Enum(StatutIngestion, name="statut_ingestion"), default=StatutIngestion.EN_ATTENTE
+    )
+    # Phase this list belongs to (chosen by the admin at upload for multi-phase exams);
+    # every Resultat created from it carries the same phase.
+    phase: Mapped[PhasePublication] = mapped_column(
+        Enum(PhasePublication, name="phase_publication"),
+        default=PhasePublication.RESULTAT_UNIQUE,
     )
     nombre_lignes_detectees: Mapped[int] = mapped_column(Integer, default=0)
     nombre_erreurs: Mapped[int] = mapped_column(Integer, default=0)

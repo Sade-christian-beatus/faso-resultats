@@ -1,9 +1,15 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-from app.models import CategorieExamen, SourceDonnees, StatutExamen, TypeExamen
+from app.models import (
+    CategorieExamen,
+    PhasePublication,
+    SourceDonnees,
+    StatutExamen,
+    TypeExamen,
+)
 
 
 class ExamenCreate(BaseModel):
@@ -15,7 +21,16 @@ class ExamenCreate(BaseModel):
     ministere_tutelle: str | None = None
     source_donnees: SourceDonnees = SourceDonnees.FILE_IMPORT
     partenariat_officiel: bool = False
-    phases_publication: list[str] = []
+    # Ordered phases (docs/CONTEXTE_METIER.md § 2.4), e.g. EPREUVES_SPORTIVES,
+    # ADMISSIBILITE, ADMISSION_DEFINITIVE. Empty = single publication.
+    phases_publication: list[PhasePublication] = []
+
+    @field_validator("phases_publication")
+    @classmethod
+    def _phases_distinctes(cls, phases: list[PhasePublication]) -> list[PhasePublication]:
+        if len(set(phases)) != len(phases):
+            raise ValueError("Une même phase ne peut pas apparaître deux fois")
+        return phases
 
 
 class ExamenOut(BaseModel):
@@ -32,4 +47,5 @@ class ExamenOut(BaseModel):
     source_donnees: SourceDonnees
     partenariat_officiel: bool
     phases_publication: list[str]
+    phases_cloturees: list[str] = []
     created_at: datetime

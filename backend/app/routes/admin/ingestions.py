@@ -15,16 +15,21 @@ from app.models import (
     Administration,
     Examen,
     Ingestion,
+    PhasePublication,
+    Resultat,
+    StatutExamen,
     StatutIngestion,
     TypeFichier,
     Utilisateur,
 )
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
 from app.services.audit_service import journaliser_audit
+from app.services.candidat.matching_service import MatchingService
 from app.services.ingestion.dispatch import parser_fichier
 from app.services.ingestion.normalizer import valider_ligne_normalisee
 from app.services.ingestion.publication import construire_resultats
 from app.services.ingestion.template import construire_modele_excel
+from app.services.phases import ErreurPhase, phase_par_defaut, verifier_phase_ouverte
 
 router = APIRouter(prefix="/api/v1/admin/ingestions", tags=["admin-ingestions"])
 settings = get_settings()
@@ -72,6 +77,11 @@ async def upload_ingestion(
         description="Appliquée à toute ligne sans décision propre (ex. listes "
         "d'admissibilité à un concours, où la décision vaut pour tout le document).",
     ),
+    phase: PhasePublication | None = Form(
+        None,
+        description="Phase à laquelle appartient cette liste. Obligatoire pour un examen à "
+        "plusieurs phases (concours paramilitaires) ; déduite sinon.",
+    ),
     current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
@@ -79,6 +89,18 @@ async def upload_ingestion(
     examen = await db.get(Examen, examen_id)
     if examen is None or examen.administration_id != administration.id:
         raise HTTPException(status_code=404, detail="Examen introuvable")
+
+    phase = phase or phase_par_defaut(examen)
+    if phase is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Cet examen comporte plusieurs phases : précisez à quelle phase "
+            "appartient cette liste",
+        )
+    try:
+        verifier_phase_ouverte(examen, phase)
+    except ErreurPhase as erreur:
+        raise HTTPException(status_code=409, detail=str(erreur)) from erreur
 
     extension = Path(file.filename or "").suffix.lower()
     if extension not in _EXTENSIONS_AUTORISEES[type_fichier]:
@@ -115,6 +137,7 @@ async def upload_ingestion(
         chemin_fichier=str(chemin_fichier),
         type_fichier=type_fichier,
         statut=StatutIngestion.PREVISUALISATION,
+        phase=phase,
         nombre_lignes_detectees=resultat_parsing.nombre_lignes,
         nombre_erreurs=resultat_parsing.nombre_erreurs,
         erreurs_fichier=resultat_parsing.erreurs_fichier,
@@ -240,6 +263,34 @@ async def correct_ingestion(
     return _vers_preview(ingestion)
 
 
+async def _refuser_doublons(
+    resultats: list[Resultat], examen: Examen, phase: PhasePublication, db: AsyncSession
+) -> None:
+    """A candidate (PV number + jury) has at most one result per phase. Report every
+    conflict clearly instead of letting the unique index fail with a 500: typically the
+    same list imported twice, or a list imported under the wrong phase."""
+    cles = [(r.numero_pv, r.jury) for r in resultats]
+    en_double_dans_le_fichier = {cle for cle in cles if cles.count(cle) > 1}
+    deja_publies = set(
+        (
+            await db.execute(
+                select(Resultat.numero_pv, Resultat.jury).where(
+                    Resultat.examen_id == examen.id, Resultat.phase == phase
+                )
+            )
+        ).all()
+    )
+    conflits = sorted(en_double_dans_le_fichier | (set(cles) & deja_publies))
+    if conflits:
+        apercu = ", ".join(f"PV {pv} ({jury})" for pv, jury in conflits[:5])
+        suite = f" et {len(conflits) - 5} autre(s)" if len(conflits) > 5 else ""
+        raise HTTPException(
+            status_code=409,
+            detail=f"{len(conflits)} candidat(s) ont déjà un résultat pour la phase "
+            f"{phase.value} ou figurent deux fois dans la liste : {apercu}{suite}",
+        )
+
+
 @router.post(
     "/{ingestion_id}/publish",
     response_model=IngestionOut,
@@ -270,8 +321,24 @@ async def publish_ingestion(
     if not ingestion.apercu_donnees:
         raise HTTPException(status_code=400, detail="Aucune ligne à publier")
 
-    for resultat in construire_resultats(ingestion):
+    examen = await db.get(Examen, ingestion.examen_id)
+    try:
+        # Re-checked at publication: the phase may have been closed (or the previous
+        # one not yet) since the upload.
+        verifier_phase_ouverte(examen, ingestion.phase)
+    except ErreurPhase as erreur:
+        raise HTTPException(status_code=409, detail=str(erreur)) from erreur
+
+    resultats = construire_resultats(ingestion, examen)
+    await _refuser_doublons(resultats, examen, ingestion.phase, db)
+    for resultat in resultats:
         db.add(resultat)
+    if examen.statut == StatutExamen.PUBLISHED:
+        # A new list on an already public exam (typically the next phase of a
+        # concours): candidate dashboards follow it and candidates are notified. For an
+        # exam not yet public, the same happens when the exam itself is published.
+        await db.flush()
+        await MatchingService(db).traiter_publication_examen(examen)
 
     ingestion.statut = StatutIngestion.PUBLIEE
     ingestion.publiee_at = func.now()
