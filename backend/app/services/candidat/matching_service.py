@@ -3,12 +3,19 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_deterministe
-from app.models import Examen, Resultat, StatutExamen
+from app.models import Examen, PhasePublication, Resultat, StatutExamen
 from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
 from app.models.profil_candidat import ProfilCandidat
 from app.services.candidat.notification_engine import NotificationEngine
-from app.services.candidat.verification_service import DecisionVerification, VerificationService
+from app.services.candidat.verification_service import (
+    DecisionVerification,
+    VerificationService,
+    derniere_phase_par_candidat,
+)
+
+# Shown on the candidate dashboard once a phase is closed without them on its lists
+# (decision of 2026-09-28: never before closure, lists may arrive centre by centre).
+STATUT_ABSENT_DE_LA_LISTE = "NE FIGURE PAS SUR LA LISTE"
 
 
 class MatchingService:
@@ -23,18 +30,21 @@ class MatchingService:
         les résultats déjà publiés qui portent son CNIB, et crée les candidatures
         correspondantes automatiquement. Aucune notification : ce sont des résultats
         déjà anciens, pas de raison de spammer."""
+        # Indexed lookup on the CNIB hash: CNIBs are encrypted at rest in `resultats`.
         query = (
             select(Resultat)
             .join(Examen, Examen.id == Resultat.examen_id)
-            .where(Examen.statut == StatutExamen.PUBLISHED, Resultat.numero_cnib.isnot(None))
+            .where(
+                Examen.statut == StatutExamen.PUBLISHED,
+                Resultat.numero_cnib_hash == profil.numero_cnib_hash,
+            )
         )
-        resultats = (await self.db.execute(query)).scalars().all()
+        resultats = derniere_phase_par_candidat(
+            list((await self.db.execute(query)).scalars().all())
+        )
 
         candidatures_creees: list[Candidature] = []
         for resultat in resultats:
-            if hash_deterministe(resultat.numero_cnib) != profil.numero_cnib_hash:
-                continue
-
             recepisse = resultat.numero_recepisse or resultat.numero_pv
             deja_liee = await self.db.execute(
                 select(Candidature).where(
@@ -63,15 +73,23 @@ class MatchingService:
         return candidatures_creees
 
     async def traiter_publication_examen(self, examen: Examen) -> None:
-        """Scénario A (§ 4.5) / Événement 1 (§ 6) : à la publication d'un examen, tente
-        de vérifier les candidatures en attente qui le concernent, met à jour leur cache
-        de résultat, et notifie les candidats dont le résultat vient d'apparaître."""
+        """Scénario A (§ 4.5) / Événement 1 (§ 6) : à la publication d'un examen — et à
+        chaque nouvelle liste publiée ensuite, notamment chaque phase d'un concours
+        paramilitaire —, vérifie les candidatures en attente, met à jour le cache de
+        résultat des candidatures déjà vérifiées (dernière phase publiée), et notifie
+        les candidats dont le résultat vient d'apparaître ou de changer de phase."""
         candidatures = (
             (
                 await self.db.execute(
                     select(Candidature).where(
                         Candidature.examen_id == examen.id,
-                        Candidature.statut_verification == StatutVerificationCandidature.EN_ATTENTE,
+                        Candidature.statut_verification.in_(
+                            [
+                                StatutVerificationCandidature.EN_ATTENTE,
+                                StatutVerificationCandidature.VERIFIE_AUTO,
+                                StatutVerificationCandidature.VERIFIE_MANUEL,
+                            ]
+                        ),
                     )
                 )
             )
@@ -85,6 +103,18 @@ class MatchingService:
         for candidature in candidatures:
             profil = await self.db.get(ProfilCandidat, candidature.profil_candidat_id)
             if profil is None:
+                continue
+
+            if candidature.statut_verification != StatutVerificationCandidature.EN_ATTENTE:
+                # Already verified: only follow the candidate to their latest phase.
+                resultat = await verification_service.trouver_resultat_publie(
+                    candidature.administration_id,
+                    candidature.examen_id,
+                    candidature.numero_recepisse,
+                    profil,
+                )
+                if resultat is not None:
+                    await self._mettre_a_jour_resultat(candidature, profil, examen, resultat)
                 continue
 
             decision, methode, resultat = await verification_service.verifier(
@@ -106,20 +136,56 @@ class MatchingService:
             candidature.statut_verification = StatutVerificationCandidature.VERIFIE_AUTO
             candidature.methode_verification = methode
             candidature.date_verification = datetime.now(UTC)
+            await self._mettre_a_jour_resultat(candidature, profil, examen, resultat)
 
-            resultat_deja_notifie = (
-                candidature.dernier_resultat_id == resultat.id
-                and candidature.derniere_notification_envoyee is not None
+    async def traiter_cloture_phase(self, examen: Examen, phase: PhasePublication) -> None:
+        """A phase was closed: verified candidates who were expected in it (their latest
+        result announces it as the next step) but are on none of its lists now see that
+        they are not on the list. Their previous result stays the reference row."""
+        candidatures = (
+            (
+                await self.db.execute(
+                    select(Candidature).where(
+                        Candidature.examen_id == examen.id,
+                        Candidature.statut_verification.in_(
+                            [
+                                StatutVerificationCandidature.VERIFIE_AUTO,
+                                StatutVerificationCandidature.VERIFIE_MANUEL,
+                            ]
+                        ),
+                        Candidature.dernier_resultat_id.isnot(None),
+                    )
+                )
             )
-            candidature.dernier_resultat_id = resultat.id
-            candidature.dernier_resultat_phase = resultat.phase.value
-            candidature.dernier_resultat_statut = resultat.decision
+            .scalars()
+            .all()
+        )
+        for candidature in candidatures:
+            dernier = await self.db.get(Resultat, candidature.dernier_resultat_id)
+            if dernier is not None and dernier.phase_suivante_attendue == phase:
+                candidature.dernier_resultat_phase = phase.value
+                candidature.dernier_resultat_statut = STATUT_ABSENT_DE_LA_LISTE
 
-            if resultat_deja_notifie or not candidature.notifications_activees:
-                continue
-            if not profil.notifications_sms:
-                continue
+    async def _mettre_a_jour_resultat(
+        self,
+        candidature: Candidature,
+        profil: ProfilCandidat,
+        examen: Examen,
+        resultat: Resultat,
+    ) -> None:
+        resultat_deja_notifie = (
+            candidature.dernier_resultat_id == resultat.id
+            and candidature.derniere_notification_envoyee is not None
+        )
+        candidature.dernier_resultat_id = resultat.id
+        candidature.dernier_resultat_phase = resultat.phase.value
+        candidature.dernier_resultat_statut = resultat.decision
 
-            message = NotificationEngine.formater_message_resultat(examen, resultat)
-            if await NotificationEngine.envoyer_sms(profil.telephone, message):
-                candidature.derniere_notification_envoyee = datetime.now(UTC)
+        if resultat_deja_notifie or not candidature.notifications_activees:
+            return
+        if not profil.notifications_sms:
+            return
+
+        message = NotificationEngine.formater_message_resultat(examen, resultat)
+        if await NotificationEngine.envoyer_sms(profil.telephone, message):
+            candidature.derniere_notification_envoyee = datetime.now(UTC)

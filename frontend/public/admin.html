@@ -102,7 +102,12 @@
           >
             Créer
           </button>
+          <label class="basis-full flex items-center gap-2 text-sm text-slate-600">
+            <input id="input-multi-phases" type="checkbox" class="rounded border-slate-300" />
+            Concours en 3 phases (épreuves sportives → admissibilité → admission définitive)
+          </label>
         </form>
+        <p id="message-examens" class="text-sm text-red-600 mb-3"></p>
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left text-slate-500 border-b border-slate-200">
@@ -133,6 +138,7 @@
         </div>
         <form id="form-import" class="flex flex-wrap gap-2 items-center">
           <select id="select-examen-import" class="border border-slate-300 rounded-lg px-2 py-2 flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-faso-500"></select>
+          <select id="select-phase-import" class="hidden border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-faso-500" title="Phase à laquelle appartient cette liste"></select>
           <select id="select-type-fichier" class="border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-faso-500">
             <option value="EXCEL">Excel (.xlsx)</option>
             <option value="PDF">PDF (texte ou scanné, détecté automatiquement)</option>

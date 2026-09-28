@@ -1,9 +1,10 @@
 # Architecture — Faso Résultats
 
 > Maintenu à jour à chaque évolution du schéma ou de la structure applicative.
-> Dernière mise à jour : 2026-08-17 — couvre la Phase 1 (fondations, auth,
-> ingestion, API publique, frontend, Docker Compose réel), le pivot multi-tenant
-> et le profil candidat unifié. La Phase 3 (mobile, `mobile/`) est documentée
+> Dernière mise à jour : 2026-09-28 — couvre la Phase 1 (fondations, auth,
+> ingestion, API publique, frontend, Docker Compose réel), le pivot multi-tenant,
+> le profil candidat unifié, le chiffrement de l'identité dans `resultats`, la
+> publication par phase et la charte graphique. La Phase 3 (mobile, `mobile/`) est documentée
 > séparément dans `mobile/docs/`.
 
 ## Structure du dépôt
@@ -81,7 +82,8 @@ Un examen ou concours pour une année donnée (ex : "BAC 2026 - Session normale"
 | ministere_tutelle | string nullable | traçabilité de l'organisme responsable ; voir aussi `app/data/reference/organismes.py` |
 | source_donnees | enum `SourceDonnees`, défaut `FILE_IMPORT` | d'où proviennent les résultats — voir § Sources de données |
 | partenariat_officiel | bool, défaut `False` | reconnaissance officielle par convention signée |
-| phases_publication | jsonb (liste), défaut `[]` | phases attendues pour ce type d'examen — voir § Phases de publication |
+| phases_publication | jsonb (liste), défaut `[]` | phases attendues, dans l'ordre (vide = publication unique) — voir § Phases de publication |
+| phases_cloturees | jsonb (liste), défaut `[]` | phases déclarées complètes par un admin, dans l'ordre — voir § Phases de publication |
 | created_at / updated_at | timestamptz | |
 
 Index : `(administration_id, statut)` — filtrage tenant des examens publiés.
@@ -114,8 +116,9 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | nom_fichier / chemin_fichier | string | |
 | type_fichier | enum (`PDF`, `EXCEL`, `PDF_OCR`) | |
 | statut | enum (`EN_ATTENTE`, `PREVISUALISATION`, `VALIDEE`, `PUBLIEE`, `REJETEE`) | reflète le flux upload → prévisualisation → correction → publication |
+| phase | enum `PhasePublication`, défaut `RESULTAT_UNIQUE` | phase de la liste, choisie à l'upload (obligatoire pour un examen à plusieurs phases) ; reprise par chaque `Resultat` créé |
 | nombre_lignes_detectees / nombre_erreurs | int | |
-| apercu_donnees | jsonb | lignes extraites en attente de correction/publication |
+| apercu_donnees | text chiffré (JSON) | lignes extraites en attente de correction/publication — chiffré au repos (`EncryptedJSON`), contient CNIB/dates de naissance |
 | erreurs_fichier | jsonb (liste de string) | messages au niveau du fichier entier (colonnes non reconnues, fichier vide...), pas d'une ligne précise |
 | publiee_at | timestamptz nullable | |
 
@@ -131,16 +134,18 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | examen_id | UUID (FK → examens, CASCADE), **NOT NULL** | un résultat sans examen valide est refusé |
 | ingestion_id | UUID (FK → ingestions, RESTRICT), **NOT NULL** | traçabilité vers le fichier source |
 | numero_pv / jury | string | |
-| nom / prenom / date_naissance / lieu_naissance | | données sensibles — jamais loguées |
+| nom / prenom | | données sensibles — jamais loguées |
+| date_naissance / lieu_naissance | chiffré (`EncryptedDate` / `EncryptedStr`) | jamais loguées ni exposées publiquement ; `date_naissance` sert à vérifier l'identité d'un candidat |
 | etablissement | string nullable | |
-| numero_cnib | string(20) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_cnib | chiffré (`EncryptedStr`) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_cnib_hash | string(64) nullable, indexé | HMAC de `numero_cnib` (même pepper que `profils_candidats`), rempli automatiquement par le modèle — rapprochement candidat ↔ résultat sans déchiffrer |
 | numero_recepisse / code_concours / code_centre / rang_numerique / rang_affiche | nullable | spécifiques aux communiqués scannés de la Fonction publique (voir § Parser scan Fonction publique) ; vides pour les autres types d'examens. `numero_recepisse` duplique `numero_pv` plutôt que de le remplacer, pour ne pas casser la recherche publique existante |
 | decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
 | phase | enum `PhasePublication`, défaut `RESULTAT_UNIQUE` | voir § Phases de publication |
 | date_publication_phase | timestamptz nullable | |
 | phase_suivante_attendue | enum `PhasePublication` nullable | |
-| donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
+| donnees_brutes | text chiffré (JSON) | ligne brute extraite du fichier source, conservée pour audit — chiffrée au repos (`EncryptedJSON`) |
 
 Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation
 (non filtrée par tenant, voir § Routes publiques), un candidat pouvant désormais
@@ -226,10 +231,42 @@ distingue ces lignes ; `phase_suivante_attendue` indique à l'utilisateur la pro
 type d'examen (`RESULTAT_UNIQUE` par défaut pour tout le reste, y compris `SECOND_TOUR`
 pour un BEPC/BAC en seconde session).
 
-⚠️ Le frontend n'affiche pas encore d'indicateur de phase ni de sélecteur d'examen à
-deux niveaux (catégorie puis type précis) — améliorations UX documentées comme
-« bonus, non prioritaires » dans `docs/CONTEXTE_METIER.md` § 7, à traiter avec le
-reste du travail esthétique.
+### Fonctionnement opérationnel (depuis le 2026-09-28)
+
+Règles métier dans `app/services/phases.py` (fonctions pures, testées sans base) :
+
+1. **Choix de la phase à l'import** : `POST /admin/ingestions` accepte `phase` —
+   obligatoire pour un examen à plusieurs phases (422 sinon), déduite pour un
+   examen à publication unique. Chaque `Resultat` reprend la phase de sa liste,
+   `date_publication_phase` (moment de la publication) et
+   `phase_suivante_attendue` (phase suivante, sauf décision négative : `NON …`,
+   `AJOURNÉ`, `INAPTE`, `ÉLIMINÉ`, `ABSENT`, `REFUSÉ`).
+2. **Ordre imposé** : une phase n'accepte de listes (import et publication) que
+   si toutes les phases précédentes sont clôturées.
+3. **Clôture explicite** (`POST /admin/exams/{id}/phases/{phase}/close`) : l'admin
+   déclare que toutes les listes de la phase sont publiées. Irréversible. Refusée
+   tant qu'une liste de la phase attend validation. Journalisée (`CLOSE_PHASE`).
+4. **« Ne figure pas sur la liste » uniquement après clôture** : une phase peut être
+   publiée en plusieurs fichiers (un par centre) ; avant clôture, un candidat absent
+   des listes voit « publication en cours », jamais un échec.
+5. **Doublons** : un candidat (PV + jury) a au plus un résultat par phase ; une
+   liste réimportée ou importée sous la mauvaise phase est refusée en 409 avec les
+   PV concernés (au lieu d'une erreur 500 sur l'index unique).
+6. **Candidats plateforme** : la vérification regroupe les lignes d'un même candidat
+   sur plusieurs phases (elles étaient prises pour des jurys distincts, forçant un
+   OTP), le dashboard suit chaque nouvelle liste publiée sur un examen public, et
+   affiche `NE FIGURE PAS SUR LA LISTE` après clôture d'une phase où le candidat
+   était attendu. Notification SMS d'absence non envoyée (stub SMS, Phase 2).
+
+Interface : case « Concours en 3 phases » à la création d'un examen, pastilles
+d'avancement et bouton « Clôturer » dans la liste des examens, choix de la phase
+à l'import (pré-sélectionne la phase ouverte) ; page publique en frise par phase ;
+dashboard candidat avec la phase du dernier résultat. L'app mobile consomme encore
+`/results` (lignes par phase, avec phase et prochaine étape) — passer à
+`/results/progress` pour afficher « publication en cours » / « ne figure pas ».
+
+⚠️ Toujours non fait : sélecteur d'examen à deux niveaux (catégorie puis type
+précis), `docs/CONTEXTE_METIER.md` § 7.
 
 ## Décisions techniques
 
@@ -237,9 +274,11 @@ reste du travail esthétique.
   custom (`GUID`) plutôt que `postgresql.UUID` directement, pour que les modèles
   restent testables sur SQLite en mémoire sans dépendance à un Postgres réel.
   En production (dialecte `postgresql`), il se comporte comme un UUID natif.
-- **`donnees_brutes` en JSON avec variante JSONB** : `JSON().with_variant(JSONB, "postgresql")`
-  donne un stockage JSONB natif sur PostgreSQL (production) tout en restant
-  compatible SQLite pour les tests unitaires rapides.
+- **`donnees_brutes` et `apercu_donnees` chiffrés (`EncryptedJSON`)** : stockés en
+  texte chiffré (Fernet) plutôt qu'en JSONB depuis le 2026-09-28, car ils
+  recopient la CNIB et la date de naissance. Conséquence assumée : plus aucune
+  requête SQL possible dans ces documents (aucune n'existait), et seule la
+  réassignation complète est détectée (pas de mutation en place).
 - **Migrations Alembic en mode async** : `alembic/env.py` utilise
   `async_engine_from_config` pour rester cohérent avec le reste de l'application
   (SQLAlchemy 2.0 async partout).
@@ -288,7 +327,11 @@ reste du travail esthétique.
   le rendant visible côté public. Séparé volontairement de la publication
   d'une ingestion : charger des résultats et rendre un examen public sont
   deux décisions distinctes. 404 si l'examen appartient à une autre
-  administration.
+  administration. Vide le cache de la liste publique des examens.
+- `POST /api/v1/admin/exams/{id}/phases/{phase}/close` : clôture une phase
+  (voir § Phases de publication). 409 si une phase précédente n'est pas
+  clôturée, si aucune liste n'est publiée pour cette phase, ou si une liste
+  attend encore validation.
 
 ## Pipeline d'ingestion
 
@@ -567,7 +610,14 @@ et examen) sont des étapes distinctes, contrôlées séparément.
   numéro de PV (le `jury` est optionnel, utile pour désambiguïser — c'est
   exactement l'index composite `(examen_id, numero_pv, jury)`). 404 si aucun
   résultat, ou si l'examen n'est pas `PUBLISHED` (même si l'ingestion l'a
-  déjà été).
+  déjà été). Renvoie une ligne par phase publiée pour le candidat.
+- `GET /api/v1/public/results/progress?examen_id=&numero_pv=&jury=` : même
+  recherche, mais un **parcours par candidat** : pour chaque phase de
+  l'examen, `statut_phase` (`A_VENIR` / `EN_COURS` / `CLOTUREE`) et
+  `situation` (`RESULTAT` / `EN_ATTENTE` / `NE_FIGURE_PAS` / `A_VENIR` /
+  `NON_CONCERNE`), calculés côté serveur (`app/services/phases.py`) pour que
+  web, mobile et plus tard SMS/USSD affichent la même conclusion. Utilisé par
+  la page publique ; fonctionne aussi pour un examen à publication unique.
 - **Champs sensibles non exposés** : `date_naissance` et `lieu_naissance` sont
   volontairement absents de `ResultatPublicOut`, par principe de minimisation
   des données (exigence CIL). Décision actée — voir « Historique des décisions
@@ -607,7 +657,9 @@ et le slogan, et sert aussi de filet de sécurité si le CDN Tailwind ne charge
 pas (pages lisibles et aux couleurs de la marque même sans utilitaires).
 
 - **`index.html` + `js/public.js`** : consultation publique. Charge la liste
-  des examens publiés (`/api/v1/public/exams`), recherche un résultat par
+  des examens publiés (`/api/v1/public/exams`) — affichée en bande défilante
+  de droite à gauche (CSS pur dans `css/brand.css`, pause au survol/au toucher,
+  bande statique défilable si l'utilisateur demande moins d'animations), recherche un résultat par
   numéro de PV (+ jury optionnel), affiche la décision/moyenne/établissement.
 - **`admin.html` + `js/admin.js`** : connexion (JWT stocké en
   `sessionStorage`, jamais en `localStorage`, pour limiter la durée de vie

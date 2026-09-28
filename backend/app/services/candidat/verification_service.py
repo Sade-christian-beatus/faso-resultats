@@ -1,18 +1,37 @@
 import enum
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_deterministe
 from app.models import Examen, Resultat, StatutExamen
 from app.models.candidature import MethodeVerification, StatutVerificationCandidature
 from app.models.profil_candidat import ProfilCandidat
 
 
+def derniere_phase_par_candidat(resultats: list[Resultat]) -> list[Resultat]:
+    """One entry per candidate: a candidate of a multi-phase concours has one row per
+    phase (same PV number and jury), which must not be mistaken for several juries
+    sharing a number. Keeps each candidate's most recently published phase."""
+    derniers: dict[tuple[str, str], Resultat] = {}
+    for resultat in resultats:
+        cle = (resultat.numero_pv, resultat.jury)
+        actuel = derniers.get(cle)
+        if actuel is None or _date_publication(resultat) > _date_publication(actuel):
+            derniers[cle] = resultat
+    return list(derniers.values())
+
+
+def _date_publication(resultat: Resultat) -> datetime:
+    moment = resultat.date_publication_phase or resultat.created_at or datetime.min
+    # SQLite (tests) returns naive datetimes, PostgreSQL aware ones: compare in UTC.
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+
+
 def _identite_correspond(resultat: Resultat, profil: ProfilCandidat) -> bool:
-    if resultat.numero_cnib:
-        return hash_deterministe(resultat.numero_cnib) == profil.numero_cnib_hash
+    if resultat.numero_cnib_hash:
+        return resultat.numero_cnib_hash == profil.numero_cnib_hash
     if resultat.date_naissance:
         return resultat.date_naissance.isoformat() == profil.date_naissance
     return False
@@ -50,7 +69,7 @@ class VerificationService:
                 | (Resultat.numero_pv == numero_recepisse),
             )
         )
-        return list((await self.db.execute(query)).scalars().all())
+        return derniere_phase_par_candidat(list((await self.db.execute(query)).scalars().all()))
 
     async def trouver_resultat_publie(
         self,
@@ -97,7 +116,7 @@ class VerificationService:
                 resultat = confirmes[0]
                 methode = (
                     MethodeVerification.CNIB_MATCH_AUTO
-                    if resultat.numero_cnib
+                    if resultat.numero_cnib_hash
                     else MethodeVerification.DATE_NAISSANCE
                 )
                 return DecisionVerification.VERIFIEE, methode, resultat
@@ -107,8 +126,8 @@ class VerificationService:
             return DecisionVerification.OTP_REQUIS, None, None
 
         resultat = resultats[0]
-        if resultat.numero_cnib:
-            if hash_deterministe(resultat.numero_cnib) == profil.numero_cnib_hash:
+        if resultat.numero_cnib_hash:
+            if resultat.numero_cnib_hash == profil.numero_cnib_hash:
                 return DecisionVerification.VERIFIEE, MethodeVerification.CNIB_MATCH_AUTO, resultat
             return DecisionVerification.REJETEE, None, resultat
 

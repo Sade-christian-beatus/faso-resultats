@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.models import PhasePublication, TypeExamen
+from app.services.phases import SituationCandidat, StatutPhase
 
 
 class AdministrationPublicOut(BaseModel):
@@ -45,6 +46,21 @@ class ResultatPublicOut(BaseModel):
     phase: PhasePublication
     phase_suivante_attendue: PhasePublication | None
     date_publication_phase: datetime | None
+
+
+class EtapeParcoursOut(BaseModel):
+    """One phase of the exam for one candidate (app/services/phases.py)."""
+
+    phase: PhasePublication
+    statut_phase: StatutPhase
+    situation: SituationCandidat
+    resultat: ResultatPublicOut | None
+
+
+class ParcoursCandidatOut(BaseModel):
+    numero_pv: str
+    jury: str
+    etapes: list[EtapeParcoursOut]
 
 
 class DroitsCandidatOut(BaseModel):

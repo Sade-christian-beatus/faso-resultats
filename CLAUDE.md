@@ -351,7 +351,7 @@ Après chaque étape majeure, produire un résumé structuré :
   compte admin après échecs de connexion ni de journalisation de ces
   échecs ; pas de révocation JWT (token candidat valable 30 jours) ; CNIB et
   date de naissance en clair dans `resultats` (chiffrés dans
-  `profils_candidats`, incohérence à trancher) ; `erreurs_fichier` (écart de
+  `profils_candidats`, incohérence à trancher — corrigé le 2026-09-28) ; `erreurs_fichier` (écart de
   comptage OCR) non bloquant à la publication ; notifications perdues sans
   retry en heure silencieuse (22h-6h) ; alias `"mention"` → champ `decision`
   sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
@@ -482,6 +482,67 @@ Après chaque étape majeure, produire un résumé structuré :
   (5 min). Hors périmètre de ce correctif : le résultat déjà dénormalisé dans
   le dashboard candidat (`dernier_resultat_*`) reste affiché pour une
   administration suspendue (seule la résiliation est traitée, par la purge).
+- **2026-09-28 — Chiffrement au repos de l'identité des candidats dans
+  `resultats`**, point ouvert de l'audit du 2026-08-17. Périmètre validé :
+  `numero_cnib`, `date_naissance` et `lieu_naissance` (colonnes), **et** les
+  copies brutes qui contiennent les mêmes données — `resultats.donnees_brutes`
+  et `ingestions.apercu_donnees` (sans elles, chiffrer les colonnes ne
+  protégeait rien). Même mécanisme et même clé que `profils_candidats`
+  (Fernet, `CANDIDAT_ENCRYPTION_KEY`) : pas de nouveau secret à gérer.
+  Nouveaux types `EncryptedDate` (garde un `date` Python) et `EncryptedJSON`.
+  Nouvelle colonne indexée `numero_cnib_hash`, remplie automatiquement par le
+  modèle (`@validates`) : le rapprochement rétroactif candidat ↔ résultat
+  (`matcher_retroactif`) passe d'un parcours de **tous** les résultats avec
+  CNIB en Python à une recherche indexée. Migration `5b8e2f41c9d7` qui
+  chiffre/déchiffre les données existantes par lots de 1000, testée contre
+  PostgreSQL 16 réel avec données (aller-retour identique à l'octet près,
+  `alembic check` sans dérive, ~0,8 ms/ligne). Coûts mesurés : ~60 µs par
+  ligne lue (négligeable pour une consultation publique, déjà en cache),
+  ~12 s de plus pour publier 200 000 lignes. Hors périmètre, documenté dans
+  `docs/CIL.md` § 7.2 : les fichiers sources sur disque (restent en clair) et
+  la sauvegarde de la clé (sa perte rend ces données définitivement
+  illisibles) ; pas de rotation de clé.
+- **2026-09-28 — Publication par phase rendue opérationnelle** (concours
+  paramilitaires, `docs/CONTEXTE_METIER.md` § 2.4). Le modèle existait en base
+  depuis la Phase 1 mais rien ne l'alimentait : toute liste était
+  `RESULTAT_UNIQUE`, donc publier une 2e phase d'un même concours cassait sur
+  l'index unique (erreur 500). Décisions prises avec le développeur : (1) un
+  candidat n'est déclaré « ne figure pas sur la liste » **qu'après clôture
+  explicite** de la phase par un admin — une phase peut arriver en plusieurs
+  listes (un centre après l'autre) et une absence avant clôture n'est pas un
+  échec ; (2) **ordre des phases imposé** : une phase n'accepte de listes que si
+  les précédentes sont clôturées. Règles isolées dans `app/services/phases.py`,
+  nouvel endpoint public `GET /results/progress` (parcours calculé côté serveur,
+  réutilisable par mobile/SMS/USSD), migration `9c1d7e3a5f20`. Corrigés au
+  passage : la vérification candidat prenait les lignes de plusieurs phases
+  d'un même candidat pour des jurys distincts (OTP forcé) ; dans l'admin, après
+  chaque import le sélecteur d'examen revenait sur le premier examen de la
+  liste (`form.reset()`), la liste suivante pouvait donc être importée dans le
+  mauvais examen — trouvé en testant dans un vrai navigateur ; publier un
+  examen ne vidait pas le cache de la liste publique (examen invisible jusqu'à
+  5 min) ; valeurs importées non échappées dans l'aperçu admin et le dashboard
+  candidat web. Reste : app mobile à brancher sur `/results/progress`,
+  notification SMS d'absence (dépend de la Phase 2).
+- **2026-09-28 — Build APK release ajouté à la CI mobile** : seul le build
+  debug était vérifié, alors que `flutter build apk` produit un build release
+  (R8). Debug et release passent en CI (Flutter 3.44.5) ; un échec de build
+  rapporté par le développeur n'a pas pu être reproduit — en attente du message
+  d'erreur exact.
+- **2026-09-28 — App mobile : accès réseau corrigé.** Le manifeste Android
+  principal ne déclarait pas la permission `INTERNET` (seuls les manifestes debug/
+  profile l'avaient, pour l'outillage Flutter) : un APK release ne pouvait pas
+  joindre l'API. Et Android refuse le HTTP en clair par défaut alors que l'API de
+  dev est en `http://` : autorisé **en debug uniquement**
+  (`android/app/src/debug/AndroidManifest.xml`), la release reste HTTPS seule ;
+  iOS : `NSAllowsLocalNetworking` pour le simulateur. Procédure de lancement
+  (émulateur, téléphone physique sur le même Wi-Fi, simulateur iOS) dans
+  `mobile/README.md`. Non vérifié sur appareil réel (pas de SDK Android dans
+  l'environnement de développement).
+- **2026-09-28 — Page publique : examens disponibles en bande défilante**
+  (droite → gauche, demandé par le développeur), pastilles compactes d'une ligne.
+  CSS pur sans bibliothèque (léger en 3G), pause au survol et au toucher, copies
+  de la boucle masquées aux lecteurs d'écran, bande statique si l'utilisateur
+  demande moins d'animations (`prefers-reduced-motion`).
 
 ---
 

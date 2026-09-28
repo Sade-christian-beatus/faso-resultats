@@ -12,15 +12,20 @@ from app.models import (
     STATUTS_ADMINISTRATION_VISIBLES,
     Administration,
     Examen,
+    Ingestion,
     Resultat,
     StatutExamen,
+    StatutIngestion,
 )
 from app.schemas.public import (
     AdministrationPublicOut,
     DroitsCandidatOut,
+    EtapeParcoursOut,
     ExamenPublicOut,
+    ParcoursCandidatOut,
     ResultatPublicOut,
 )
+from app.services.phases import construire_parcours
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
 settings = get_settings()
@@ -136,6 +141,92 @@ async def search_public_results(
         cle_cache, [r.model_dump(mode="json") for r in resultats], settings.cache_ttl_seconds
     )
     return resultats
+
+
+@router.get(
+    "/results/progress",
+    response_model=list[ParcoursCandidatOut],
+    summary="Suivre son parcours phase par phase",
+    description="Pour les concours publiés en plusieurs phases (épreuves sportives, "
+    "admissibilité, admission définitive) : situation du candidat à chaque phase — "
+    "résultat, publication en cours, ne figure pas sur la liste (uniquement une fois la "
+    "phase clôturée par l'administration), à venir. Même recherche et mêmes filtres que "
+    "GET /results ; fonctionne aussi pour un examen à publication unique.",
+)
+@limiter.limit(settings.rate_limit_public)
+async def search_public_progress(
+    request: Request,
+    examen_id: uuid.UUID,
+    numero_pv: str,
+    jury: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> list[ParcoursCandidatOut]:
+    cle_cache = f"public:progress:{examen_id}:{numero_pv}:{jury or ''}"
+    cache = await cache_get(cle_cache)
+    if cache is not None:
+        return [ParcoursCandidatOut.model_validate(item) for item in cache]
+
+    examen = (
+        await db.execute(
+            select(Examen)
+            .join(Administration, Examen.administration_id == Administration.id)
+            .where(
+                Examen.id == examen_id,
+                Examen.statut == StatutExamen.PUBLISHED,
+                Administration.statut.in_(STATUTS_ADMINISTRATION_VISIBLES),
+            )
+        )
+    ).scalar_one_or_none()
+    if examen is None:
+        raise HTTPException(status_code=404, detail="Aucun résultat trouvé")
+
+    query = select(Resultat).where(Resultat.examen_id == examen.id, Resultat.numero_pv == numero_pv)
+    if jury is not None:
+        query = query.where(Resultat.jury == jury)
+    resultats = (await db.execute(query)).scalars().all()
+    if not resultats:
+        raise HTTPException(status_code=404, detail="Aucun résultat trouvé")
+
+    phases_avec_listes = set(
+        (
+            await db.execute(
+                select(Ingestion.phase)
+                .where(
+                    Ingestion.examen_id == examen.id,
+                    Ingestion.statut == StatutIngestion.PUBLIEE,
+                )
+                .distinct()
+            )
+        )
+        .scalars()
+        .all()
+    )
+    par_candidat: dict[tuple[str, str], list[Resultat]] = {}
+    for resultat in resultats:
+        par_candidat.setdefault((resultat.numero_pv, resultat.jury), []).append(resultat)
+
+    parcours = [
+        ParcoursCandidatOut(
+            numero_pv=pv,
+            jury=jury_candidat,
+            etapes=[
+                EtapeParcoursOut(
+                    phase=etape.phase,
+                    statut_phase=etape.statut_phase,
+                    situation=etape.situation,
+                    resultat=(
+                        ResultatPublicOut.model_validate(etape.resultat) if etape.resultat else None
+                    ),
+                )
+                for etape in construire_parcours(examen, lignes, phases_avec_listes)
+            ],
+        )
+        for (pv, jury_candidat), lignes in sorted(par_candidat.items())
+    ]
+    await cache_set(
+        cle_cache, [p.model_dump(mode="json") for p in parcours], settings.cache_ttl_seconds
+    )
+    return parcours
 
 
 @router.get(

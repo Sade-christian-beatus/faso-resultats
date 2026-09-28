@@ -8,7 +8,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.models.encrypted_str import EncryptedJSON
 from app.models.guid import GUID
+from app.models.resultat import PhasePublication
 
 if TYPE_CHECKING:
     from app.models.examen import Examen
@@ -53,15 +55,21 @@ class Ingestion(TimestampMixin, Base):
     statut: Mapped[StatutIngestion] = mapped_column(
         Enum(StatutIngestion, name="statut_ingestion"), default=StatutIngestion.EN_ATTENTE
     )
+    # Phase this list belongs to (chosen by the admin at upload for multi-phase exams);
+    # every Resultat created from it carries the same phase.
+    phase: Mapped[PhasePublication] = mapped_column(
+        Enum(PhasePublication, name="phase_publication"),
+        default=PhasePublication.RESULTAT_UNIQUE,
+    )
     nombre_lignes_detectees: Mapped[int] = mapped_column(Integer, default=0)
     nombre_erreurs: Mapped[int] = mapped_column(Integer, default=0)
     publiee_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Aperçu des lignes extraites, en attente de correction/publication.
     # Chaque élément : {"ligne": int, "donnees": {...}, "brut": {...}, "erreurs": [...]}
-    apercu_donnees: Mapped[list] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), default=list
-    )
+    # Chiffré (CNIB, date de naissance des candidats). Toujours réassigné en entier,
+    # jamais muté en place : EncryptedJSON ne suit pas les mutations.
+    apercu_donnees: Mapped[list] = mapped_column(EncryptedJSON(), default=list)
     # Messages au niveau du fichier entier (pas d'une ligne précise), ex. colonnes non
     # reconnues ou fichier vide — pour que l'admin comprenne pourquoi peu/pas de lignes
     # ont été extraites sans avoir à nous solliciter.

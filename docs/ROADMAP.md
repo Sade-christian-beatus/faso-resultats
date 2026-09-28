@@ -34,6 +34,19 @@
 - Fondation API B2B (Phase 4, § dédiée ci-dessous) : modèles `Partenaire`/`ApiKey`,
   gestion super-admin, routes `/api/v1/b2b/exams` et `/api/v1/b2b/results` avec quota
   par clé — pas encore de facturation ni de contrat partenaire réel
+- **2026-09-28** — Charte graphique officielle et logo appliqués au web, à l'app mobile
+  et aux icônes d'app (`docs/CHARTE_GRAPHIQUE.md`)
+- **2026-09-28** — CI backend (lint, tests avec couverture minimale, migrations sur
+  PostgreSQL réel) et CI mobile étendue au build APK release
+- **2026-09-28** — Points d'audit fermés : chiffrement au repos de la CNIB, de la date
+  et du lieu de naissance dans `resultats` (et des copies brutes `donnees_brutes` /
+  `apercu_donnees`) ; administrations `SUSPENDU`/`RESILIE` masquées côté public et B2B
+- **2026-09-28** — Publication par phase opérationnelle (concours paramilitaires) :
+  phase choisie à l'import, ordre imposé, clôture explicite des phases, parcours
+  candidat phase par phase (`GET /api/v1/public/results/progress`) — voir
+  `docs/ARCHITECTURE.md` § Phases de publication
+- **2026-09-28** — Page publique : examens disponibles en bande défilante, résultats
+  en frise par phase
 
 ## 🚧 En cours / à faire avant un lancement pilote réel
 
@@ -112,6 +125,13 @@ commits `feat(mobile)` mergés sur `main`) sans que cette page ne soit tenue à 
 - 🔒 Build release Android : infrastructure de signature en place, pas de
   keystore de production généré. iOS jamais testé (pas d'environnement Xcode
   disponible en session).
+- ✅ **2026-09-28** : la release Android déclare enfin la permission `INTERNET`
+  (sans elle, un APK release ne joignait pas l'API) ; HTTP local autorisé en debug
+  uniquement (API de dev en `http://`) ; build release vérifié en CI. Procédure de
+  lancement détaillée dans `mobile/README.md`.
+- 📅 Brancher l'app sur `GET /api/v1/public/results/progress` pour afficher
+  « publication en cours » / « ne figure pas sur la liste » (l'app affiche déjà la
+  phase et la prochaine étape via `/results`).
 - 📅 Espace établissement : pas commencé — nouvelle table normalisée +
   vérification automatique contre une liste officielle d'établissements (liste
   des établissements privés déjà reçue, liste des établissements publics
@@ -237,6 +257,15 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
    reste un stub journalisé en attendant. Voir Phase 2 pour la grille tarifaire
    consultée et le nouveau prérequis de structure juridique (RCCM/IFU) identifiés le
    2026-08-17.
+
+6. **Points restants de l'audit du 2026-08-17 et des chantiers du 2026-09-28** :
+   révocation des sessions (token candidat valable 30 jours sans révocation) ;
+   `erreurs_fichier` (écart de comptage OCR) non bloquant à la publication ;
+   notifications perdues en heure silencieuse (22h-6h) sans nouvel essai ; alias
+   `"mention"` → `decision` sans garde-fou ; aucune purge de la table `resultats` ;
+   fichiers sources importés en clair sur disque et sauvegarde/rotation de la clé
+   de chiffrement (`docs/CIL.md` § 7.2) ; auto-hébergement de Poppins et de
+   Tailwind avant la production.
 
 Chaque phase reste conditionnée à une demande explicite avant de démarrer le code,
 conformément à `CLAUDE.md`, même si les choix techniques ci-dessus sont déjà actés.

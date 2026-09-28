@@ -169,6 +169,34 @@ function attenteConfirmationOtp(c) {
   return c.statut_verification === "EN_ATTENTE" && c.methode_verification === "OTP_SMS";
 }
 
+const CARACTERES_HTML = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+// Decisions come from files imported by an administration, not from a validated form.
+function escapeHtml(valeur) {
+  return String(valeur ?? "").replace(/[&<>"']/g, (caractere) => CARACTERES_HTML[caractere]);
+}
+
+// Concours publiés en plusieurs phases (docs/CONTEXTE_METIER.md § 2.4).
+const LIBELLES_PHASE = {
+  EPREUVES_SPORTIVES: "Épreuves sportives",
+  ADMISSIBILITE: "Admissibilité",
+  ADMISSION_DEFINITIVE: "Admission définitive",
+  SECOND_TOUR: "Second tour",
+};
+const STATUT_ABSENT_DE_LA_LISTE = "NE FIGURE PAS SUR LA LISTE";
+
+function rendreDernierResultat(c) {
+  if (!c.dernier_resultat_statut) {
+    return `<p class="mt-2 text-sm text-slate-400">Résultat pas encore publié</p>`;
+  }
+  const phase = LIBELLES_PHASE[c.dernier_resultat_phase];
+  const libellePhase = phase ? `<p class="mt-2 text-xs text-slate-500">${escapeHtml(phase)}</p>` : "";
+  if (c.dernier_resultat_statut === STATUT_ABSENT_DE_LA_LISTE) {
+    return `${libellePhase}<p class="text-sm text-slate-700">Toutes les listes de cette phase sont publiées : vous n'y figurez pas.</p>`;
+  }
+  return `${libellePhase}<p class="${phase ? "" : "mt-2 "}text-lg font-semibold text-slate-900">${escapeHtml(c.dernier_resultat_statut)}</p>`;
+}
+
 function rendreCandidatures(candidatures) {
   const zone = document.getElementById("zone-candidatures");
   if (candidatures.length === 0) {
@@ -185,14 +213,10 @@ function rendreCandidatures(candidatures) {
       return `
       <div class="carte-candidature bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-sm text-slate-500">Récépissé n° ${c.numero_recepisse}</p>
+          <p class="text-sm text-slate-500">Récépissé n° ${escapeHtml(c.numero_recepisse)}</p>
           <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${style.classe}">${style.texte}</span>
         </div>
-        ${
-          c.dernier_resultat_statut
-            ? `<p class="mt-2 text-lg font-semibold text-slate-900">${c.dernier_resultat_statut}</p>`
-            : `<p class="mt-2 text-sm text-slate-400">Résultat pas encore publié</p>`
-        }
+        ${rendreDernierResultat(c)}
         ${
           attenteOtp
             ? `

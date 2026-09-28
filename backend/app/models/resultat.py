@@ -3,11 +3,12 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Numeric, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.security import hash_deterministe
 from app.models.base import Base, TimestampMixin
+from app.models.encrypted_str import EncryptedDate, EncryptedJSON, EncryptedStr
 from app.models.guid import GUID
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ class Resultat(TimestampMixin, Base):
             unique=True,
         ),
         Index("ix_resultats_administration", "administration_id"),
+        Index("ix_resultats_numero_cnib_hash", "numero_cnib_hash"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -58,11 +60,17 @@ class Resultat(TimestampMixin, Base):
 
     nom: Mapped[str] = mapped_column(String(255))
     prenom: Mapped[str] = mapped_column(String(255))
-    date_naissance: Mapped[date | None] = mapped_column(Date, nullable=True)
-    lieu_naissance: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Identity data encrypted at rest (audit 2026-08-17, same scheme as
+    # `profils_candidats`): never shown publicly, only used to verify a candidate.
+    date_naissance: Mapped[date | None] = mapped_column(EncryptedDate(), nullable=True)
+    lieu_naissance: Mapped[str | None] = mapped_column(EncryptedStr(), nullable=True)
     etablissement: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC.
-    numero_cnib: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    numero_cnib: Mapped[str | None] = mapped_column(EncryptedStr(255), nullable=True)
+    # Deterministic hash of `numero_cnib` (same pepper as `profils_candidats`), set
+    # automatically by `_hasher_cnib`: lets the candidate matching find results by CNIB
+    # with an index instead of decrypting every row.
+    numero_cnib_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Champs spécifiques aux communiqués PDF scannés de la Fonction publique
     # (RECEPISSE-CODE-CENTRE, rang de mérite) — vides pour CEP/BEPC/BAC et les imports
@@ -90,9 +98,15 @@ class Resultat(TimestampMixin, Base):
         Enum(PhasePublication, name="phase_publication"), nullable=True
     )
 
-    # Ligne brute telle qu'extraite du fichier source, conservée pour audit.
-    donnees_brutes: Mapped[dict] = mapped_column(JSON().with_variant(JSONB, "postgresql"))
+    # Ligne brute telle qu'extraite du fichier source, conservée pour audit. Chiffrée :
+    # elle contient les mêmes CNIB/date de naissance que les colonnes ci-dessus.
+    donnees_brutes: Mapped[dict] = mapped_column(EncryptedJSON())
 
     administration: Mapped["Administration"] = relationship()
     examen: Mapped["Examen"] = relationship(back_populates="resultats")
     ingestion: Mapped["Ingestion"] = relationship(back_populates="resultats")
+
+    @validates("numero_cnib")
+    def _hasher_cnib(self, _key: str, numero_cnib: str | None) -> str | None:
+        self.numero_cnib_hash = hash_deterministe(numero_cnib) if numero_cnib else None
+        return numero_cnib

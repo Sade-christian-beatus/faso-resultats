@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.models import StatutIngestion, TypeFichier
+from app.models import PhasePublication, StatutIngestion, TypeFichier
 
 
 class LigneApercu(BaseModel):
@@ -23,6 +23,7 @@ class IngestionOut(BaseModel):
     nom_fichier: str
     type_fichier: TypeFichier
     statut: StatutIngestion
+    phase: PhasePublication
     nombre_lignes_detectees: int
     nombre_erreurs: int
     erreurs_fichier: list[str] = []

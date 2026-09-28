@@ -110,6 +110,12 @@ class Examen(TimestampMixin, Base):
     phases_publication: Mapped[list] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), default=list
     )
+    # Phases closed by an admin, in order (app/services/phases.py): once closed, no new
+    # list can be published for it, and a candidate from the previous phase who is not on
+    # its lists is told so. Before closure, lists may still be arriving centre by centre.
+    phases_cloturees: Mapped[list] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), default=list
+    )
 
     administration: Mapped["Administration"] = relationship()
     resultats: Mapped[list["Resultat"]] = relationship(back_populates="examen")

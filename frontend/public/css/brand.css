@@ -32,3 +32,72 @@ body {
 .logo-texte .logo-faso { color: var(--faso-nuit); }
 .logo-texte .logo-etoile { color: var(--faso-jaune); -webkit-text-stroke: 0.5px #c9a400; }
 .logo-texte .logo-resultats { color: var(--faso-vert-fonce); }
+
+/* "Examens et concours disponibles" band: cards scroll right to left in a loop (the
+   track holds the list twice and moves by half its width, so the loop is seamless).
+   Pure CSS: no library, cheap on low-end phones. Pauses on hover/keyboard focus so a
+   card can be clicked; users who ask for reduced motion get a manual scroll strip. */
+.bande-examens {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.bande-examens__piste {
+  display: flex;
+  gap: 0.5rem;
+  width: max-content;
+  animation: defilement-examens var(--duree-defilement, 40s) linear infinite;
+}
+.bande-examens:hover .bande-examens__piste,
+.bande-examens:focus-within .bande-examens__piste,
+.bande-examens.en-pause .bande-examens__piste {
+  animation-play-state: paused;
+}
+@keyframes defilement-examens {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 0.25rem)); }
+}
+.carte-examen {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  max-width: 18rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #c6eed7;
+  border-left: 3px solid var(--faso-vert);
+  border-radius: 999px;
+  background: #e8f8ef;
+  color: var(--faso-nuit);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.carte-examen:hover,
+.carte-examen:focus-visible {
+  background: #c6eed7;
+  border-color: var(--faso-vert);
+  outline: none;
+}
+.carte-examen__type {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faso-vert-fonce);
+}
+.carte-examen__libelle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bande-examens {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .bande-examens__piste { animation: none; }
+  .bande-examens__piste [aria-hidden="true"] { display: none; }
+}
