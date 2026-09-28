@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_delete
 from app.core.deps import get_current_super_admin
 from app.core.security import hash_password
 from app.database import get_db
 from app.models import ActionAuditLog, Administration, StatutAdministration, Utilisateur
+from app.routes.public.results import CLE_CACHE_ADMINISTRATIONS, CLE_CACHE_EXAMENS
 from app.schemas.administration import (
     AdministrationCreate,
     AdministrationOut,
@@ -134,6 +136,14 @@ async def update_administration(
     )
     await db.commit()
     await db.refresh(administration)
+
+    if administration.statut != statut_avant:
+        # Public/B2B visibility depends on the status (STATUTS_ADMINISTRATION_VISIBLES):
+        # drop the cached lists so a suspension takes effect immediately. Cached result
+        # lookups (per PV number, keys not enumerable) expire on their own within
+        # cache_ttl_seconds.
+        await cache_delete(CLE_CACHE_EXAMENS)
+        await cache_delete(CLE_CACHE_ADMINISTRATIONS)
     return administration
 
 

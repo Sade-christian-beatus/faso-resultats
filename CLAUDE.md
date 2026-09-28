@@ -358,7 +358,8 @@ Après chaque étape majeure, produire un résumé structuré :
   `innerHTML` non échappé sur `frontend/public/js/public.js` (nom/prénom/
   établissement affichés sans échappement) ; absence de CI backend
   (`pytest`/`ruff`/`black` non automatisés — corrigé le 2026-09-28) ; `/api/v1/public/results` et
-  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE`. À
+  `/exams` n'excluent pas les administrations `SUSPENDU`/`RESILIE` (corrigé
+  le 2026-09-28). À
   reprendre par priorité dans une prochaine session.
 - **2026-08-17 — Fondation technique de l'API B2B (Phase 4)**, sur demande
   explicite pendant l'attente du contrat Orange Business (SMS/USSD). Décisions
@@ -468,6 +469,19 @@ Après chaque étape majeure, produire un résumé structuré :
   dernier job a immédiatement révélé un vrai bug : la migration initiale ne
   supprimait pas ses types enum PostgreSQL au downgrade, rendant impossible
   un aller-retour complet — corrigé.
+- **2026-09-28 — Administrations `SUSPENDU`/`RESILIE` masquées côté public
+  et B2B**, point ouvert de l'audit du 2026-08-17. `/exams` et `/results`
+  (public et B2B) appliquent désormais la même règle que
+  `/public/administrations` : seuls les tenants `ACTIF`/`PILOTE`
+  (`STATUTS_ADMINISTRATION_VISIBLES`) sont visibles. Conséquence assumée : un
+  candidat d'une administration suspendue (ex. impayé) ne voit plus son
+  résultat sur la plateforme tant que la suspension dure — c'est la
+  signification de la suspension, et la décision de suspendre reste humaine
+  (SUPER_ADMIN). Listes en cache invalidées au changement de statut ;
+  recherches de résultat en cache servies au plus `cache_ttl_seconds`
+  (5 min). Hors périmètre de ce correctif : le résultat déjà dénormalisé dans
+  le dashboard candidat (`dernier_resultat_*`) reste affiché pour une
+  administration suspendue (seule la résiliation est traitée, par la purge).
 
 ---
 

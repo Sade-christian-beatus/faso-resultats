@@ -1,4 +1,9 @@
-from app.models.administration import Administration, PlanAbonnement, StatutAdministration
+from app.models.administration import (
+    STATUTS_ADMINISTRATION_VISIBLES,
+    Administration,
+    PlanAbonnement,
+    StatutAdministration,
+)
 from app.models.api_key import ApiKey, StatutApiKey
 from app.models.audit_log import ActionAuditLog, AuditLog
 from app.models.base import Base
@@ -20,6 +25,7 @@ __all__ = [
     "Administration",
     "PlanAbonnement",
     "StatutAdministration",
+    "STATUTS_ADMINISTRATION_VISIBLES",
     "Examen",
     "TypeExamen",
     "CategorieExamen",
