@@ -446,6 +446,18 @@ Après chaque étape majeure, produire un résumé structuré :
   pour signer une déclaration CIL et un courrier ANSSI en tant qu'entité
   identifiée plutôt qu'à titre personnel. Détail complet dans
   `docs/ROADMAP.md` § Chantiers transverses.
+- **2026-09-28 — Adoption de la charte graphique officielle**
+  (`docs/CHARTE_GRAPHIQUE.md`, planche de référence dans
+  `docs/brand/charte-graphique.webp`). Palette vert Faso `#00A651` / rouge
+  `#E30613` / jaune `#FFD000` / bleu nuit `#0B1F2D` / gris clair `#F4F6F8`,
+  police Poppins, slogan « Vos résultats en un clic ». Appliquée au web
+  (palette Tailwind `faso-*` partagée via `js/theme.js`, `css/brand.css`,
+  logotype, favicon) et au thème Flutter (le bleu foncé/orange précédent est
+  remplacé). Texte et boutons en vert foncé `#007A3D` : le vert officiel sur
+  blanc n'atteint pas le contraste WCAG AA. Logo et favicon SVG **provisoires**
+  en attendant les fichiers vectoriels officiels. Éléments de la planche
+  volontairement non repris : « Recherche par nom » (contredit la décision
+  anti-énumération du 2026-07-03) et « Universités » (hors périmètre).
 
 ---
 

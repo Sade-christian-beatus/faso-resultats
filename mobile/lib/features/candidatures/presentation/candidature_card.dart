@@ -98,7 +98,7 @@ class CandidatureCard extends StatelessWidget {
 
   (String, Color) _styleStatut(Candidature c) {
     if (c.attenteConfirmationOtp) {
-      return ('Confirmation par code requise', AppColors.accentOrange);
+      return ('Confirmation par code requise', AppColors.avertissement);
     }
     return switch (c.statutVerification) {
       StatutVerificationCandidature.verifieAuto ||
@@ -106,7 +106,7 @@ class CandidatureCard extends StatelessWidget {
         ('Vérifiée', AppColors.succes),
       StatutVerificationCandidature.enAttente => (
           'En attente',
-          AppColors.accentOrange
+          AppColors.avertissement
         ),
       StatutVerificationCandidature.rejete => (
           'Non vérifiée',

@@ -145,8 +145,8 @@ class _Onglet extends StatelessWidget {
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        backgroundColor: actif ? AppColors.bleuFonce : null,
-        foregroundColor: actif ? Colors.white : AppColors.bleuFonce,
+        backgroundColor: actif ? AppColors.vertFonce : null,
+        foregroundColor: actif ? Colors.white : AppColors.vertFonce,
       ),
       child: Text(label),
     );

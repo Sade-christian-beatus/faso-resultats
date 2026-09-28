@@ -75,13 +75,13 @@ function renderExamens() {
         <td class="py-2.5">${LIBELLES_EXAMEN[e.type_examen] || e.type_examen} ${e.annee} — ${e.libelle}</td>
         <td>
           <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
-            e.statut === "PUBLISHED" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+            e.statut === "PUBLISHED" ? "bg-faso-100 text-faso-700" : "bg-slate-100 text-slate-600"
           }">${e.statut}</span>
         </td>
         <td class="text-right">
           ${
             e.statut === "DRAFT"
-              ? `<button data-id="${e.id}" class="btn-publier-examen text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline transition">Publier</button>`
+              ? `<button data-id="${e.id}" class="btn-publier-examen text-xs font-medium text-faso-700 hover:text-faso-900 hover:underline transition">Publier</button>`
               : ""
           }
         </td>
@@ -188,7 +188,7 @@ function renderApercu() {
 
   const corps = document.getElementById("corps-table-apercu");
   const classeChamp =
-    "border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition";
+    "border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-faso-500 focus:border-faso-500 transition";
   corps.innerHTML = ingestion.lignes
     .map(
       (ligne, index) => `
@@ -253,13 +253,13 @@ document.getElementById("btn-publier").addEventListener("click", async () => {
 async function afficherMessagePublicationTerminee(messageEl) {
   await chargerExamens();
   const examen = etat.examens.find((e) => e.id === etat.ingestionCourante.examen_id);
-  messageEl.className = "text-sm mt-3 text-emerald-700";
+  messageEl.className = "text-sm mt-3 text-faso-700";
 
   if (examen && examen.statut === "DRAFT") {
     messageEl.innerHTML = `
       Résultats enregistrés. Ils resteront invisibles du public tant que l'examen n'est
       pas publié.
-      <button id="btn-publier-examen-maintenant" class="ml-1 underline hover:text-emerald-900">
+      <button id="btn-publier-examen-maintenant" class="ml-1 underline hover:text-faso-900">
         Publier l'examen maintenant
       </button>`;
     document.getElementById("btn-publier-examen-maintenant").addEventListener("click", async () => {

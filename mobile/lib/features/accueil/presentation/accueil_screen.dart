@@ -78,11 +78,34 @@ class _AccueilScreenState extends ConsumerState<AccueilScreen> {
             children: [
               const _Logo(),
               const SizedBox(height: 16),
+              // Wordmark (docs/CHARTE_GRAPHIQUE.md): "Faso" in midnight
+              // blue + yellow star, "Résultats" in Faso green.
+              const Text.rich(
+                TextSpan(
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  children: [
+                    TextSpan(
+                      text: 'Faso',
+                      style: TextStyle(color: AppColors.bleuNuit),
+                    ),
+                    TextSpan(
+                      text: '★ ',
+                      style: TextStyle(color: AppColors.jauneFaso),
+                    ),
+                    TextSpan(
+                      text: 'Résultats',
+                      style: TextStyle(color: AppColors.vertFonce),
+                    ),
+                  ],
+                ),
+                semanticsLabel: 'Faso Résultats',
+              ),
+              const SizedBox(height: 6),
               const Text(
-                'Faso Résultats',
+                'Vos résultats en un clic',
                 style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.texte,
                 ),
               ),
@@ -124,7 +147,7 @@ class _Logo extends StatelessWidget {
       width: 72,
       height: 72,
       decoration: BoxDecoration(
-        color: AppColors.bleuFonce,
+        color: AppColors.vertFonce,
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Icon(Icons.school_outlined, color: Colors.white, size: 36),

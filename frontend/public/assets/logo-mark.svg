@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Faso Résultats">
+  <!-- Simplified mark (see docs/CHARTE_GRAPHIQUE.md): result sheet + check under a
+       mortarboard, on Faso green. Replace with the official vector file when available. -->
+  <rect width="64" height="64" rx="16" fill="#007A3D"/>
+  <path d="M8 58 L56 58 L56 50 Q40 44 8 54 Z" fill="#E30613" opacity=".9"/>
+  <rect x="17" y="22" width="26" height="30" rx="4" fill="#fff"/>
+  <path d="M22 30h16M22 36h12M22 42h8" stroke="#0B1F2D" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="42" cy="44" r="8" fill="#00A651" stroke="#fff" stroke-width="2"/>
+  <path d="M38.5 44l2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 8 L54 16 L32 24 L10 16 Z" fill="#0B1F2D"/>
+  <path d="M50 17.5 v8" stroke="#FFD000" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="50" cy="26.5" r="2" fill="#FFD000"/>
+  <path d="M12 44 l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#FFD000"/>
+</svg>

@@ -56,8 +56,8 @@ function renderExamensDisponibles(examens) {
   zoneExamensDisponibles.innerHTML = [...parType.entries()]
     .map(
       ([libelleType, listeExamens]) => `
-      <div class="border-l-2 border-emerald-200 pl-3">
-        <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">${escapeHtml(libelleType)}</h3>
+      <div class="border-l-2 border-faso-200 pl-3">
+        <h3 class="text-xs font-semibold text-faso-700 uppercase tracking-wide mb-2">${escapeHtml(libelleType)}</h3>
         <div class="flex flex-wrap gap-2">
           ${listeExamens
             .map(
@@ -65,7 +65,7 @@ function renderExamensDisponibles(examens) {
             <button
               type="button"
               data-examen-id="${escapeHtml(examen.id)}"
-              class="btn-choisir-examen text-sm border border-emerald-200 bg-emerald-50 text-emerald-800 rounded-full px-3 py-1.5 hover:bg-emerald-100 hover:border-emerald-300 active:scale-[0.98] transition"
+              class="btn-choisir-examen text-sm border border-faso-200 bg-faso-50 text-faso-800 rounded-full px-3 py-1.5 hover:bg-faso-100 hover:border-faso-300 active:scale-[0.98] transition"
             >${examen.annee} — ${escapeHtml(examen.libelle)}</button>`
             )
             .join("")}
@@ -109,7 +109,7 @@ async function chargerExamens() {
 }
 
 const STYLE_DECISION = {
-  ADMIS: { badge: "bg-emerald-600 text-white", bordure: "border-emerald-500" },
+  ADMIS: { badge: "bg-faso-600 text-white", bordure: "border-faso-500" },
   ADMISSIBLE: { badge: "bg-sky-600 text-white", bordure: "border-sky-500" },
 };
 const STYLE_DECISION_DEFAUT = { badge: "bg-amber-500 text-white", bordure: "border-amber-400" };

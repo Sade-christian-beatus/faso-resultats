@@ -32,7 +32,10 @@ faso-resultats/
 ├── frontend/public/          HTML/CSS/JS vanilla + Tailwind CDN, servi par nginx
 │   ├── index.html             Consultation publique
 │   ├── admin.html              Interface admin (login, examens, import)
-│   └── js/                    api.js (fetch wrapper), public.js, admin.js
+│   ├── candidat.html           Espace candidat
+│   ├── css/brand.css           Styles de marque partagés (docs/CHARTE_GRAPHIQUE.md)
+│   ├── assets/                 logo-mark.svg, favicon.svg
+│   └── js/                    theme.js (palette Tailwind), api.js, public.js, admin.js, candidat.js
 ├── docs/                     Documentation technique
 └── docker-compose.yml
 ```
@@ -595,6 +598,13 @@ et examen) sont des étapes distinctes, contrôlées séparément.
 
 HTML/CSS/JS vanilla + Tailwind via CDN (`<script src="https://cdn.tailwindcss.com">`),
 conformément à la stack verrouillée. Aucun bundler, aucune dépendance npm.
+
+Identité visuelle (`docs/CHARTE_GRAPHIQUE.md`) partagée par les trois pages :
+`js/theme.js` (chargé juste après le CDN Tailwind) déclare la palette `faso-*`
+(échelle autour du vert officiel #00A651), `rouge`, `jaune`, `nuit`, `clair` et
+la police Poppins ; `css/brand.css` porte la barre tricolore, le logotype texte
+et le slogan, et sert aussi de filet de sécurité si le CDN Tailwind ne charge
+pas (pages lisibles et aux couleurs de la marque même sans utilitaires).
 
 - **`index.html` + `js/public.js`** : consultation publique. Charge la liste
   des examens publiés (`/api/v1/public/exams`), recherche un résultat par
