@@ -112,3 +112,15 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_admins_email'), table_name='admins')
     op.drop_table('admins')
     # ### end Alembic commands ###
+    # Autogenerate drops the tables but not the PostgreSQL enum types sa.Enum created
+    # implicitly: without this, `downgrade base` then `upgrade head` fails with
+    # "type ... already exists" (caught by the backend CI migration job).
+    bind = op.get_bind()
+    for nom_type in (
+        'statut_notification',
+        'statut_ingestion',
+        'type_fichier',
+        'statut_examen',
+        'type_examen',
+    ):
+        postgresql.ENUM(name=nom_type).drop(bind, checkfirst=True)
