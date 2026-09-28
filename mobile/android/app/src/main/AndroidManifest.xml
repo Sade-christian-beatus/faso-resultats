@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required in release: without it the app cannot reach the API at all (the
+         debug/profile manifests declare it only for Flutter tooling). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Faso Résultats"
         android:name="${applicationName}"

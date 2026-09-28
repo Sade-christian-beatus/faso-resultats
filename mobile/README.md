@@ -21,12 +21,45 @@ flutter pub get
 
 ## Lancer en développement
 
+1. **Démarrer le backend** (depuis la racine du dépôt) : `docker compose up`. L'API
+   écoute sur le port 8000 de toutes les interfaces réseau (`--host 0.0.0.0`),
+   donc un téléphone du même Wi-Fi peut la joindre.
+2. **Vérifier l'environnement Flutter** : `flutter doctor` (Android SDK, émulateur
+   ou téléphone en mode développeur avec débogage USB activé).
+3. **Lister les appareils** : `flutter devices`.
+4. **Lancer l'app** depuis `mobile/`, selon l'appareil :
+
 ```bash
 # Émulateur Android : 10.0.2.2 est l'alias vers localhost de la machine hôte.
 flutter run --dart-define=ENV=dev
 
-# Appareil physique ou backend distant (ex. tunnel ngrok) :
+# Téléphone Android physique (même Wi-Fi que l'ordinateur) : IP locale de la
+# machine qui fait tourner le backend (ip addr / ifconfig), jamais localhost.
+flutter run --dart-define=ENV=dev --dart-define=API_BASE_URL=http://192.168.1.20:8000
+
+# Simulateur iOS (macOS uniquement) : localhost désigne directement la machine.
+flutter run --dart-define=ENV=dev --dart-define=API_BASE_URL=http://localhost:8000
+
+# Backend distant ou tunnel (ngrok...) :
 flutter run --dart-define=ENV=dev --dart-define=API_BASE_URL=https://xxxx.ngrok.io
+```
+
+Pendant l'exécution : `r` = hot reload, `R` = redémarrage complet, `q` = quitter.
+
+Le HTTP non chiffré (API locale) n'est autorisé qu'en **debug** sur Android
+(`android/app/src/debug/AndroidManifest.xml`) ; les builds release n'acceptent que
+HTTPS. Sur iOS, seul le réseau local est ouvert (`NSAllowsLocalNetworking`).
+
+Comptes de démonstration (créés par `backend/seed.py`) : se connecter avec le
+téléphone `+22670000001`, `+22670000002` ou `+22670000003`. Aucun SMS n'est
+envoyé (Phase 2) : hors production, le code OTP est renvoyé dans la réponse de
+l'API (`code_otp_debug`) et visible dans les logs du backend.
+
+## Construire un APK
+
+```bash
+flutter build apk --release   # build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --debug     # plus rapide, pour tester sur un téléphone
 ```
 
 ## Tests
