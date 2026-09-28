@@ -115,7 +115,7 @@ chaque résultat créé référence l'ingestion qui l'a produit.
 | type_fichier | enum (`PDF`, `EXCEL`, `PDF_OCR`) | |
 | statut | enum (`EN_ATTENTE`, `PREVISUALISATION`, `VALIDEE`, `PUBLIEE`, `REJETEE`) | reflète le flux upload → prévisualisation → correction → publication |
 | nombre_lignes_detectees / nombre_erreurs | int | |
-| apercu_donnees | jsonb | lignes extraites en attente de correction/publication |
+| apercu_donnees | text chiffré (JSON) | lignes extraites en attente de correction/publication — chiffré au repos (`EncryptedJSON`), contient CNIB/dates de naissance |
 | erreurs_fichier | jsonb (liste de string) | messages au niveau du fichier entier (colonnes non reconnues, fichier vide...), pas d'une ligne précise |
 | publiee_at | timestamptz nullable | |
 
@@ -131,16 +131,18 @@ Un résultat individuel, rattaché à un examen et à l'ingestion qui l'a produi
 | examen_id | UUID (FK → examens, CASCADE), **NOT NULL** | un résultat sans examen valide est refusé |
 | ingestion_id | UUID (FK → ingestions, RESTRICT), **NOT NULL** | traçabilité vers le fichier source |
 | numero_pv / jury | string | |
-| nom / prenom / date_naissance / lieu_naissance | | données sensibles — jamais loguées |
+| nom / prenom | | données sensibles — jamais loguées |
+| date_naissance / lieu_naissance | chiffré (`EncryptedDate` / `EncryptedStr`) | jamais loguées ni exposées publiquement ; `date_naissance` sert à vérifier l'identité d'un candidat |
 | etablissement | string nullable | |
-| numero_cnib | string(20) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_cnib | chiffré (`EncryptedStr`) nullable | numéro de carte d'identité, renseigné pour les concours directs (identification forte) ; vide pour CEP/BEPC/BAC. **Absent de l'API publique** (même sensibilité que date/lieu de naissance) |
+| numero_cnib_hash | string(64) nullable, indexé | HMAC de `numero_cnib` (même pepper que `profils_candidats`), rempli automatiquement par le modèle — rapprochement candidat ↔ résultat sans déchiffrer |
 | numero_recepisse / code_concours / code_centre / rang_numerique / rang_affiche | nullable | spécifiques aux communiqués scannés de la Fonction publique (voir § Parser scan Fonction publique) ; vides pour les autres types d'examens. `numero_recepisse` duplique `numero_pv` plutôt que de le remplacer, pour ne pas casser la recherche publique existante |
 | decision | string | ex. `ADMIS`, `AJOURNE`, ou `ADMISSIBLE` pour une liste d'admissibilité de concours |
 | moyenne | numeric(4,2) nullable | |
 | phase | enum `PhasePublication`, défaut `RESULTAT_UNIQUE` | voir § Phases de publication |
 | date_publication_phase | timestamptz nullable | |
 | phase_suivante_attendue | enum `PhasePublication` nullable | |
-| donnees_brutes | JSONB | ligne brute extraite du fichier source, conservée pour audit |
+| donnees_brutes | text chiffré (JSON) | ligne brute extraite du fichier source, conservée pour audit — chiffrée au repos (`EncryptedJSON`) |
 
 Index : `(examen_id, numero_pv, jury, phase)` — requête principale de consultation
 (non filtrée par tenant, voir § Routes publiques), un candidat pouvant désormais
@@ -237,9 +239,11 @@ reste du travail esthétique.
   custom (`GUID`) plutôt que `postgresql.UUID` directement, pour que les modèles
   restent testables sur SQLite en mémoire sans dépendance à un Postgres réel.
   En production (dialecte `postgresql`), il se comporte comme un UUID natif.
-- **`donnees_brutes` en JSON avec variante JSONB** : `JSON().with_variant(JSONB, "postgresql")`
-  donne un stockage JSONB natif sur PostgreSQL (production) tout en restant
-  compatible SQLite pour les tests unitaires rapides.
+- **`donnees_brutes` et `apercu_donnees` chiffrés (`EncryptedJSON`)** : stockés en
+  texte chiffré (Fernet) plutôt qu'en JSONB depuis le 2026-09-28, car ils
+  recopient la CNIB et la date de naissance. Conséquence assumée : plus aucune
+  requête SQL possible dans ces documents (aucune n'existait), et seule la
+  réassignation complète est détectée (pas de mutation en place).
 - **Migrations Alembic en mode async** : `alembic/env.py` utilise
   `async_engine_from_config` pour rester cohérent avec le reste de l'application
   (SQLAlchemy 2.0 async partout).

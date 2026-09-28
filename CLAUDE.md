@@ -351,7 +351,7 @@ Après chaque étape majeure, produire un résumé structuré :
   compte admin après échecs de connexion ni de journalisation de ces
   échecs ; pas de révocation JWT (token candidat valable 30 jours) ; CNIB et
   date de naissance en clair dans `resultats` (chiffrés dans
-  `profils_candidats`, incohérence à trancher) ; `erreurs_fichier` (écart de
+  `profils_candidats`, incohérence à trancher — corrigé le 2026-09-28) ; `erreurs_fichier` (écart de
   comptage OCR) non bloquant à la publication ; notifications perdues sans
   retry en heure silencieuse (22h-6h) ; alias `"mention"` → champ `decision`
   sans garde-fou métier ; aucune purge sur la table `resultats` ; XSS via
@@ -482,6 +482,26 @@ Après chaque étape majeure, produire un résumé structuré :
   (5 min). Hors périmètre de ce correctif : le résultat déjà dénormalisé dans
   le dashboard candidat (`dernier_resultat_*`) reste affiché pour une
   administration suspendue (seule la résiliation est traitée, par la purge).
+- **2026-09-28 — Chiffrement au repos de l'identité des candidats dans
+  `resultats`**, point ouvert de l'audit du 2026-08-17. Périmètre validé :
+  `numero_cnib`, `date_naissance` et `lieu_naissance` (colonnes), **et** les
+  copies brutes qui contiennent les mêmes données — `resultats.donnees_brutes`
+  et `ingestions.apercu_donnees` (sans elles, chiffrer les colonnes ne
+  protégeait rien). Même mécanisme et même clé que `profils_candidats`
+  (Fernet, `CANDIDAT_ENCRYPTION_KEY`) : pas de nouveau secret à gérer.
+  Nouveaux types `EncryptedDate` (garde un `date` Python) et `EncryptedJSON`.
+  Nouvelle colonne indexée `numero_cnib_hash`, remplie automatiquement par le
+  modèle (`@validates`) : le rapprochement rétroactif candidat ↔ résultat
+  (`matcher_retroactif`) passe d'un parcours de **tous** les résultats avec
+  CNIB en Python à une recherche indexée. Migration `5b8e2f41c9d7` qui
+  chiffre/déchiffre les données existantes par lots de 1000, testée contre
+  PostgreSQL 16 réel avec données (aller-retour identique à l'octet près,
+  `alembic check` sans dérive, ~0,8 ms/ligne). Coûts mesurés : ~60 µs par
+  ligne lue (négligeable pour une consultation publique, déjà en cache),
+  ~12 s de plus pour publier 200 000 lignes. Hors périmètre, documenté dans
+  `docs/CIL.md` § 7.2 : les fichiers sources sur disque (restent en clair) et
+  la sauvegarde de la clé (sa perte rend ces données définitivement
+  illisibles) ; pas de rotation de clé.
 
 ---
 

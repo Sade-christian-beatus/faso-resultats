@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_deterministe
 from app.models import Examen, Resultat, StatutExamen
 from app.models.candidature import Candidature, MethodeVerification, StatutVerificationCandidature
 from app.models.profil_candidat import ProfilCandidat
@@ -23,18 +22,19 @@ class MatchingService:
         les résultats déjà publiés qui portent son CNIB, et crée les candidatures
         correspondantes automatiquement. Aucune notification : ce sont des résultats
         déjà anciens, pas de raison de spammer."""
+        # Indexed lookup on the CNIB hash: CNIBs are encrypted at rest in `resultats`.
         query = (
             select(Resultat)
             .join(Examen, Examen.id == Resultat.examen_id)
-            .where(Examen.statut == StatutExamen.PUBLISHED, Resultat.numero_cnib.isnot(None))
+            .where(
+                Examen.statut == StatutExamen.PUBLISHED,
+                Resultat.numero_cnib_hash == profil.numero_cnib_hash,
+            )
         )
         resultats = (await self.db.execute(query)).scalars().all()
 
         candidatures_creees: list[Candidature] = []
         for resultat in resultats:
-            if hash_deterministe(resultat.numero_cnib) != profil.numero_cnib_hash:
-                continue
-
             recepisse = resultat.numero_recepisse or resultat.numero_pv
             deja_liee = await self.db.execute(
                 select(Candidature).where(

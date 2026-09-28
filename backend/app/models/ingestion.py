@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.models.encrypted_str import EncryptedJSON
 from app.models.guid import GUID
 
 if TYPE_CHECKING:
@@ -59,9 +60,9 @@ class Ingestion(TimestampMixin, Base):
 
     # Aperçu des lignes extraites, en attente de correction/publication.
     # Chaque élément : {"ligne": int, "donnees": {...}, "brut": {...}, "erreurs": [...]}
-    apercu_donnees: Mapped[list] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), default=list
-    )
+    # Chiffré (CNIB, date de naissance des candidats). Toujours réassigné en entier,
+    # jamais muté en place : EncryptedJSON ne suit pas les mutations.
+    apercu_donnees: Mapped[list] = mapped_column(EncryptedJSON(), default=list)
     # Messages au niveau du fichier entier (pas d'une ligne précise), ex. colonnes non
     # reconnues ou fichier vide — pour que l'admin comprenne pourquoi peu/pas de lignes
     # ont été extraites sans avoir à nous solliciter.

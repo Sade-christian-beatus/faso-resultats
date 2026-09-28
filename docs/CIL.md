@@ -83,10 +83,10 @@ formelle opposable.
 | `nom`, `prenom` | Identifiante | Oui |
 | `decision`, `moyenne`, `etablissement` | Résultat scolaire | Oui |
 | `rang_numerique`, `rang_affiche`, `phase` | Résultat de concours (classement, étape) | Oui |
-| `date_naissance`, `lieu_naissance` | Identifiante, sensible | **Non** — conservée pour traçabilité uniquement |
-| `numero_cnib` | Identifiante forte, sensible (concours directs uniquement — absente pour les examens scolaires) | **Non** |
+| `date_naissance`, `lieu_naissance` | Identifiante, sensible — **chiffrée au repos** | **Non** — conservée pour traçabilité et vérification d'identité du candidat |
+| `numero_cnib` | Identifiante forte, sensible (concours directs uniquement — absente pour les examens scolaires) — **chiffrée au repos**, doublée d'une empreinte (hash HMAC) pour la recherche | **Non** |
 | `numero_recepisse`, `code_concours`, `code_centre` | Identifiants de dossier (concours de la Fonction publique) | Oui |
-| `donnees_brutes` (jsonb) | Copie intégrale de la ligne source du fichier importé | Non — accessible uniquement aux administrateurs habilités, pour audit et traçabilité en cas de contestation |
+| `donnees_brutes` | Copie intégrale de la ligne source du fichier importé — **chiffrée au repos** (contient les mêmes CNIB/date de naissance) | Non — accessible uniquement aux administrateurs habilités, pour audit et traçabilité en cas de contestation |
 
 ### 2.2 Comptes administrateurs (table `utilisateurs`)
 
@@ -103,7 +103,9 @@ Les fichiers PDF/Excel/scans importés par les administrateurs peuvent contenir
 les mêmes données que `donnees_brutes`, ainsi que toute donnée superflue
 présente dans le document d'origine (colonnes non reconnues, mise en page).
 Conservés en l'état pour permettre un nouveau traitement en cas d'erreur de
-parsing, jamais exposés en dehors des routes d'administration.
+parsing, jamais exposés en dehors des routes d'administration. ⚠️ Ces fichiers
+ne sont **pas** chiffrés par l'application (voir §7.2). L'aperçu extrait du
+fichier (`ingestions.apercu_donnees`), lui, est chiffré au repos.
 
 ### 2.4 Préinscriptions SMS (table `notifications_preinscription`)
 
@@ -197,13 +199,24 @@ responsable de traitement et validé avec la CIL.
 - Données affichées publiquement systématiquement échappées avant affichage
   (protection contre l'injection de code dans un nom ou un établissement mal
   nettoyé à la source).
+- **Chiffrement au repos (AES, Fernet) de l'identité des candidats** : CNIB,
+  date et lieu de naissance dans `resultats`, ainsi que les copies brutes qui
+  les contiennent (`donnees_brutes`, aperçu d'import `apercu_donnees`) — même
+  mécanisme et même clé que le profil candidat. La recherche par CNIB passe
+  par une empreinte (hash HMAC) sans jamais déchiffrer ni indexer la valeur.
+  Une lecture directe de la base (sauvegarde volée, accès non autorisé) ne
+  révèle donc aucune de ces données.
 
 ### 7.2 ⚠️ À compléter avant toute exposition à des données réelles
 
-- **Chiffrement au repos du CNIB et de la date de naissance** dans
-  `resultats` : ces champs sont aujourd'hui en clair en base, alors que les
-  mêmes catégories de données sont chiffrées côté profil candidat
-  (`docs/CIL_PROFIL_CANDIDAT.md`) — incohérence à résoudre.
+- **Fichiers sources importés** (§2.3) : conservés en clair sur le disque du
+  serveur. À couvrir par le chiffrement du disque chez l'hébergeur, ou par un
+  chiffrement applicatif des fichiers après analyse.
+- **Sauvegarde de la clé de chiffrement** (`CANDIDAT_ENCRYPTION_KEY`) : sa
+  perte rend définitivement illisibles les données chiffrées (profil candidat,
+  identité dans les résultats, copies d'audit). À conserver hors du serveur,
+  séparément des sauvegardes de la base. Pas encore de procédure de rotation
+  de clé.
 - **Purge des données** au terme de la durée de conservation (§6), une fois
   celle-ci définie.
 - **HTTPS** — la plateforme tourne aujourd'hui en environnement de
@@ -277,7 +290,9 @@ tenu à jour dans `CLAUDE.md` § Historique des décisions techniques.
 1. Faire valider ce document par la CIL et/ou un professionnel du droit
    (base légale, durée de conservation, responsable de traitement formalisé
    par administration cliente).
-2. Chiffrer `numero_cnib` et `date_naissance` dans `resultats` (§7.2).
+2. ~~Chiffrer `numero_cnib` et `date_naissance` dans `resultats`~~ — fait le
+   2026-09-28 (§7.1). Reste : fichiers sources sur disque et sauvegarde de la
+   clé (§7.2).
 3. Implémenter un mécanisme de purge des résultats après la durée de
    conservation confirmée par la CIL (§6).
 4. Mettre en place HTTPS et un hébergement situé au Burkina Faso avant toute
