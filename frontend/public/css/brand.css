@@ -32,11 +32,3 @@ body {
 .logo-texte .logo-faso { color: var(--faso-nuit); }
 .logo-texte .logo-etoile { color: var(--faso-jaune); -webkit-text-stroke: 0.5px #c9a400; }
 .logo-texte .logo-resultats { color: var(--faso-vert-fonce); }
-
-/* Tagline with the red / green dashes around it. */
-.slogan { display: inline-flex; align-items: center; gap: 0.5rem; color: #334155; }
-.slogan::before, .slogan::after {
-  content: ""; display: inline-block; width: 1.25rem; height: 3px; border-radius: 2px;
-}
-.slogan::before { background: var(--faso-rouge); }
-.slogan::after { background: var(--faso-vert); }

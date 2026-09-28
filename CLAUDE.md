@@ -454,8 +454,9 @@ Après chaque étape majeure, produire un résumé structuré :
   (palette Tailwind `faso-*` partagée via `js/theme.js`, `css/brand.css`,
   logotype, favicon) et au thème Flutter (le bleu foncé/orange précédent est
   remplacé). Texte et boutons en vert foncé `#007A3D` : le vert officiel sur
-  blanc n'atteint pas le contraste WCAG AA. Logo et favicon SVG **provisoires**
-  en attendant les fichiers vectoriels officiels. Éléments de la planche
+  blanc n'atteint pas le contraste WCAG AA. Logo officiel
+  (`docs/brand/logo-faso-resultats.webp`) décliné en en-têtes web, favicon,
+  écran d'accueil mobile et icônes d'app Android/iOS. Éléments de la planche
   volontairement non repris : « Recherche par nom » (contredit la décision
   anti-énumération du 2026-07-03) et « Universités » (hors périmètre).
 

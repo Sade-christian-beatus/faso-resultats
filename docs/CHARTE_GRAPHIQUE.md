@@ -1,7 +1,9 @@
 # Charte graphique — Faso Résultats
 
 > Référence visuelle : [`docs/brand/charte-graphique.webp`](brand/charte-graphique.webp)
-> (planche fournie par le porteur du projet le 2026-09-28).
+> (planche fournie par le porteur du projet le 2026-09-28) et logo officiel
+> [`docs/brand/logo-faso-resultats.webp`](brand/logo-faso-resultats.webp)
+> (fond transparent, 1774×887 — fichier source de toutes les déclinaisons).
 > Ce document traduit la planche en règles applicables au code web et mobile.
 
 ## Signature
@@ -50,13 +52,24 @@ de style — la lisibilité de la décision prime sur la marque.
 
 ## Logo et icônes
 
-| Fichier | Contenu | Statut |
-|---------|---------|--------|
-| `frontend/public/assets/logo-mark.svg` | Symbole simplifié (feuille de résultat + coche + toque, sur carré vert) | **Provisoire**, redessiné à la main d'après la planche |
-| `frontend/public/assets/favicon.svg` | Toque blanche sur disque bleu nuit (variante « Favicon » de la planche) | Provisoire |
+Toutes les déclinaisons sont générées depuis `docs/brand/logo-faso-resultats.webp`
+(recadrage + redimensionnement, aucune retouche du dessin) :
 
-Le logotype texte (« Faso★Résultats ») est rendu en HTML/Flutter avec Poppins
-plutôt qu'en image : net à toutes les tailles, zéro octet supplémentaire.
+| Fichier | Contenu | Usage |
+|---------|---------|-------|
+| `frontend/public/assets/logo.webp` | Logo complet (symbole + nom + slogan), 720 px, ≈ 60 Ko | En-tête de la page de consultation publique |
+| `frontend/public/assets/logo-symbole.webp` | Symbole seul, 256 px | En-têtes admin et espace candidat (à côté du nom en texte) |
+| `frontend/public/assets/favicon-32.png` | Symbole, 32 px | Icône d'onglet |
+| `frontend/public/assets/apple-touch-icon.png` | Symbole sur fond blanc, 180 px | Raccourci écran d'accueil iPhone |
+| `mobile/assets/images/logo.webp` | Logo complet, 720 px | Écran d'accueil de l'app |
+| `mobile/android/.../mipmap-*/ic_launcher.png`, `mobile/ios/.../AppIcon.appiconset/*.png` | Symbole sur fond blanc opaque (iOS refuse la transparence) | Icône de l'app |
+
+Sur les petites tailles (admin, espace candidat), le nom est rendu en texte
+(« Faso★Résultats », Poppins) à côté du symbole : le logo complet y serait
+illisible.
+
+⚠️ Le logo n'existe qu'en version pour **fond clair** (« Faso » en bleu nuit).
+Ne pas le poser sur un fond sombre ou vert sans une variante dédiée.
 
 ## Éléments de la planche volontairement **non** repris
 
@@ -68,21 +81,19 @@ des décisions du projet et ne doivent pas être implémentés tels quels :
   d'énumérer les candidats (décision du 2026-07-03, `CLAUDE.md`).
 - **« Universités »** : hors du périmètre actuel (examens CEP/BEPC/BAC et
   concours de la Fonction publique).
-- **Silhouette de la carte du Burkina Faso dans le logo** : non reprise dans le
-  symbole provisoire ; à intégrer depuis le fichier vectoriel officiel.
 
 ## Reste à faire
 
-1. Obtenir les **fichiers sources vectoriels** (SVG/AI/PDF) du logo complet,
-   des variantes horizontale/verticale et monochromes, et remplacer les SVG
-   provisoires.
-2. Générer les **icônes d'application** Android (`mipmap-*`, icône adaptative)
-   et iOS (`AppIcon.appiconset`) à partir de l'icône officielle, ainsi que
-   l'écran de démarrage natif.
-3. Embarquer **Poppins** dans l'app Flutter (fichiers `.ttf` dans
+1. Obtenir une **version vectorielle** (SVG/AI/PDF) du logo : le fichier actuel
+   est une image matricielle, suffisante pour l'écran mais pas pour
+   l'impression grand format (signalétique, goodies).
+2. Variante **fond sombre** du logo (et monochrome), et **icône adaptative
+   Android** (premier plan + fond séparés, Android 8+) — les icônes actuelles
+   sont des carrés blancs classiques.
+3. Écran de démarrage natif (Android/iOS) aux couleurs de la marque.
+4. Embarquer **Poppins** dans l'app Flutter (fichiers `.ttf` dans
    `mobile/assets/fonts/` + déclaration `fonts:` dans `pubspec.yaml` — pas de
    paquet `google_fonts`, qui téléchargerait la police au premier lancement).
-4. **Auto-héberger Poppins** côté web (fichiers `.woff2` dans
+5. **Auto-héberger Poppins** côté web (fichiers `.woff2` dans
    `frontend/public/fonts/`) avant la mise en production.
-5. Déclinaisons PNG du favicon (32×32, 180×180 `apple-touch-icon`) et image
-   de partage réseaux sociaux (`og:image`).
+6. Image de partage réseaux sociaux (`og:image`).

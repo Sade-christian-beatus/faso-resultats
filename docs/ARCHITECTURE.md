@@ -34,7 +34,7 @@ faso-resultats/
 │   ├── admin.html              Interface admin (login, examens, import)
 │   ├── candidat.html           Espace candidat
 │   ├── css/brand.css           Styles de marque partagés (docs/CHARTE_GRAPHIQUE.md)
-│   ├── assets/                 logo-mark.svg, favicon.svg
+│   ├── assets/                 Logo, symbole, favicon (générés depuis docs/brand/)
 │   └── js/                    theme.js (palette Tailwind), api.js, public.js, admin.js, candidat.js
 ├── docs/                     Documentation technique
 └── docker-compose.yml
