@@ -46,6 +46,29 @@ flutter run --dart-define=ENV=dev --dart-define=API_BASE_URL=https://xxxx.ngrok.
 
 Pendant l'exécution : `r` = hot reload, `R` = redémarrage complet, `q` = quitter.
 
+### Sous Windows (invite de commandes `cmd`)
+
+- **Docker Desktop doit être démarré** (icône « Engine running ») avant
+  `docker compose up`, sinon erreur `...dockerDesktopLinuxEngine... context canceled`.
+  Vérifier avec `docker version` (les sections Client **et** Server doivent répondre).
+- Toutes les commandes `flutter` se lancent **depuis le dossier `mobile`**
+  (`cd mobile`), sinon : `No pubspec.yaml file found`.
+- `#` n'est pas un commentaire dans `cmd` : taper **une seule commande à la fois**,
+  sans le texte de commentaire.
+- Adresse IP locale du PC : `ipconfig` (ligne « Adresse IPv4 » de la carte Wi-Fi).
+- Téléphone physique : autoriser le port 8000 dans le pare-feu Windows (réseau
+  privé), sinon le téléphone n'atteint pas l'API.
+- Pas de simulateur iOS sous Windows (macOS uniquement).
+
+```bat
+cd C:\faso-resultats
+docker compose up -d
+cd mobile
+flutter pub get
+flutter devices
+flutter run --dart-define=ENV=dev
+```
+
 Le HTTP non chiffré (API locale) n'est autorisé qu'en **debug** sur Android
 (`android/app/src/debug/AndroidManifest.xml`) ; les builds release n'acceptent que
 HTTPS. Sur iOS, seul le réseau local est ouvert (`NSAllowsLocalNetworking`).
