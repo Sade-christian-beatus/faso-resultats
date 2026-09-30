@@ -556,6 +556,20 @@ Après chaque étape majeure, produire un résumé structuré :
   photo de la bannière (illustration CSS en place) et URL des réseaux sociaux
   (`RESEAUX_SOCIAUX` dans `js/public.js`, icônes masquées tant que vide). La
   bande défilante du 2026-09-28 est remplacée par « Dernières publications ».
+- **2026-09-30 — Écran d'accueil mobile et barre de navigation selon la
+  maquette mobile** : en-tête vert (logo, notifications, compte), carrousel
+  de 4 bannières au glissement (pas de défilement automatique : ni timer ni
+  mouvement sous le doigt), 8 raccourcis, bannière espace candidat, résultats
+  récents, barre de navigation à 5 onglets (`ShellRoute`). Mêmes écarts que
+  le web : pas d'« Universités », « Guides & Conseils » (orientation, hors
+  périmètre) ni « Calendrier des résultats » (aucune donnée) — remplacés par
+  les catégories Concours / Fonction publique / Paramilitaires et une
+  Assistance téléphonique ; bannière « Faso Digital 2026 » remplacée par
+  « Suivez vos concours ». Photo de bannière et numéros de contact
+  (56 12 18 18 / 62 29 18 18) fournis par le développeur, aussi intégrés au
+  web. **Bug réel corrigé** : locale `fr` forcée sans traductions Material —
+  le sélecteur de date de naissance de l'inscription candidat plantait
+  (ajout de `flutter_localizations`, paquet du SDK, `intl` passé en 0.20.2).
 
 ---
 

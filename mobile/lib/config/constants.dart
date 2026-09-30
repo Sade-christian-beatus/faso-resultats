@@ -54,3 +54,20 @@ class AppInfo {
   /// informe tout visiteur, y compris ceux qui ne créent jamais de compte.
   static const String versionConsentementApp = 'v1';
 }
+
+/// Faso Résultats support line, shown on the home screen ("Assistance") and
+/// the help screen. Same numbers as the web site footer.
+class ContactSupport {
+  const ContactSupport._();
+
+  /// Local 8-digit numbers, as Burkinabè users write them.
+  static const List<String> telephones = ['56121818', '62291818'];
+
+  /// "56 12 18 18".
+  static String formater(String numero) => [
+        for (var i = 0; i < numero.length; i += 2)
+          numero.substring(i, i + 2 > numero.length ? numero.length : i + 2),
+      ].join(' ');
+
+  static Uri uriAppel(String numero) => Uri(scheme: 'tel', path: '+226$numero');
+}

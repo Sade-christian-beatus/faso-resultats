@@ -8,13 +8,21 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../domain/administration.dart';
+import '../domain/categorie_examen.dart';
 import '../domain/examen.dart';
 import '../domain/resultat.dart';
 import 'consultation_providers.dart';
 import 'resultat_card.dart';
 
 class ConsultationRapideScreen extends ConsumerStatefulWidget {
-  const ConsultationRapideScreen({super.key});
+  const ConsultationRapideScreen({this.categorie, this.examenId, super.key});
+
+  /// Home page category shortcut: only exams of this category are offered.
+  final CategorieExamen? categorie;
+
+  /// Home page "Résultats récents": this exam (and its administration) is
+  /// preselected once the lists are loaded.
+  final String? examenId;
 
   @override
   ConsumerState<ConsultationRapideScreen> createState() =>
@@ -29,6 +37,26 @@ class _ConsultationRapideScreenState
 
   String? _administrationId;
   String? _examenId;
+  late CategorieExamen? _categorie = widget.categorie;
+  bool _preselectionAppliquee = false;
+
+  bool _dansCategorie(Examen examen) =>
+      _categorie == null || _categorie!.contient(examen);
+
+  /// Applies [ConsultationRapideScreen.examenId] once, as soon as the exam
+  /// list is available (called from build: plain field writes, no setState).
+  void _appliquerPreselection(List<Examen> examens) {
+    if (_preselectionAppliquee || widget.examenId == null) return;
+    _preselectionAppliquee = true;
+    for (final examen in examens) {
+      if (examen.id == widget.examenId) {
+        _administrationId = examen.administrationId;
+        _examenId = examen.id;
+        _categorie = null;
+        return;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -51,6 +79,8 @@ class _ConsultationRapideScreenState
     final administrations = ref.watch(administrationsPubliquesProvider);
     final examens = ref.watch(examensPublicsProvider);
     final recherche = ref.watch(rechercheResultatProvider);
+    final listeExamens = examens.valueOrNull;
+    if (listeExamens != null) _appliquerPreselection(listeExamens);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Consulter mon résultat')),
@@ -63,6 +93,14 @@ class _ConsultationRapideScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_categorie != null) ...[
+                    InputChip(
+                      label: Text('Catégorie : ${_categorie!.titre}'),
+                      onDeleted: () => setState(() => _categorie = null),
+                      deleteButtonTooltipMessage: 'Toutes les catégories',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   const Text(
                     'Administration',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
@@ -75,7 +113,16 @@ class _ConsultationRapideScreenState
                           ref.invalidate(administrationsPubliquesProvider),
                     ),
                     data: (liste) => _SelecteurAdministration(
-                      administrations: liste,
+                      // With a category filter, only administrations that
+                      // published an exam of that category are offered.
+                      administrations:
+                          _categorie == null || listeExamens == null
+                              ? liste
+                              : liste
+                                  .where((a) => listeExamens.any((e) =>
+                                      e.administrationId == a.id &&
+                                      _dansCategorie(e)))
+                                  .toList(),
                       valeur: _administrationId,
                       onChanged: (id) {
                         setState(() {
@@ -99,7 +146,8 @@ class _ConsultationRapideScreenState
                           ? <Examen>[]
                           : liste
                               .where((e) =>
-                                  e.administrationId == _administrationId)
+                                  e.administrationId == _administrationId &&
+                                  _dansCategorie(e))
                               .toList();
                       return _SelecteurExamen(
                         examens: filtres,
@@ -190,6 +238,9 @@ class _SelecteurAdministration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
+      // initialValue is only read when the field is created: keying on the
+      // value lets a preselection made after the first build show up.
+      key: ValueKey('administration-$valeur-${administrations.length}'),
       initialValue: valeur,
       items: administrations
           .map((a) => DropdownMenuItem(value: a.id, child: Text(a.nomOfficiel)))
@@ -229,6 +280,7 @@ class _SelecteurExamen extends StatelessWidget {
       );
     }
     return DropdownButtonFormField<String>(
+      key: ValueKey('examen-$valeur-${examens.length}'),
       initialValue: valeur,
       items: examens
           .map((e) => DropdownMenuItem(

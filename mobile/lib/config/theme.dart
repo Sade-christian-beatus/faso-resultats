@@ -89,6 +89,21 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.vertFonce, width: 2),
         ),
       ),
+      // Bottom navigation (5 tabs): labels kept on one line on a 360 dp
+      // wide phone ("Notifications", "Mes résultats").
+      navigationBarTheme: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (etats) => TextStyle(
+            fontSize: 11,
+            fontWeight: etats.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            color: etats.contains(WidgetState.selected)
+                ? AppColors.vertFonce
+                : AppColors.texteAttenue,
+          ),
+        ),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.surface,

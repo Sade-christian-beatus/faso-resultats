@@ -54,6 +54,35 @@ peu de routes typées complexes). `auto_route` apporterait des routes
 typées via `build_runner`, utile sur de très grosses apps multi-équipes —
 gain marginal ici pour un coût de complexité réel.
 
+### Navigation principale (2026-09-30)
+
+Écran d'accueil et barre de navigation réorganisés selon la maquette mobile.
+Les cinq onglets (Accueil, Rechercher, Mes résultats, Notifications, Mon
+compte) sont des routes d'un `ShellRoute` dont la coque est
+`features/accueil/presentation/navigation_principale.dart` ; les autres écrans
+restent hors de la coque et s'ouvrent en plein écran avec un bouton retour.
+« Mes résultats » et « Mon compte » passent par `ouvrirEspaceCandidat` :
+écran de connexion si aucun token n'est stocké. Un simple `ShellRoute` (et non
+`StatefulShellRoute`) suffit : chaque onglet recharge son contenu, déjà en
+cache HTTP, sans conserver d'état de défilement — pas de complexité en plus
+pour un bénéfice marginal.
+
+Les tuiles de catégorie et « Résultats récents » ouvrent la recherche avec un
+filtre dans l'URL (`AppRoutes.consultationFiltree` →
+`/consultation-rapide?categorie=EXAMENS` ou `?examen=<id>`). Le regroupement
+des types d'examen (`domain/categorie_examen.dart`) est le même que celui de
+la page d'accueil web (`frontend/public/js/public.js`).
+
+**Bug réel corrigé au passage** : l'app forçait la locale `fr` sans déclarer
+`localizationsDelegates`. Flutter n'embarque que l'anglais par défaut : tout
+widget lisant `MaterialLocalizations` plantait (« No MaterialLocalizations
+found »), notamment le **sélecteur de date de naissance de l'inscription
+candidat** et la barre de navigation — trouvé en faisant tourner l'app
+compilée dans un navigateur, invisible dans les tests qui utilisaient un
+`MaterialApp` anglais par défaut. Corrigé avec `flutter_localizations`
+(paquet du SDK Flutter, pas une dépendance tierce ; impose `intl` 0.20.x) et
+couvert par `test/widget/localisation_test.dart`.
+
 ## Réseau : Dio + intercepteurs
 
 Un seul client Dio (`lib/core/network/dio_client.dart`), avec :

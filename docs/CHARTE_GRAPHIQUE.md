@@ -62,6 +62,11 @@ Toutes les déclinaisons sont générées depuis `docs/brand/logo-faso-resultats
 | `frontend/public/assets/favicon-32.png` | Symbole, 32 px | Icône d'onglet |
 | `frontend/public/assets/apple-touch-icon.png` | Symbole sur fond blanc, 180 px | Raccourci écran d'accueil iPhone |
 | `mobile/assets/images/logo.webp` | Logo complet, 720 px | Écran d'accueil de l'app |
+| `mobile/assets/images/hero.webp` | Photo de la bannière recadrée en portrait, 400 px, ≈ 19 Ko | Carrousel de l'écran d'accueil de l'app |
+| `frontend/public/assets/hero.webp` | Photo de la bannière recadrée, 560 px, ≈ 25 Ko | Bannière de la page d'accueil web |
+
+La photo source (fournie par le porteur du projet le 2026-09-30) est conservée
+dans `docs/brand/photo-banniere.webp` (1996×788).
 | `mobile/android/.../mipmap-*/ic_launcher.png`, `mobile/ios/.../AppIcon.appiconset/*.png` | Symbole sur fond blanc opaque (iOS refuse la transparence) | Icône de l'app |
 
 Sur les petites tailles (admin, espace candidat), le nom est rendu en texte
@@ -69,7 +74,9 @@ Sur les petites tailles (admin, espace candidat), le nom est rendu en texte
 illisible.
 
 ⚠️ Le logo n'existe qu'en version pour **fond clair** (« Faso » en bleu nuit).
-Ne pas le poser sur un fond sombre ou vert sans une variante dédiée.
+Ne pas le poser sur un fond sombre ou vert sans une variante dédiée. Dans l'en-tête
+vert de l'app mobile (maquette du 2026-09-30), il est posé sur une plaque
+blanche arrondie en attendant cette variante.
 
 ## Composants de la page publique
 

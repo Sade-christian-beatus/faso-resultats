@@ -1,4 +1,5 @@
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/administration.dart';
+import 'package:faso_resultats_mobile/features/consultation_rapide/domain/categorie_examen.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/consultation_repository.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/examen.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/resultat.dart';
@@ -49,7 +50,86 @@ Widget construireApp(ConsultationRepository repository) {
   );
 }
 
+/// Two administrations: a school exam at OCECOS, a police exam elsewhere.
+class _FakeDeuxAdministrations extends _FakeConsultationRepository {
+  @override
+  Future<List<Administration>> listerAdministrations() async => const [
+        Administration(
+            id: 'admin-1',
+            code: 'ocecos',
+            nomOfficiel: 'OCECOS',
+            sigle: 'OCECOS'),
+        Administration(
+            id: 'admin-2',
+            code: 'police',
+            nomOfficiel: 'Police nationale',
+            sigle: 'PN'),
+      ];
+
+  @override
+  Future<List<Examen>> listerExamens() async => [
+        ...await super.listerExamens(),
+        const Examen(
+          id: 'examen-police',
+          administrationId: 'admin-2',
+          typeExamen: 'POLICE',
+          annee: 2026,
+          libelle: 'Élèves assistants de police',
+        ),
+      ];
+}
+
+Widget construireAppAvec(ConsultationRapideScreen ecran) {
+  return ProviderScope(
+    overrides: [
+      consultationRepositoryProvider
+          .overrideWithValue(_FakeDeuxAdministrations()),
+    ],
+    child: MaterialApp(home: ecran),
+  );
+}
+
 void main() {
+  testWidgets(
+      'un examen présélectionné (résultats récents) est prêt à chercher',
+      (tester) async {
+    await tester.pumpWidget(construireAppAvec(
+        const ConsultationRapideScreen(examenId: 'examen-police')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Police nationale'), findsOneWidget);
+    expect(find.text('2026 — Élèves assistants de police'), findsOneWidget);
+    final bouton = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(bouton.onPressed, isNotNull);
+  });
+
+  testWidgets('une catégorie ne propose que ses administrations',
+      (tester) async {
+    await tester.pumpWidget(construireAppAvec(const ConsultationRapideScreen(
+        categorie: CategorieExamen.paramilitaires)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catégorie : Paramilitaires'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Police nationale'), findsWidgets);
+    expect(find.text('OCECOS'), findsNothing);
+  });
+
+  testWidgets('retirer la catégorie propose de nouveau tout', (tester) async {
+    await tester.pumpWidget(construireAppAvec(const ConsultationRapideScreen(
+        categorie: CategorieExamen.paramilitaires)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Toutes les catégories'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catégorie : Paramilitaires'), findsNothing);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    expect(find.text('OCECOS'), findsWidgets);
+  });
+
   testWidgets('affiche le formulaire et charge les administrations',
       (tester) async {
     await tester.pumpWidget(construireApp(_FakeConsultationRepository()));
