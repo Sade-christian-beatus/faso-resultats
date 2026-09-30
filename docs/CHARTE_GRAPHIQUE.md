@@ -73,11 +73,14 @@ Ne pas le poser sur un fond sombre ou vert sans une variante dédiée.
 
 ## Composants de la page publique
 
-- **Bande « Examens et concours disponibles »** : pastilles compactes (≈ 31 px de
-  haut, type en petites capitales vertes puis année et libellé) qui défilent de
-  droite à gauche en boucle. CSS pur (`css/brand.css`, `.bande-examens`), pause au
-  survol/au toucher, statique et défilable à la main si l'utilisateur demande moins
-  d'animations.
+- **Page d'accueil (maquette web du 2026-09-30)** : bannière verte dégradée,
+  pastilles d'icône rondes par catégorie — vert foncé (examens), bleu `#1D4E89`
+  (concours directs), jaune avec icône bleu nuit (fonction publique), violet
+  `#6D28D9` (paramilitaires) —, cartes blanches à coins arrondis, pied de page
+  vert foncé. Le drapeau et le téléphone de la bannière sont dessinés en CSS
+  (aucune image à charger) en attendant la photo officielle. Remplace la bande
+  défilante « Examens et concours disponibles » (2026-09-28), absente de la
+  maquette : la liste « Dernières publications » joue désormais ce rôle.
 - **Frise des phases** (concours paramilitaires) : une pastille par phase — verte
   pour un résultat, ambre pour « publication en cours », grise pour « ne figure pas »
   ou « à venir ».
