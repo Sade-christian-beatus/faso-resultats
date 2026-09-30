@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/routes.dart';
 import 'config/theme.dart';
 import 'core/network/connectivity_provider.dart';
 import 'core/network/session_expiree.dart';
+
+/// Material/Cupertino/widgets strings in French. Required as soon as the
+/// locale is 'fr': Flutter only bundles English by default, and widgets such
+/// as the date picker or the navigation bar crash without them.
+const localisationsApp = GlobalMaterialLocalizations.delegates;
 
 class FasoResultatsApp extends ConsumerWidget {
   const FasoResultatsApp({super.key});
@@ -28,6 +34,7 @@ class FasoResultatsApp extends ConsumerWidget {
       // Français uniquement au MVP, structure i18n prête (lib/l10n) — jour 8.
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],
+      localizationsDelegates: localisationsApp,
       builder: (context, child) => _AvecBandeauHorsLigne(child: child),
     );
   }
