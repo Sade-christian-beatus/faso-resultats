@@ -42,43 +42,6 @@ body {
     linear-gradient(180deg, #e8f8ef 0%, var(--faso-clair) 100%);
 }
 
-/* Flag "brush stroke" behind the hero visual (red over green, yellow star). */
-.hero-drapeau {
-  position: absolute;
-  inset: 12% -10% 30% -14%;
-  background: linear-gradient(180deg, var(--faso-rouge) 0 50%, var(--faso-vert) 50% 100%);
-  border-radius: 46% 54% 42% 58% / 58% 40% 60% 42%;
-  transform: rotate(-8deg);
-  opacity: 0.9;
-}
-.hero-drapeau::after {
-  content: "★";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--faso-jaune);
-  font-size: 3.5rem;
-  line-height: 1;
-}
-
-/* Illustrated phone (placeholder until the official hero photo is provided). */
-.hero-telephone {
-  position: absolute;
-  inset: 4% 18% 0 18%;
-  background: var(--faso-nuit);
-  border-radius: 1.75rem;
-  padding: 0.6rem;
-  box-shadow: 0 20px 40px rgba(11, 31, 45, 0.25);
-  transform: rotate(4deg);
-}
-.hero-telephone__ecran {
-  height: 100%;
-  background: #fff;
-  border-radius: 1.3rem;
-  padding: 1rem 0.75rem;
-}
-
 /* Handwritten-style tagline next to the hero visual. */
 .hero-accroche {
   position: absolute;
