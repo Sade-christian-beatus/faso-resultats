@@ -33,71 +33,183 @@ body {
 .logo-texte .logo-etoile { color: var(--faso-jaune); -webkit-text-stroke: 0.5px #c9a400; }
 .logo-texte .logo-resultats { color: var(--faso-vert-fonce); }
 
-/* "Examens et concours disponibles" band: cards scroll right to left in a loop (the
-   track holds the list twice and moves by half its width, so the loop is seamless).
-   Pure CSS: no library, cheap on low-end phones. Pauses on hover/keyboard focus so a
-   card can be clicked; users who ask for reduced motion get a manual scroll strip. */
-.bande-examens {
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+/* ---- Home page (index.html), laid out after the web blueprint ---- */
+
+/* Hero: soft green wash fading to the page background. */
+.hero {
+  background:
+    radial-gradient(circle at 85% 20%, rgba(0, 166, 81, 0.12), transparent 45%),
+    linear-gradient(180deg, #e8f8ef 0%, var(--faso-clair) 100%);
 }
-.bande-examens__piste {
+
+/* Flag "brush stroke" behind the hero visual (red over green, yellow star). */
+.hero-drapeau {
+  position: absolute;
+  inset: 12% -10% 30% -14%;
+  background: linear-gradient(180deg, var(--faso-rouge) 0 50%, var(--faso-vert) 50% 100%);
+  border-radius: 46% 54% 42% 58% / 58% 40% 60% 42%;
+  transform: rotate(-8deg);
+  opacity: 0.9;
+}
+.hero-drapeau::after {
+  content: "★";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--faso-jaune);
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+/* Illustrated phone (placeholder until the official hero photo is provided). */
+.hero-telephone {
+  position: absolute;
+  inset: 4% 18% 0 18%;
+  background: var(--faso-nuit);
+  border-radius: 1.75rem;
+  padding: 0.6rem;
+  box-shadow: 0 20px 40px rgba(11, 31, 45, 0.25);
+  transform: rotate(4deg);
+}
+.hero-telephone__ecran {
+  height: 100%;
+  background: #fff;
+  border-radius: 1.3rem;
+  padding: 1rem 0.75rem;
+}
+
+/* Handwritten-style tagline next to the hero visual. */
+.hero-accroche {
+  position: absolute;
+  top: -2.75rem;
+  left: -1rem;
+  color: var(--faso-vert-fonce);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  text-align: center;
+  transform: rotate(-8deg);
+}
+
+/* Advantage cards (Rapide / Sans inscription / Fiable / Accessible). */
+.avantage {
   display: flex;
-  gap: 0.5rem;
-  width: max-content;
-  animation: defilement-examens var(--duree-defilement, 40s) linear infinite;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 1px 2px rgba(11, 31, 45, 0.05);
 }
-.bande-examens:hover .bande-examens__piste,
-.bande-examens:focus-within .bande-examens__piste,
-.bande-examens.en-pause .bande-examens__piste {
-  animation-play-state: paused;
-}
-@keyframes defilement-examens {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-50% - 0.25rem)); }
-}
-.carte-examen {
+.avantage__icone {
   flex: none;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  max-width: 18rem;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid #c6eed7;
-  border-left: 3px solid var(--faso-vert);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
   border-radius: 999px;
-  background: #e8f8ef;
-  color: var(--faso-nuit);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-.carte-examen:hover,
-.carte-examen:focus-visible {
-  background: #c6eed7;
-  border-color: var(--faso-vert);
-  outline: none;
-}
-.carte-examen__type {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  border: 1.5px solid var(--faso-vert-fonce);
   color: var(--faso-vert-fonce);
 }
-.carte-examen__libelle {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.avantage__icone svg { width: 1.1rem; height: 1.1rem; }
+.avantage strong { display: block; font-size: 0.85rem; color: var(--faso-nuit); }
+.avantage small { display: block; font-size: 0.72rem; color: #64748b; line-height: 1.3; }
+
+/* Category shortcut cards. */
+.categorie {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(11, 31, 45, 0.06);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-@media (prefers-reduced-motion: reduce) {
-  .bande-examens {
-    overflow-x: auto;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  .bande-examens__piste { animation: none; }
-  .bande-examens__piste [aria-hidden="true"] { display: none; }
+.categorie:hover,
+.categorie:focus-visible { border-color: var(--faso-vert); box-shadow: 0 6px 16px rgba(11, 31, 45, 0.08); outline: none; }
+@media (max-width: 639px) {
+  .categorie { flex-direction: column; align-items: flex-start; gap: 0.6rem; padding: 0.85rem; }
+  .categorie > :last-child { display: none; }
 }
+.categorie[aria-pressed="true"] { border-color: var(--faso-vert-fonce); box-shadow: inset 0 0 0 1px var(--faso-vert-fonce); }
+.pastille-icone {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+}
+.pastille-icone svg { width: 1.4rem; height: 1.4rem; }
+.pastille-icone--petite { width: 2.5rem; height: 2.5rem; }
+.pastille-icone--petite svg { width: 1.15rem; height: 1.15rem; }
+.teinte-examens { background: var(--faso-vert-fonce); }
+.teinte-concours { background: #1d4e89; }
+.teinte-fonction-publique { background: var(--faso-jaune); color: var(--faso-nuit); }
+.teinte-paramilitaires { background: #6d28d9; }
+.teinte-autres { background: #475569; }
+
+/* Phone mock-up in the "Téléchargez l'application" card. */
+.app-telephone {
+  width: 7rem;
+  height: 11rem;
+  background: #fff;
+  border: 5px solid var(--faso-nuit);
+  border-radius: 1.2rem;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+  transform: rotate(-6deg);
+}
+
+/* Footer statistics. */
+.stat { display: flex; align-items: center; gap: 0.75rem; }
+.stat__icone {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.stat__icone svg { width: 1.35rem; height: 1.35rem; }
+.stat strong { display: block; font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
+.stat small { display: block; font-size: 0.75rem; opacity: 0.85; }
+
+/* Burkina Faso flag drawn in CSS (no image request). */
+.drapeau-bf {
+  position: relative;
+  width: 3rem;
+  height: 2rem;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--faso-rouge) 0 50%, var(--faso-vert) 50% 100%);
+}
+.drapeau-bf::after {
+  content: "★";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faso-jaune);
+  font-size: 0.95rem;
+}
+
+/* Social network icons (header top bar and footer). */
+.reseau {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--faso-nuit);
+  color: #fff;
+}
+.reseau svg { width: 0.8rem; height: 0.8rem; }
+.reseau:hover { background: var(--faso-vert-fonce); }

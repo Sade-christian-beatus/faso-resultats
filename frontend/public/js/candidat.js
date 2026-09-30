@@ -340,4 +340,6 @@ if (etat.token) {
   chargerDashboard();
 } else {
   afficherConnecte(false);
+  // Home page "S'inscrire" / "Créer un compte" buttons link to candidat.html#inscription.
+  if (window.location.hash === "#inscription") activerOnglet(true);
 }

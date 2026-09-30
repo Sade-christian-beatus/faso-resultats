@@ -543,6 +543,19 @@ Après chaque étape majeure, produire un résumé structuré :
   CSS pur sans bibliothèque (léger en 3G), pause au survol et au toucher, copies
   de la boucle masquées aux lecteurs d'écran, bande statique si l'utilisateur
   demande moins d'animations (`prefers-reduced-motion`).
+- **2026-09-30 — Page d'accueil web réorganisée selon la maquette fournie**
+  (en-tête + navigation, bannière de recherche, raccourcis par catégorie,
+  dernières publications, encart app, pied de page). Écarts volontaires, validés
+  avec le développeur : pas de carte « Universités » (hors périmètre) ; bannière
+  « Faso Digital 2026 » non reprise ; chiffres du pied de page réels (examens
+  publiés, administrations) au lieu de « +1 000 000 candidats / +50
+  administrations » ; « Plateforme officielle » et « Gratuit » remplacés par des
+  formulations vérifiables tant qu'aucune convention n'est signée ; boutons
+  stores remplacés par « Bientôt sur Android et iOS » (app non publiée).
+  « Une initiative de LUPORA Group » confirmé par le développeur. En attente :
+  photo de la bannière (illustration CSS en place) et URL des réseaux sociaux
+  (`RESEAUX_SOCIAUX` dans `js/public.js`, icônes masquées tant que vide). La
+  bande défilante du 2026-09-28 est remplacée par « Dernières publications ».
 
 ---
 

@@ -1,12 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Faso Résultats — Consultation</title>
+<title>Faso Résultats — Vos résultats en un clic</title>
+<meta name="description" content="Consultez les résultats des examens et concours du Burkina Faso : BAC, BEPC, CAP, concours directs et professionnels, concours paramilitaires." />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <meta name="theme-color" content="#007A3D" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/brand.css" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="js/theme.js"></script>
@@ -16,95 +20,289 @@
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* Safety net when the Tailwind CDN is slow/unavailable (3G). Zero specificity (:where)
+     so responsive utilities such as lg:flex always win, whatever the load order. */
+  :where(.hidden) { display: none; }
 </style>
+</head>
 <body class="bg-clair text-nuit min-h-screen">
-  <div class="barre-drapeau"></div>
+  <a href="#recherche" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white px-3 py-2 rounded z-50">Aller à la recherche</a>
 
-  <div class="max-w-xl mx-auto px-4 py-10">
-    <header class="text-center mb-8">
-      <h1>
-        <img
-          src="assets/logo.webp"
-          alt="Faso Résultats — Vos résultats en un clic"
-          width="720"
-          height="354"
-          class="w-72 sm:w-80 h-auto mx-auto"
-        />
-      </h1>
-      <p class="text-slate-600 mt-3 text-[15px]">
-        Consultez les résultats des examens et concours du Burkina Faso.
+  <!-- 1. Header / navigation -->
+  <div class="bg-white border-b border-slate-100 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 h-9 flex items-center justify-between gap-4">
+      <p class="flex items-center gap-1.5 truncate">
+        <svg class="w-3.5 h-3.5 text-faso-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+        <span>Faso Résultats <span class="text-slate-300 mx-1">|</span> Burkina Faso</span>
       </p>
-    </header>
+      <div class="flex items-center gap-4">
+        <button type="button" class="lien-aide hover:text-faso-700">Aide</button>
+        <!-- Social links are filled from RESEAUX_SOCIAUX (js/public.js); hidden while empty. -->
+        <div id="zone-reseaux-haut" class="hidden items-center gap-2 pl-4 border-l border-slate-200"></div>
+      </div>
+    </div>
+  </div>
 
-    <section class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-5">
-      <h2 class="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 text-faso-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <path d="M16 2v4M8 2v4M3 10h18" />
-        </svg>
-        Examens et concours disponibles
-      </h2>
-      <div id="zone-examens-disponibles" class="space-y-4">
-        <p class="text-sm text-slate-400">Chargement…</p>
+  <header class="bg-white/95 backdrop-blur border-b border-slate-100 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 h-16 lg:h-20 flex items-center gap-4 lg:gap-8">
+      <a href="index.html" class="shrink-0" aria-label="Faso Résultats — accueil">
+        <img src="assets/logo.webp" alt="Faso Résultats — Vos résultats en un clic" width="720" height="354" class="h-11 lg:h-14 w-auto" />
+      </a>
+
+      <nav id="nav-principale" aria-label="Navigation principale" class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-700">
+        <a href="#" class="lien-nav text-faso-700 border-b-2 border-faso-600 py-1" data-categorie="">Accueil</a>
+        <a href="#publications" class="lien-nav hover:text-faso-700 py-1" data-categorie="EXAMENS">Examens</a>
+        <a href="#publications" class="lien-nav hover:text-faso-700 py-1" data-categorie="CONCOURS">Concours</a>
+        <a href="#publications" class="lien-nav hover:text-faso-700 py-1" data-categorie="FONCTION_PUBLIQUE">Fonction publique</a>
+        <a href="#publications" class="lien-nav hover:text-faso-700 py-1" data-categorie="PARAMILITAIRES">Paramilitaires</a>
+        <button type="button" class="lien-aide hover:text-faso-700 py-1">Aide</button>
+      </nav>
+
+      <form id="form-recherche-entete" class="hidden xl:flex flex-1 max-w-xs ml-auto items-center gap-2 border border-slate-200 rounded-full px-3.5 py-2 focus-within:ring-2 focus-within:ring-faso-500" role="search">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <label for="input-recherche-entete" class="sr-only">Rechercher un examen ou un concours</label>
+        <input id="input-recherche-entete" type="search" placeholder="Rechercher un examen, un concours…" class="w-full text-sm bg-transparent focus:outline-none" />
+      </form>
+
+      <div class="hidden sm:flex items-center gap-2 ml-auto xl:ml-0">
+        <a href="candidat.html" class="inline-flex items-center gap-2 bg-faso-700 hover:bg-faso-800 text-white text-sm font-medium rounded-full px-4 py-2 transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+          Connexion
+        </a>
+        <a href="candidat.html#inscription" class="text-sm font-medium text-faso-700 border border-faso-700 hover:bg-faso-50 rounded-full px-4 py-2 transition">S'inscrire</a>
+      </div>
+
+      <button id="btn-menu" type="button" class="lg:hidden ml-auto sm:ml-0 p-2 -mr-2 text-nuit" aria-expanded="false" aria-controls="menu-mobile" aria-label="Ouvrir le menu">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+      </button>
+    </div>
+
+    <div id="menu-mobile" class="hidden lg:hidden border-t border-slate-100 bg-white">
+      <nav class="max-w-7xl mx-auto px-4 py-3 grid gap-1 text-sm font-medium text-slate-700" aria-label="Navigation principale (mobile)">
+        <a href="#" class="lien-nav px-2 py-2 rounded hover:bg-faso-50" data-categorie="">Accueil</a>
+        <a href="#publications" class="lien-nav px-2 py-2 rounded hover:bg-faso-50" data-categorie="EXAMENS">Examens</a>
+        <a href="#publications" class="lien-nav px-2 py-2 rounded hover:bg-faso-50" data-categorie="CONCOURS">Concours</a>
+        <a href="#publications" class="lien-nav px-2 py-2 rounded hover:bg-faso-50" data-categorie="FONCTION_PUBLIQUE">Fonction publique</a>
+        <a href="#publications" class="lien-nav px-2 py-2 rounded hover:bg-faso-50" data-categorie="PARAMILITAIRES">Paramilitaires</a>
+        <button type="button" class="lien-aide text-left px-2 py-2 rounded hover:bg-faso-50">Aide</button>
+        <div class="flex gap-2 pt-2 sm:hidden">
+          <a href="candidat.html" class="flex-1 text-center bg-faso-700 text-white rounded-full px-4 py-2">Connexion</a>
+          <a href="candidat.html#inscription" class="flex-1 text-center text-faso-700 border border-faso-700 rounded-full px-4 py-2">S'inscrire</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- 2. Hero -->
+    <section class="hero relative overflow-hidden">
+      <div class="max-w-7xl mx-auto px-4 py-10 lg:py-14 grid lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-7 relative z-10">
+          <p class="text-faso-700 font-semibold text-sm mb-2">La plateforme burkinabè des résultats</p>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+            Consultez vos résultats<br /><span class="text-faso-700">en quelques clics</span>
+          </h1>
+          <p class="text-slate-600 mt-4 max-w-xl text-[15px]">
+            Faso Résultats facilite la consultation des résultats d'examens, de concours et de la
+            fonction publique au Burkina Faso. Rapide, fiable et accessible partout.
+          </p>
+
+          <!-- Search: step 1 pick the exam, step 2 enter the PV number. -->
+          <form id="form-recherche" class="mt-6 max-w-2xl" autocomplete="off">
+            <div id="recherche" class="relative">
+              <div class="flex items-stretch bg-white rounded-full shadow-md ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-faso-500">
+                <label for="input-recherche-examen" class="sr-only">Examen ou concours</label>
+                <svg class="w-5 h-5 text-slate-400 shrink-0 self-center ml-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input
+                  id="input-recherche-examen"
+                  type="search"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                  aria-controls="liste-suggestions"
+                  placeholder="Ex. : BAC 2026, Fonction publique, Police…"
+                  class="flex-1 min-w-0 w-full bg-transparent px-3 py-3.5 text-[15px] focus:outline-none"
+                />
+                <button type="submit" class="shrink-0 inline-flex items-center gap-2 bg-faso-700 hover:bg-faso-800 text-white font-medium rounded-full px-4 sm:px-7 m-1 transition">
+                  Rechercher
+                  <svg class="w-4 h-4 hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </button>
+              </div>
+              <ul id="liste-suggestions" role="listbox" aria-label="Examens correspondants" class="hidden absolute z-30 left-0 right-0 mt-2 bg-white rounded-xl shadow-lg ring-1 ring-slate-200 max-h-80 overflow-auto py-1"></ul>
+            </div>
+
+            <div id="etape-pv" class="hidden mt-4 bg-white rounded-2xl shadow-md ring-1 ring-slate-200 p-4 sm:p-5">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <p class="text-sm">
+                  <span class="text-slate-500">Examen choisi :</span>
+                  <strong id="libelle-examen-choisi" class="text-nuit"></strong>
+                </p>
+                <button id="btn-changer-examen" type="button" class="text-xs text-faso-700 underline underline-offset-2 shrink-0">Changer</button>
+              </div>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="input-numero-pv" class="block text-sm font-medium text-slate-700 mb-1">Numéro de PV</label>
+                  <input id="input-numero-pv" type="text" inputmode="numeric" placeholder="Ex : 001234" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+                </div>
+                <div>
+                  <label for="input-jury" class="block text-sm font-medium text-slate-700 mb-1">Jury / centre <span class="text-slate-400 font-normal">(optionnel)</span></label>
+                  <input id="input-jury" type="text" placeholder="Ex : Ouagadougou 1" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+                </div>
+              </div>
+              <button type="submit" class="mt-4 w-full bg-faso-700 hover:bg-faso-800 text-white font-medium rounded-lg px-4 py-2.5 transition">Voir mon résultat</button>
+            </div>
+          </form>
+
+          <div class="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm text-slate-600">
+            <a href="#publications" class="inline-flex items-center gap-1.5 hover:text-faso-700">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              Résultats récents
+            </a>
+            <button id="btn-exemples" type="button" class="inline-flex items-center gap-1.5 hover:text-faso-700">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" /></svg>
+              Exemples de recherche
+            </button>
+            <button type="button" class="lien-aide inline-flex items-center gap-1.5 hover:text-faso-700">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01" /></svg>
+              Besoin d'aide ?
+            </button>
+          </div>
+
+          <div id="zone-message" class="mt-4 max-w-2xl"></div>
+          <div id="zone-resultats" class="mt-4 max-w-2xl space-y-4" aria-live="polite"></div>
+
+          <div id="panneau-aide" class="hidden mt-4 max-w-2xl bg-white rounded-xl ring-1 ring-slate-200 p-5 text-sm text-slate-700 space-y-2">
+            <h2 class="font-semibold text-nuit">Comment consulter mon résultat ?</h2>
+            <ol class="list-decimal pl-5 space-y-1">
+              <li>Tapez le nom de votre examen ou concours (ex. « BAC », « BEPC », « Police ») et choisissez-le dans la liste.</li>
+              <li>Saisissez votre numéro de PV, tel qu'il figure sur votre convocation ou votre récépissé.</li>
+              <li>Si le résultat est ambigu, précisez votre jury ou centre d'examen.</li>
+            </ol>
+            <p class="text-slate-500">Seuls les résultats validés et publiés par l'administration organisatrice sont affichés. En cas de doute, rapprochez-vous de l'organisateur de l'examen.</p>
+          </div>
+        </div>
+
+        <div class="hidden sm:block lg:col-span-5 relative">
+          <div class="relative flex items-center justify-center lg:justify-start gap-4">
+            <figure class="hero-visuel relative w-56 sm:w-64 lg:w-72 aspect-[4/5] shrink-0" aria-hidden="true">
+              <div class="hero-drapeau"></div>
+              <!-- Placeholder illustration until the official photo is provided
+                   (replace with <img src="assets/hero.webp" ...>). -->
+              <div class="hero-telephone">
+                <div class="hero-telephone__ecran">
+                  <img src="assets/logo-symbole.webp" alt="" width="48" height="48" class="w-12 h-12 mx-auto" />
+                  <p class="text-[11px] font-semibold text-center text-nuit mt-1">Faso Résultats</p>
+                  <div class="mt-3 rounded-lg bg-faso-50 border border-faso-200 p-2">
+                    <p class="text-[9px] text-slate-500">BAC — Jury Ouaga 1</p>
+                    <p class="text-[11px] font-bold text-faso-800">ADMIS</p>
+                  </div>
+                  <div class="mt-2 space-y-1.5">
+                    <div class="h-1.5 rounded bg-slate-200"></div>
+                    <div class="h-1.5 rounded bg-slate-200 w-3/4"></div>
+                    <div class="h-1.5 rounded bg-slate-200 w-1/2"></div>
+                  </div>
+                </div>
+              </div>
+            </figure>
+
+            <ul class="hidden sm:grid lg:hidden xl:grid gap-2.5 w-52 shrink-0">
+              <li class="avantage"><span class="avantage__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2M10 2h4" /></svg></span><span><strong>Rapide</strong><small>Résultats en quelques secondes</small></span></li>
+              <li class="avantage"><span class="avantage__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2" /></svg></span><span><strong>Sans inscription</strong><small>Consultation libre pour tous</small></span></li>
+              <li class="avantage"><span class="avantage__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></svg></span><span><strong>Fiable</strong><small>Listes validées avant publication</small></span></li>
+              <li class="avantage"><span class="avantage__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg></span><span><strong>Accessible</strong><small>Sur le web et sur mobile</small></span></li>
+            </ul>
+          </div>
+          <p class="hero-accroche hidden lg:block" aria-hidden="true">Un même accès<br />pour tous<br />les candidats !</p>
+        </div>
       </div>
     </section>
 
-    <main class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-      <form id="form-recherche" class="space-y-4">
-        <div>
-          <label for="select-examen" class="block text-sm font-medium text-slate-700 mb-1">Examen</label>
-          <select
-            id="select-examen"
-            required
-            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition"
-          >
-            <option value="">Chargement des examens…</option>
-          </select>
+    <!-- 3. Category shortcuts -->
+    <section class="max-w-7xl mx-auto px-4 -mt-2 lg:-mt-4 relative z-10" aria-label="Catégories">
+      <div id="zone-categories" class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4"></div>
+    </section>
+
+    <!-- 4. Main content -->
+    <section class="max-w-7xl mx-auto px-4 py-8 lg:py-10 grid lg:grid-cols-12 gap-4 lg:gap-5">
+      <div id="publications" class="lg:col-span-6 bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden scroll-mt-24">
+        <div class="bg-faso-700 text-white px-5 py-4 flex items-center justify-between gap-3">
+          <h2 class="flex items-center gap-2.5 text-lg font-semibold">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg>
+            <span id="titre-publications">Dernières publications</span>
+          </h2>
+          <button id="btn-tout-voir" type="button" class="text-sm font-medium inline-flex items-center gap-1 hover:underline underline-offset-2">
+            Voir tous les résultats
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </button>
         </div>
+        <ul id="zone-publications" class="divide-y divide-slate-100">
+          <li class="px-5 py-6 text-sm text-slate-400">Chargement…</li>
+        </ul>
+      </div>
 
-        <div>
-          <label for="input-numero-pv" class="block text-sm font-medium text-slate-700 mb-1">
-            Numéro de PV
-          </label>
-          <input
-            id="input-numero-pv"
-            type="text"
-            required
-            placeholder="Ex : 001234"
-            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition"
-          />
+      <div class="lg:col-span-3 bg-faso-800 text-white rounded-2xl p-6 flex flex-col relative overflow-hidden">
+        <h2 class="text-xl font-bold leading-snug">Téléchargez l'application Faso Résultats</h2>
+        <p class="text-sm text-faso-100 mt-2">Consultez vos résultats même hors connexion.</p>
+        <div class="app-telephone mx-auto my-5" aria-hidden="true">
+          <img src="assets/logo-symbole.webp" alt="" width="40" height="40" class="w-10 h-10 mx-auto mt-3" />
+          <div class="mt-2 space-y-1.5 px-3">
+            <div class="h-2 rounded bg-faso-100"></div>
+            <div class="h-2 rounded bg-faso-100 w-2/3"></div>
+            <div class="h-2 rounded bg-faso-100 w-4/5"></div>
+          </div>
         </div>
+        <p class="text-center text-sm font-semibold bg-white/10 rounded-lg py-2">Bientôt sur Android et iOS</p>
+        <ul class="mt-4 flex justify-between text-xs text-faso-100">
+          <li class="flex items-center gap-1"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></svg>Rapide</li>
+          <li class="flex items-center gap-1"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M3 12h18" /></svg>Simple</li>
+          <li class="flex items-center gap-1"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5 9 16l10-10" /></svg>Hors ligne</li>
+        </ul>
+      </div>
 
-        <div>
-          <label for="input-jury" class="block text-sm font-medium text-slate-700 mb-1">
-            Jury / centre <span class="text-slate-400 font-normal">(optionnel)</span>
-          </label>
-          <input
-            id="input-jury"
-            type="text"
-            placeholder="Ex : Ouagadougou 1"
-            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition"
-          />
+      <div class="lg:col-span-3 bg-faso-50 rounded-2xl ring-1 ring-faso-100 p-6 flex flex-col">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          <svg class="w-5 h-5 text-faso-700" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3v18l7-5 7 5V3z" /></svg>
+          Suivez vos concours
+        </h2>
+        <p class="text-sm text-slate-600 mt-2">Créez votre espace candidat pour suivre tous vos examens et concours au même endroit.</p>
+        <a href="candidat.html#inscription" class="mt-5 inline-flex items-center justify-center gap-2 bg-faso-700 hover:bg-faso-800 text-white font-medium rounded-full px-5 py-2.5 transition self-start">
+          Créer un compte
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </a>
+        <div class="mt-auto pt-6 flex items-center gap-3">
+          <span class="w-12 h-12 rounded-full bg-white ring-1 ring-faso-200 grid place-items-center text-faso-700 shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="8" r="4" /><path d="M3 21a7 7 0 0 1 11-5.7M16 19l2 2 4-4" /></svg>
+          </span>
+          <p class="text-sm italic text-faso-800">Un seul compte pour tous vos concours.</p>
         </div>
+      </div>
+    </section>
+  </main>
 
-        <button
-          type="submit"
-          class="w-full bg-faso-700 text-white font-medium rounded-lg px-4 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition shadow-sm"
-        >
-          Consulter
-        </button>
-      </form>
-
-      <div id="zone-message" class="mt-6"></div>
-      <div id="zone-resultats" class="mt-6 space-y-4"></div>
-    </main>
-
-    <footer class="text-center text-xs text-slate-400 mt-8 space-y-1">
-      <p>Plateforme officielle de consultation des résultats — Burkina Faso</p>
-      <p class="text-slate-300">« La Patrie ou la Mort, nous Vaincrons »</p>
-    </footer>
-  </div>
+  <!-- 5. Footer -->
+  <footer class="bg-faso-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 lg:grid-cols-5 gap-6 items-center">
+      <div class="stat"><span class="stat__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5z" /><path d="M6 12v5c3 2 9 2 12 0v-5" /></svg></span><p><strong id="stat-examens">—</strong><small>examens et concours publiés</small></p></div>
+      <div class="stat"><span class="stat__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 21h18M5 21V10M19 21V10M9 21V10M15 21V10M2 10l10-7 10 7z" /></svg></span><p><strong id="stat-administrations">—</strong><small>administrations partenaires</small></p></div>
+      <div class="stat"><span class="stat__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></svg></span><p><strong>100 %</strong><small>des listes validées avant publication</small></p></div>
+      <div class="flex items-center gap-3 col-span-2 lg:col-span-1">
+        <svg class="w-10 h-10 text-faso-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z" /><circle cx="12" cy="9" r="2.5" /></svg>
+        <p class="text-sm leading-snug">Une initiative de<br /><strong>LUPORA Group</strong><br /><span class="text-faso-100">Ouagadougou</span></p>
+      </div>
+      <div class="flex items-center gap-3 col-span-2 lg:col-span-1">
+        <span class="drapeau-bf shrink-0" role="img" aria-label="Drapeau du Burkina Faso"></span>
+        <p class="text-sm italic leading-snug">Ensemble pour une éducation plus accessible !</p>
+      </div>
+    </div>
+    <div class="bg-white text-slate-500 text-xs">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>© <span id="annee-courante">2026</span> Faso Résultats. Tous droits réservés.</p>
+        <div id="zone-reseaux-bas" class="hidden items-center gap-2"></div>
+      </div>
+    </div>
+  </footer>
 
   <script src="js/api.js"></script>
   <script src="js/public.js"></script>
 </body>
+</html>

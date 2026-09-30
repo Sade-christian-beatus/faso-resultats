@@ -656,11 +656,17 @@ la police Poppins ; `css/brand.css` porte la barre tricolore, le logotype texte
 et le slogan, et sert aussi de filet de sécurité si le CDN Tailwind ne charge
 pas (pages lisibles et aux couleurs de la marque même sans utilitaires).
 
-- **`index.html` + `js/public.js`** : consultation publique. Charge la liste
-  des examens publiés (`/api/v1/public/exams`) — affichée en bande défilante
-  de droite à gauche (CSS pur dans `css/brand.css`, pause au survol/au toucher,
-  bande statique défilable si l'utilisateur demande moins d'animations), recherche un résultat par
-  numéro de PV (+ jury optionnel), affiche la décision/moyenne/établissement.
+- **`index.html` + `js/public.js`** : page d'accueil publique, organisée selon
+  la maquette web (2026-09-30) en 5 blocs : en-tête (navigation par catégorie,
+  recherche, Connexion/S'inscrire vers `candidat.html`), bannière principale avec
+  la recherche en deux temps (choix de l'examen par saisie libre avec suggestions,
+  puis numéro de PV + jury optionnel → `/results/progress`), raccourcis par
+  catégorie (Examens, Concours, Fonction publique, Paramilitaires — regroupement
+  des `TypeExamen` dans `CATEGORIES`), dernières publications / encart app mobile /
+  « Suivez vos concours », pied de page avec des chiffres réels (nombre d'examens
+  publiés et d'administrations, tirés de `/exams` et `/administrations`). Aucun
+  appel API supplémentaire côté backend : le filtrage et la recherche d'examen se
+  font dans le navigateur sur la liste déjà en cache.
 - **`admin.html` + `js/admin.js`** : connexion (JWT stocké en
   `sessionStorage`, jamais en `localStorage`, pour limiter la durée de vie
   du token à l'onglet), création/publication d'examens, upload de fichier,
