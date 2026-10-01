@@ -10,8 +10,9 @@ import '../../../core/widgets/primary_button.dart';
 import '../domain/administration.dart';
 import '../domain/categorie_examen.dart';
 import '../domain/examen.dart';
-import '../domain/resultat.dart';
+import '../domain/parcours.dart';
 import 'consultation_providers.dart';
+import 'parcours_card.dart';
 import 'resultat_card.dart';
 
 class ConsultationRapideScreen extends ConsumerStatefulWidget {
@@ -195,7 +196,7 @@ class _ConsultationRapideScreenState
 class _ZoneResultats extends StatelessWidget {
   const _ZoneResultats({required this.recherche});
 
-  final AsyncValue<List<Resultat>>? recherche;
+  final AsyncValue<List<ParcoursCandidat>>? recherche;
 
   @override
   Widget build(BuildContext context) {
@@ -208,8 +209,8 @@ class _ZoneResultats extends StatelessWidget {
             ? erreur.message
             : 'Une erreur est survenue. Veuillez réessayer.',
       ),
-      data: (resultats) {
-        if (resultats.isEmpty) {
+      data: (listeParcours) {
+        if (listeParcours.isEmpty) {
           return const EmptyView(
             message:
                 'Aucun résultat trouvé pour ce récépissé. Vérifiez le numéro saisi.',
@@ -217,7 +218,15 @@ class _ZoneResultats extends StatelessWidget {
           );
         }
         return Column(
-          children: resultats.map((r) => ResultatCard(resultat: r)).toList(),
+          children: [
+            for (final parcours in listeParcours)
+              // Single-list exams keep the plain result card; multi-phase
+              // competitions get the timeline.
+              if (parcours.estPublicationUnique)
+                ResultatCard(resultat: parcours.etapes.first.resultat!)
+              else
+                ParcoursCard(parcours: parcours),
+          ],
         );
       },
     );

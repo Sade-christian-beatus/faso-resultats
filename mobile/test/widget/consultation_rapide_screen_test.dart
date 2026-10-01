@@ -2,17 +2,20 @@ import 'package:faso_resultats_mobile/features/consultation_rapide/domain/admini
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/categorie_examen.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/consultation_repository.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/examen.dart';
+import 'package:faso_resultats_mobile/features/consultation_rapide/domain/parcours.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/resultat.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/presentation/consultation_providers.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/presentation/consultation_rapide_screen.dart';
+import 'package:faso_resultats_mobile/features/consultation_rapide/presentation/parcours_card.dart';
+import 'package:faso_resultats_mobile/features/consultation_rapide/presentation/resultat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeConsultationRepository implements ConsultationRepository {
-  _FakeConsultationRepository({this.resultats = const []});
+  _FakeConsultationRepository({this.parcours = const []});
 
-  final List<Resultat> resultats;
+  final List<ParcoursCandidat> parcours;
 
   @override
   Future<List<Administration>> listerAdministrations() async => [
@@ -35,12 +38,12 @@ class _FakeConsultationRepository implements ConsultationRepository {
       ];
 
   @override
-  Future<List<Resultat>> rechercherResultats({
+  Future<List<ParcoursCandidat>> rechercherParcours({
     required String examenId,
     required String numeroPv,
     String? jury,
   }) async =>
-      resultats;
+      parcours;
 }
 
 Widget construireApp(ConsultationRepository repository) {
@@ -89,7 +92,72 @@ Widget construireAppAvec(ConsultationRapideScreen ecran) {
   );
 }
 
+const _admis = Resultat(
+  numeroPv: '000123',
+  jury: 'Ouaga 1',
+  nom: 'TRAORE',
+  prenom: 'Awa',
+  decision: 'ADMIS',
+  phase: PhasePublication.resultatUnique,
+);
+
+Future<void> _rechercherBac(
+    WidgetTester tester, List<ParcoursCandidat> parcours) async {
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      consultationRepositoryProvider
+          .overrideWithValue(_FakeConsultationRepository(parcours: parcours)),
+    ],
+    child:
+        const MaterialApp(home: ConsultationRapideScreen(examenId: 'examen-1')),
+  ));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextFormField).first, '000123');
+  await tester.tap(find.text('Rechercher'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('examen à liste unique : la carte résultat habituelle',
+      (tester) async {
+    await _rechercherBac(tester, [
+      const ParcoursCandidat(numeroPv: '000123', jury: 'Ouaga 1', etapes: [
+        EtapeParcours(
+          phase: PhasePublication.resultatUnique,
+          statutPhase: StatutPhase.cloturee,
+          situation: SituationCandidat.resultat,
+          resultat: _admis,
+        ),
+      ]),
+    ]);
+
+    expect(find.byType(ResultatCard), findsOneWidget);
+    expect(find.byType(ParcoursCard), findsNothing);
+    expect(find.text('Awa TRAORE'), findsOneWidget);
+  });
+
+  testWidgets('concours à phases : la frise phase par phase', (tester) async {
+    await _rechercherBac(tester, [
+      const ParcoursCandidat(numeroPv: '000123', jury: 'Ouaga 1', etapes: [
+        EtapeParcours(
+          phase: PhasePublication.epreuvesSportives,
+          statutPhase: StatutPhase.cloturee,
+          situation: SituationCandidat.resultat,
+          resultat: _admis,
+        ),
+        EtapeParcours(
+          phase: PhasePublication.admissibilite,
+          statutPhase: StatutPhase.enCours,
+          situation: SituationCandidat.enAttente,
+        ),
+      ]),
+    ]);
+
+    expect(find.byType(ParcoursCard), findsOneWidget);
+    expect(find.byType(ResultatCard), findsNothing);
+    expect(find.text('Admissibilité'), findsOneWidget);
+  });
+
   testWidgets(
       'un examen présélectionné (résultats récents) est prêt à chercher',
       (tester) async {
@@ -162,8 +230,7 @@ void main() {
 
   testWidgets('affiche "aucun résultat" quand la recherche ne trouve rien',
       (tester) async {
-    await tester
-        .pumpWidget(construireApp(_FakeConsultationRepository(resultats: [])));
+    await tester.pumpWidget(construireApp(_FakeConsultationRepository()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(DropdownButtonFormField<String>).first);

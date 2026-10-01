@@ -5,7 +5,10 @@ class ApiPaths {
 
   static const String publicAdministrations = '/api/v1/public/administrations';
   static const String publicExams = '/api/v1/public/exams';
-  static const String publicResults = '/api/v1/public/results';
+
+  /// Phase-by-phase progress (also works for single-list exams): the only
+  /// result lookup used by the app since 2026-10-01.
+  static const String publicResultsProgress = '/api/v1/public/results/progress';
   static const String publicDroitsCandidat = '/api/v1/public/droits-candidat';
 
   static const String candidatInscription = '/api/v1/candidat/inscription';

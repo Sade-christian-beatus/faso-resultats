@@ -129,9 +129,10 @@ commits `feat(mobile)` mergés sur `main`) sans que cette page ne soit tenue à 
   (sans elle, un APK release ne joignait pas l'API) ; HTTP local autorisé en debug
   uniquement (API de dev en `http://`) ; build release vérifié en CI. Procédure de
   lancement détaillée dans `mobile/README.md`.
-- 📅 Brancher l'app sur `GET /api/v1/public/results/progress` pour afficher
-  « publication en cours » / « ne figure pas sur la liste » (l'app affiche déjà la
-  phase et la prochaine étape via `/results`).
+- ✅ **2026-10-01** : l'app consomme `GET /api/v1/public/results/progress` (seule
+  recherche de résultat utilisée) et affiche la même frise par phase que le web
+  (« publication en cours », « ne figure pas » seulement après clôture) ; un examen
+  à liste unique garde la carte résultat habituelle.
 - 📅 Espace établissement : pas commencé — nouvelle table normalisée +
   vérification automatique contre une liste officielle d'établissements (liste
   des établissements privés déjà reçue, liste des établissements publics

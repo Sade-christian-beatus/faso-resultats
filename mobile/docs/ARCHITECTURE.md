@@ -83,6 +83,22 @@ compilée dans un navigateur, invisible dans les tests qui utilisaient un
 (paquet du SDK Flutter, pas une dépendance tierce ; impose `intl` 0.20.x) et
 couvert par `test/widget/localisation_test.dart`.
 
+### Résultats phase par phase (2026-10-01)
+
+La recherche passe par `GET /results/progress` (`domain/parcours.dart`,
+`data/parcours_mapper.dart`) : un examen à liste unique s'affiche dans la
+`ResultatCard` habituelle, un concours à phases dans `ParcoursCard` (frise,
+mêmes textes que le web). La situation de chaque phase est calculée par le
+serveur ; l'app ne fait que l'afficher, et une valeur inconnue retombe sur
+« pas encore publiée », jamais sur « ne figure pas ».
+
+**Bug réel corrigé au passage** : `Resultat.estPositif` testait
+`contains('ADMIS')`, donc « NON ADMIS » s'affichait en vert comme une
+réussite (même défaut que celui du parser PDF corrigé côté backend le
+2026-08-17), et « APTE » en rouge. Remplacé par `Resultat.tonalite`, qui
+reprend les règles du backend (`decision_negative`, formes négatives testées
+en premier) ; une décision non reconnue est neutre (ambre), jamais verte.
+
 ## Réseau : Dio + intercepteurs
 
 Un seul client Dio (`lib/core/network/dio_client.dart`), avec :

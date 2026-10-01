@@ -27,7 +27,7 @@ Le prompt de départ supposait plusieurs choses que le backend ne fait pas.
 |---|---|
 | Sélection administration | `GET /api/v1/public/administrations` (cache client 1h, `dio_cache_interceptor`, jour 9) |
 | Sélection examen | `GET /api/v1/public/exams` (filtré côté client par `administration_id`, cache client 1h) |
-| Résultat | `GET /api/v1/public/results?examen_id&numero_pv&jury` (cache client 24h — « résultats déjà consultés », jour 9) |
+| Résultat | `GET /api/v1/public/results/progress?examen_id&numero_pv&jury` depuis le 2026-10-01 (avant : `/results`) — parcours phase par phase, une seule étape pour un examen à liste unique (cache client 24h — « résultats déjà consultés », jour 9) |
 
 ## Authentification candidat
 

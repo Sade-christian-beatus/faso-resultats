@@ -5,7 +5,7 @@ import 'package:faso_resultats_mobile/features/candidatures/presentation/candida
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/administration.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/consultation_repository.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/domain/examen.dart';
-import 'package:faso_resultats_mobile/features/consultation_rapide/domain/resultat.dart';
+import 'package:faso_resultats_mobile/features/consultation_rapide/domain/parcours.dart';
 import 'package:faso_resultats_mobile/features/consultation_rapide/presentation/consultation_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +33,7 @@ class _FakeConsultationRepository implements ConsultationRepository {
       ];
 
   @override
-  Future<List<Resultat>> rechercherResultats({
+  Future<List<ParcoursCandidat>> rechercherParcours({
     required String examenId,
     required String numeroPv,
     String? jury,

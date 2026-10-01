@@ -1,3 +1,4 @@
+import '../../../core/utils/date_formatter.dart';
 import '../domain/resultat.dart';
 
 /// Correspond à `ResultatPublicOut` côté backend (backend/app/schemas/public.py).
@@ -18,6 +19,8 @@ extension ResultatMapper on Map<String, dynamic> {
       phaseSuivanteAttendue: phaseSuivante == null
           ? null
           : PhasePublication.depuisApi(phaseSuivante),
+      datePublicationPhase:
+          DateFormatter.depuisApi(this['date_publication_phase'] as String?),
     );
   }
 }

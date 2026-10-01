@@ -570,6 +570,13 @@ Après chaque étape majeure, produire un résumé structuré :
   web. **Bug réel corrigé** : locale `fr` forcée sans traductions Material —
   le sélecteur de date de naissance de l'inscription candidat plantait
   (ajout de `flutter_localizations`, paquet du SDK, `intl` passé en 0.20.2).
+- **2026-10-01 — App mobile branchée sur `/results/progress`**, point ouvert du
+  2026-09-28 : même frise par phase que le web pour les concours paramilitaires
+  (« ne figure pas » seulement après clôture de la phase, décidé par le serveur ;
+  valeur inconnue → « pas encore publiée »). **Bug réel corrigé** : côté mobile,
+  « NON ADMIS » s'affichait en vert (`contains('ADMIS')`) et « APTE » en rouge ;
+  la couleur de décision reprend désormais les règles du backend
+  (`decision_negative`), une décision inconnue est neutre, jamais verte.
 
 ---
 

@@ -7,7 +7,7 @@ import '../data/consultation_repository_impl.dart';
 import '../domain/administration.dart';
 import '../domain/consultation_repository.dart';
 import '../domain/examen.dart';
-import '../domain/resultat.dart';
+import '../domain/parcours.dart';
 
 part 'consultation_providers.g.dart';
 
@@ -33,7 +33,7 @@ Future<List<Examen>> examensPublics(Ref ref) {
 @riverpod
 class RechercheResultat extends _$RechercheResultat {
   @override
-  AsyncValue<List<Resultat>>? build() => null;
+  AsyncValue<List<ParcoursCandidat>>? build() => null;
 
   Future<void> rechercher({
     required String examenId,
@@ -42,7 +42,7 @@ class RechercheResultat extends _$RechercheResultat {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-      () => ref.read(consultationRepositoryProvider).rechercherResultats(
+      () => ref.read(consultationRepositoryProvider).rechercherParcours(
           examenId: examenId, numeroPv: numeroPv, jury: jury),
     );
   }

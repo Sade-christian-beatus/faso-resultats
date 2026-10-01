@@ -7,10 +7,10 @@ import '../../../core/network/http_cache.dart';
 import '../domain/administration.dart';
 import '../domain/consultation_repository.dart';
 import '../domain/examen.dart';
-import '../domain/resultat.dart';
+import '../domain/parcours.dart';
 import 'administration_mapper.dart';
 import 'examen_mapper.dart';
-import 'resultat_mapper.dart';
+import 'parcours_mapper.dart';
 
 class ConsultationRepositoryImpl implements ConsultationRepository {
   ConsultationRepositoryImpl(this._dio, this._cacheStore);
@@ -51,14 +51,14 @@ class ConsultationRepositoryImpl implements ConsultationRepository {
   }
 
   @override
-  Future<List<Resultat>> rechercherResultats({
+  Future<List<ParcoursCandidat>> rechercherParcours({
     required String examenId,
     required String numeroPv,
     String? jury,
   }) async {
     try {
       final reponse = await _dio.get<List<dynamic>>(
-        ApiPaths.publicResults,
+        ApiPaths.publicResultsProgress,
         queryParameters: {
           'examen_id': examenId,
           'numero_pv': numeroPv,
@@ -68,7 +68,7 @@ class ConsultationRepositoryImpl implements ConsultationRepository {
       );
       return reponse.data!
           .cast<Map<String, dynamic>>()
-          .map((json) => json.versResultat())
+          .map((json) => json.versParcours())
           .toList();
     } on DioException catch (erreur) {
       if (erreur.response?.statusCode == 404) {

@@ -63,7 +63,7 @@ final examensPublicsProvider = AutoDisposeFutureProvider<List<Examen>>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ExamensPublicsRef = AutoDisposeFutureProviderRef<List<Examen>>;
-String _$rechercheResultatHash() => r'880577f8ab84eb525d780c8a05223773c50fe35b';
+String _$rechercheResultatHash() => r'35b83ee2ae29a78f1cae44fd5d4b29badd5c6fb5';
 
 /// État de la recherche de résultat — un simple `AsyncValue` déclenché
 /// manuellement par l'utilisateur (pas un fetch automatique au montage de
@@ -72,7 +72,7 @@ String _$rechercheResultatHash() => r'880577f8ab84eb525d780c8a05223773c50fe35b';
 /// Copied from [RechercheResultat].
 @ProviderFor(RechercheResultat)
 final rechercheResultatProvider = AutoDisposeNotifierProvider<RechercheResultat,
-    AsyncValue<List<Resultat>>?>.internal(
+    AsyncValue<List<ParcoursCandidat>>?>.internal(
   RechercheResultat.new,
   name: r'rechercheResultatProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -82,6 +82,7 @@ final rechercheResultatProvider = AutoDisposeNotifierProvider<RechercheResultat,
   allTransitiveDependencies: null,
 );
 
-typedef _$RechercheResultat = AutoDisposeNotifier<AsyncValue<List<Resultat>>?>;
+typedef _$RechercheResultat
+    = AutoDisposeNotifier<AsyncValue<List<ParcoursCandidat>>?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

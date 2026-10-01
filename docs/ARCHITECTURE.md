@@ -261,9 +261,8 @@ Règles métier dans `app/services/phases.py` (fonctions pures, testées sans ba
 Interface : case « Concours en 3 phases » à la création d'un examen, pastilles
 d'avancement et bouton « Clôturer » dans la liste des examens, choix de la phase
 à l'import (pré-sélectionne la phase ouverte) ; page publique en frise par phase ;
-dashboard candidat avec la phase du dernier résultat. L'app mobile consomme encore
-`/results` (lignes par phase, avec phase et prochaine étape) — passer à
-`/results/progress` pour afficher « publication en cours » / « ne figure pas ».
+dashboard candidat avec la phase du dernier résultat. L'app mobile consomme
+`/results/progress` depuis le 2026-10-01 (même frise que le web, `ParcoursCard`).
 
 ⚠️ Toujours non fait : sélecteur d'examen à deux niveaux (catégorie puis type
 précis), `docs/CONTEXTE_METIER.md` § 7.

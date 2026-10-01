@@ -55,6 +55,7 @@ class Resultat {
     this.rangNumerique,
     this.rangAffiche,
     this.phaseSuivanteAttendue,
+    this.datePublicationPhase,
   });
 
   final String numeroPv;
@@ -68,6 +69,7 @@ class Resultat {
   final String? rangAffiche;
   final PhasePublication phase;
   final PhasePublication? phaseSuivanteAttendue;
+  final DateTime? datePublicationPhase;
 
   /// Negative forms first ("NON ADMIS" contains "ADMIS", "INAPTE" contains
   /// "APTE"); a decision matching no rule is neutral, never shown as a
