@@ -11,8 +11,6 @@ class ResultatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final positif = resultat.estPositif;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -29,7 +27,7 @@ class ResultatCard extends StatelessWidget {
                         fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                 ),
-                _BadgeDecision(decision: resultat.decision, positif: positif),
+                BadgeDecision(resultat: resultat),
               ],
             ),
             const SizedBox(height: 4),
@@ -97,15 +95,20 @@ class ResultatCard extends StatelessWidget {
   }
 }
 
-class _BadgeDecision extends StatelessWidget {
-  const _BadgeDecision({required this.decision, required this.positif});
+/// Decision pill, coloured by [Resultat.tonalite]. Shared with the
+/// phase-by-phase card.
+class BadgeDecision extends StatelessWidget {
+  const BadgeDecision({required this.resultat, super.key});
 
-  final String decision;
-  final bool positif;
+  final Resultat resultat;
 
   @override
   Widget build(BuildContext context) {
-    final couleur = positif ? AppColors.succes : AppColors.erreur;
+    final couleur = switch (resultat.tonalite) {
+      TonaliteDecision.positive => AppColors.succes,
+      TonaliteDecision.negative => AppColors.erreur,
+      TonaliteDecision.neutre => AppColors.avertissement,
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -113,7 +116,7 @@ class _BadgeDecision extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        decision,
+        resultat.decision,
         style: TextStyle(
             color: couleur, fontWeight: FontWeight.w700, fontSize: 13),
       ),

@@ -25,6 +25,23 @@ enum PhasePublication {
       };
 }
 
+/// How a decision reads to the candidate: drives the badge colour.
+enum TonaliteDecision { positive, negative, neutre }
+
+// Same rules as the backend (app/services/phases.py, `decision_negative`):
+// decisions are free text from official files, negative forms are tested
+// first so that "NON ADMIS" or "INAPTE" never read as a success.
+const _prefixesNegatifs = ['NON ', 'NON-'];
+const _marqueursNegatifs = [
+  'AJOURN',
+  'INAPTE',
+  'ELIMIN',
+  'ÉLIMIN',
+  'ABSENT',
+  'REFUS',
+];
+const _marqueursPositifs = ['ADMIS', 'APTE', 'REÇU', 'RECU'];
+
 class Resultat {
   const Resultat({
     required this.numeroPv,
@@ -52,9 +69,20 @@ class Resultat {
   final PhasePublication phase;
   final PhasePublication? phaseSuivanteAttendue;
 
-  /// Une décision qui contient "ADMIS" (ADMIS, ADMISSIBLE) est traitée comme
-  /// positive à l'affichage — les libellés de décision varient selon le type
-  /// d'examen/concours (voir docs/CONTEXTE_METIER.md), pas de liste figée
-  /// côté client.
-  bool get estPositif => decision.toUpperCase().contains('ADMIS');
+  /// Negative forms first ("NON ADMIS" contains "ADMIS", "INAPTE" contains
+  /// "APTE"); a decision matching no rule is neutral, never shown as a
+  /// success.
+  TonaliteDecision get tonalite {
+    final valeur = decision.trim().toUpperCase();
+    if (_prefixesNegatifs.any(valeur.startsWith) ||
+        _marqueursNegatifs.any(valeur.contains)) {
+      return TonaliteDecision.negative;
+    }
+    if (_marqueursPositifs.any(valeur.contains)) {
+      return TonaliteDecision.positive;
+    }
+    return TonaliteDecision.neutre;
+  }
+
+  bool get estPositif => tonalite == TonaliteDecision.positive;
 }
