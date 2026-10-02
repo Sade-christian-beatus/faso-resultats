@@ -1,21 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faso Résultats — Administration</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <meta name="theme-color" content="#007A3D" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/brand.css" />
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="js/theme.js"></script>
-<!-- Filet de sécurité si le CDN Tailwind est lent/indisponible (3G) : sans lui, la classe
-     "hidden" ne fait rien et connexion + tableau de bord s'afficheraient en même temps. -->
-<style>
-  .hidden { display: none !important; }
-  #corps-table-examens tr:hover, #corps-table-apercu tr:hover { background-color: #f8fafc; }
-</style>
+<link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="css/app.css" />
+</head>
 <body class="bg-clair text-nuit min-h-screen">
   <div class="barre-drapeau"></div>
 
@@ -224,3 +218,4 @@
   <script src="js/api.js"></script>
   <script src="js/admin.js"></script>
 </body>
+</html>

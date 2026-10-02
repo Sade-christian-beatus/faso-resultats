@@ -1,8 +1,13 @@
-// Brand tokens (docs/CHARTE_GRAPHIQUE.md) exposed to the Tailwind CDN.
-// Must be loaded right after the Tailwind CDN script, before any markup renders.
+// Tailwind build config (decision of 2026-10-02: pre-built CSS instead of the CDN
+// script, see docs/ARCHITECTURE.md § Frontend). Brand tokens: docs/CHARTE_GRAPHIQUE.md.
 // "faso" is a full shade scale built around the official green #00A651 (= faso-500):
 // white text on faso-500 is below WCAG AA, so buttons and text use faso-700+.
-tailwind.config = {
+//
+// Classes are found by scanning the HTML and JS below: always write them as complete
+// literal strings in the code ("bg-red-700", never `bg-${couleur}-700`), otherwise they
+// are missing from the generated CSS.
+module.exports = {
+  content: ["./public/**/*.html", "./public/js/**/*.js"],
   theme: {
     extend: {
       colors: {

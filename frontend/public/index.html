@@ -8,22 +8,8 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <meta name="theme-color" content="#007A3D" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/brand.css" />
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="js/theme.js"></script>
-<style>
-  .carte-resultat { animation: apparition 0.25s ease-out; }
-  @keyframes apparition {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  /* Safety net when the Tailwind CDN is slow/unavailable (3G). Zero specificity (:where)
-     so responsive utilities such as lg:flex always win, whatever the load order. */
-  :where(.hidden) { display: none; }
-</style>
+<link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="css/app.css" />
 </head>
 <body class="bg-clair text-nuit min-h-screen">
   <a href="#recherche" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white px-3 py-2 rounded z-50">Aller à la recherche</a>

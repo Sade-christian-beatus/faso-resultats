@@ -40,13 +40,13 @@ de style — la lisibilité de la décision prime sur la marque.
 
 ## Typographie
 
-**Poppins** (400, 500, 600, 700), repli sur la police système.
+**Poppins** (400, 500, 600, 700, 800), repli sur la police système.
 
-- Web : chargée depuis Google Fonts avec `display=swap` (le texte s'affiche
-  immédiatement en police système sur 3G, Poppins remplace ensuite). Coût
-  ≈ 30 Ko pour les 4 graisses en sous-ensemble latin — dans l'objectif
-  < 500 Ko. ⚠️ À auto-héberger avant la mise en production sur serveurs
-  burkinabè (souveraineté, et ne pas dépendre de Google pour l'affichage).
+- Web : **auto-hébergée** depuis le 2026-10-02 (`frontend/public/fonts/`,
+  sous-ensemble latin, ≈ 39 Ko pour les 5 graisses, licence SIL OFL dans
+  `fonts/OFL.txt`), déclarée dans `frontend/src/app.css` avec
+  `font-display: swap` (le texte s'affiche immédiatement en police système
+  sur 3G, Poppins remplace ensuite). Plus aucune requête vers Google.
 - Mobile : police système pour l'instant (Poppins non encore embarquée, voir
   « Reste à faire »).
 
@@ -115,6 +115,5 @@ des décisions du projet et ne doivent pas être implémentés tels quels :
 4. Embarquer **Poppins** dans l'app Flutter (fichiers `.ttf` dans
    `mobile/assets/fonts/` + déclaration `fonts:` dans `pubspec.yaml` — pas de
    paquet `google_fonts`, qui téléchargerait la police au premier lancement).
-5. **Auto-héberger Poppins** côté web (fichiers `.woff2` dans
-   `frontend/public/fonts/`) avant la mise en production.
+5. ~~Auto-héberger Poppins côté web~~ — fait le 2026-10-02.
 6. Image de partage réseaux sociaux (`og:image`).

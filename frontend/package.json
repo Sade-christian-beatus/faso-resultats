@@ -1,0 +1,12 @@
+{
+  "name": "faso-resultats-web",
+  "private": true,
+  "description": "Build of the web CSS only. The site itself is plain HTML/CSS/JS served as static files.",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i src/app.css -o public/css/app.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i src/app.css -o public/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}
