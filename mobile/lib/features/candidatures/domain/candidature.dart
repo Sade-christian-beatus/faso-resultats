@@ -61,3 +61,16 @@ class Candidature {
       statutVerification == StatutVerificationCandidature.enAttente &&
       methodeVerification == 'OTP_SMS';
 }
+
+/// Value of `dernier_resultat_statut` when the candidate is on none of the
+/// lists of a closed phase (backend app/services/candidat/matching_service.py).
+const statutAbsentDeLaListe = 'NE FIGURE PAS SUR LA LISTE';
+
+/// Candidate-facing labels for the backend `MethodeVerification` codes.
+String libelleMethodeVerification(String code) => switch (code) {
+      'CNIB_MATCH_AUTO' => 'Numéro CNIB',
+      'DATE_NAISSANCE' => 'Date de naissance',
+      'OTP_SMS' => 'Code reçu par SMS',
+      'VALIDATION_MANUELLE' => 'Validation par l’administration',
+      _ => code,
+    };

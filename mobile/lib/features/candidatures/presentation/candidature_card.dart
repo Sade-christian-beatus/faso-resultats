@@ -4,6 +4,7 @@ import '../../../config/theme.dart';
 import '../../consultation_rapide/domain/administration.dart';
 import '../../consultation_rapide/domain/examen.dart';
 import '../domain/candidature.dart';
+import 'dernier_resultat.dart';
 
 class CandidatureCard extends StatelessWidget {
   const CandidatureCard({
@@ -73,14 +74,8 @@ class CandidatureCard extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 13, color: AppColors.texteAttenue),
               ),
-              if (candidature.dernierResultatStatut != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  candidature.dernierResultatStatut!,
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700),
-                ),
-              ],
+              const SizedBox(height: 8),
+              DernierResultat(candidature: candidature),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(

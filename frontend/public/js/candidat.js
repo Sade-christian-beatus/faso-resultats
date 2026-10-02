@@ -194,7 +194,8 @@ function rendreDernierResultat(c) {
   if (c.dernier_resultat_statut === STATUT_ABSENT_DE_LA_LISTE) {
     return `${libellePhase}<p class="text-sm text-slate-700">Toutes les listes de cette phase sont publiées : vous n'y figurez pas.</p>`;
   }
-  return `${libellePhase}<p class="${phase ? "" : "mt-2 "}text-lg font-semibold text-slate-900">${escapeHtml(c.dernier_resultat_statut)}</p>`;
+  const couleur = styleDecision(c.dernier_resultat_statut).texte;
+  return `${libellePhase}<p class="${phase ? "" : "mt-2 "}text-lg font-semibold ${couleur}">${escapeHtml(c.dernier_resultat_statut)}</p>`;
 }
 
 function rendreCandidatures(candidatures) {

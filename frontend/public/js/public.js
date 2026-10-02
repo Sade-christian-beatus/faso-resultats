@@ -487,12 +487,6 @@ async function chargerDonnees() {
   renderPublications();
 }
 
-const STYLE_DECISION = {
-  ADMIS: { badge: "bg-faso-600 text-white", bordure: "border-faso-500" },
-  APTE: { badge: "bg-faso-600 text-white", bordure: "border-faso-500" },
-  ADMISSIBLE: { badge: "bg-sky-600 text-white", bordure: "border-sky-500" },
-};
-const STYLE_DECISION_DEFAUT = { badge: "bg-amber-500 text-white", bordure: "border-amber-400" };
 
 // Publication par phase (docs/CONTEXTE_METIER.md § 2.4) — la situation de chaque phase
 // est calculée côté serveur (GET /results/progress) : « ne figure pas sur la liste »
@@ -514,7 +508,7 @@ function renderEtape(etape) {
   let detail;
   switch (etape.situation) {
     case "RESULTAT": {
-      const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
+      const style = styleDecision(r.decision);
       pastille = "bg-faso-600";
       const date = r.date_publication_phase ? ` · publié le ${DATE_FR.format(new Date(r.date_publication_phase))}` : "";
       const suite = r.phase_suivante_attendue
@@ -551,7 +545,7 @@ function renderEtape(etape) {
 }
 
 function renderResultatUnique(r) {
-  const style = STYLE_DECISION[r.decision] || STYLE_DECISION_DEFAUT;
+  const style = styleDecision(r.decision);
   return `
       <div class="carte-resultat border-l-4 ${style.bordure} bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
         <p class="text-lg font-semibold text-slate-900">${escapeHtml(r.nom)} ${escapeHtml(r.prenom)}</p>

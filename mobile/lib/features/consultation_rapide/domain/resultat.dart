@@ -42,6 +42,21 @@ const _marqueursNegatifs = [
 ];
 const _marqueursPositifs = ['ADMIS', 'APTE', 'REÇU', 'RECU'];
 
+/// Negative forms first ("NON ADMIS" contains "ADMIS", "INAPTE" contains
+/// "APTE"); a decision matching no rule is neutral, never shown as a success.
+/// Also used for the denormalised last result of a candidature.
+TonaliteDecision tonaliteDecision(String decision) {
+  final valeur = decision.trim().toUpperCase();
+  if (_prefixesNegatifs.any(valeur.startsWith) ||
+      _marqueursNegatifs.any(valeur.contains)) {
+    return TonaliteDecision.negative;
+  }
+  if (_marqueursPositifs.any(valeur.contains)) {
+    return TonaliteDecision.positive;
+  }
+  return TonaliteDecision.neutre;
+}
+
 class Resultat {
   const Resultat({
     required this.numeroPv,
@@ -71,20 +86,7 @@ class Resultat {
   final PhasePublication? phaseSuivanteAttendue;
   final DateTime? datePublicationPhase;
 
-  /// Negative forms first ("NON ADMIS" contains "ADMIS", "INAPTE" contains
-  /// "APTE"); a decision matching no rule is neutral, never shown as a
-  /// success.
-  TonaliteDecision get tonalite {
-    final valeur = decision.trim().toUpperCase();
-    if (_prefixesNegatifs.any(valeur.startsWith) ||
-        _marqueursNegatifs.any(valeur.contains)) {
-      return TonaliteDecision.negative;
-    }
-    if (_marqueursPositifs.any(valeur.contains)) {
-      return TonaliteDecision.positive;
-    }
-    return TonaliteDecision.neutre;
-  }
+  TonaliteDecision get tonalite => tonaliteDecision(decision);
 
   bool get estPositif => tonalite == TonaliteDecision.positive;
 }

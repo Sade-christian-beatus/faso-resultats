@@ -4,6 +4,7 @@ import '../../../config/theme.dart';
 import '../../consultation_rapide/domain/administration.dart';
 import '../../consultation_rapide/domain/examen.dart';
 import '../domain/candidature.dart';
+import 'dernier_resultat.dart';
 
 Future<void> ouvrirDetailCandidature(
   BuildContext context, {
@@ -33,11 +34,10 @@ Future<void> ouvrirDetailCandidature(
           _Ligne('Récépissé', candidature.numeroRecepisse),
           _Ligne('Statut', candidature.statutVerification.libelle),
           if (candidature.methodeVerification != null)
-            _Ligne('Méthode de vérification', candidature.methodeVerification!),
-          if (candidature.dernierResultatStatut != null)
-            _Ligne('Résultat', candidature.dernierResultatStatut!),
-          if (candidature.dernierResultatPhase != null)
-            _Ligne('Phase', candidature.dernierResultatPhase!),
+            _Ligne('Vérifiée par',
+                libelleMethodeVerification(candidature.methodeVerification!)),
+          const SizedBox(height: 8),
+          DernierResultat(candidature: candidature),
           const SizedBox(height: 12),
         ],
       ),
