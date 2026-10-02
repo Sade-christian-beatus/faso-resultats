@@ -295,6 +295,52 @@ async def test_upload_signale_les_colonnes_non_reconnues(
 
 
 @pytest.mark.asyncio
+async def test_publish_exige_la_confirmation_des_ecarts_du_fichier(
+    client: AsyncClient, admin_headers: dict
+) -> None:
+    """A file-level warning (here an unrecognised column; for a scanned list, an OCR
+    count gap) is not tied to a row: publishing it must be an explicit human decision,
+    recorded in the audit log, never a silent one."""
+    examen_id = await _creer_examen(client, admin_headers)
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.append(["Numéro PV", "Jury", "Nom", "Prénom", "Décision", "Adresse"])
+    feuille.append(["001", "Ouaga 1", "Traore", "Awa", "Admis", "Secteur 15"])
+    buffer = io.BytesIO()
+    classeur.save(buffer)
+    ingestion = (
+        await client.post(
+            "/api/v1/admin/ingestions",
+            data={"examen_id": examen_id, "type_fichier": "EXCEL"},
+            files={
+                "file": (
+                    "resultats.xlsx",
+                    buffer.getvalue(),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            headers=admin_headers,
+        )
+    ).json()
+    assert ingestion["erreurs_fichier"]
+
+    refus = await client.post(
+        f"/api/v1/admin/ingestions/{ingestion['id']}/publish", headers=admin_headers
+    )
+    assert refus.status_code == 409
+    assert "écarts à vérifier" in refus.json()["detail"]
+    assert "Adresse" in refus.json()["detail"]
+
+    publication = await client.post(
+        f"/api/v1/admin/ingestions/{ingestion['id']}/publish",
+        params={"confirmer_ecarts": "true"},
+        headers=admin_headers,
+    )
+    assert publication.status_code == 200
+    assert publication.json()["statut"] == "PUBLIEE"
+
+
+@pytest.mark.asyncio
 async def test_download_template_requires_auth(client: AsyncClient) -> None:
     response = await client.get("/api/v1/admin/ingestions/template")
 

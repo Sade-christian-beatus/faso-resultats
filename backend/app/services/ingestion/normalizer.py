@@ -68,13 +68,25 @@ def construire_mapping_colonnes(entetes_brutes: list[str]) -> dict[str, str]:
     return mapping
 
 
+# Row-order columns ("N°", "N° d'ordre") found in nearly every official list: knowingly
+# ignored, so they do not raise the file warning that publication asks the admin to
+# confirm (a warning raised on every import would end up confirmed without reading).
+_COLONNES_ORDRE_IGNOREES = frozenset({"n", "no", "n o", "ordre", "n d ordre", "numero d ordre"})
+
+
 def colonnes_non_reconnues(
     entetes_brutes: list[str], mapping_colonnes: dict[str, str]
 ) -> list[str]:
     """En-têtes présentes dans le fichier mais ignorées car aucun champ métier ne leur
     correspond — pour permettre à l'admin de corriger lui-même le nommage de ses colonnes
     plutôt que de nous demander une calibration à chaque nouveau format de document."""
-    return [entete for entete in entetes_brutes if entete and entete not in mapping_colonnes]
+    return [
+        entete
+        for entete in entetes_brutes
+        if entete
+        and entete not in mapping_colonnes
+        and normaliser_entete(entete) not in _COLONNES_ORDRE_IGNOREES
+    ]
 
 
 def message_colonnes_non_reconnues(non_reconnues: list[str]) -> str:

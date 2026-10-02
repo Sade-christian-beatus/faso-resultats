@@ -182,7 +182,15 @@
             </button>
           </div>
         </div>
-        <p id="apercu-erreurs-fichier" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hidden"></p>
+        <div id="bloc-erreurs-fichier" class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hidden">
+          <p id="apercu-erreurs-fichier"></p>
+          <!-- File-level warnings cannot be fixed row by row: publishing requires this
+               explicit, audit-logged confirmation (confirmer_ecarts). -->
+          <label class="mt-2 flex items-start gap-2 font-medium">
+            <input id="case-confirmer-ecarts" type="checkbox" class="mt-0.5" />
+            <span>J'ai vérifié ces écarts contre le document source officiel.</span>
+          </label>
+        </div>
         <p class="text-sm text-slate-500 mb-3">
           Corrigez directement les champs ci-dessous si besoin, puis cliquez sur
           « Enregistrer et publier » : vos corrections sont sauvegardées et les résultats

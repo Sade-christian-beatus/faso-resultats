@@ -23,7 +23,7 @@ function enTeteAuth() {
 function afficherMessageAuth(texte, estErreur = true) {
   messageAuth.innerHTML = `<p class="text-sm rounded-lg px-3 py-2.5 border ${
     estErreur ? "bg-red-50 text-red-700 border-red-200" : "bg-faso-50 text-faso-700 border-faso-200"
-  }">${texte}</p>`;
+  }">${escapeHtml(texte)}</p>`;
 }
 
 function viderMessageAuth() {
@@ -289,7 +289,12 @@ async function chargerExamensPourAjout() {
   try {
     etat.examens = await apiFetch("/api/v1/public/exams");
     select.innerHTML = etat.examens
-      .map((e) => `<option value="${e.id}|${e.administration_id}">${e.annee} — ${e.libelle}</option>`)
+      // Exam labels are typed by each administration's admins: escaped like every
+      // other value shown in the candidate space (a session token lives in this page).
+      .map(
+        (e) =>
+          `<option value="${escapeHtml(e.id)}|${escapeHtml(e.administration_id)}">${escapeHtml(e.annee)} — ${escapeHtml(e.libelle)}</option>`
+      )
       .join("");
   } catch (erreur) {
     select.innerHTML = '<option value="">Erreur de chargement</option>';
@@ -326,7 +331,7 @@ document.getElementById("form-ajout-candidature").addEventListener("submit", asy
     }
     chargerCandidatures();
   } catch (erreur) {
-    messageEl.innerHTML = `<p class="text-sm text-red-600">${erreur.message}</p>`;
+    messageEl.innerHTML = `<p class="text-sm text-red-600">${escapeHtml(erreur.message)}</p>`;
   }
 });
 

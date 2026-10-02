@@ -577,6 +577,18 @@ Après chaque étape majeure, produire un résumé structuré :
   « NON ADMIS » s'affichait en vert (`contains('ADMIS')`) et « APTE » en rouge ;
   la couleur de décision reprend désormais les règles du backend
   (`decision_negative`), une décision inconnue est neutre, jamais verte.
+- **2026-10-02 — Troisième audit complet** (`docs/AUDIT_2026-10-02.md`) :
+  backend 249 tests / 93 % de couverture, mobile 146 tests, tout le lint propre.
+  Corrigés dans la session : la publication exige désormais une **confirmation
+  explicite et journalisée des écarts de fichier** (`confirmer_ecarts`, ex. écart
+  de comptage OCR — point ouvert depuis le 2026-08-17 ; les colonnes « N° »
+  d'ordre ne déclenchent plus d'avertissement) ; XSS stocké dans l'espace
+  candidat web (libellés d'examen) ; cache mémoire de secours borné (10 000
+  entrées) ; mêmes couleurs de décision partout (`js/decision.js`). **Constat
+  majeur non corrigé : le projet n'a pas de configuration de production** (pas
+  de proxy `/api` dans nginx, compose de dev uniquement, limitation de débit qui
+  verrait tous les visiteurs comme une seule IP derrière un proxy) — priorité
+  n° 1 avant toute mise en ligne.
 
 ---
 

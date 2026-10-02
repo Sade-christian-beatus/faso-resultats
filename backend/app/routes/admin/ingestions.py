@@ -299,11 +299,15 @@ async def _refuser_doublons(
     "portent encore des erreurs (validation humaine obligatoire avant publication). "
     "Les résultats restent invisibles côté public tant que l'examen associé n'est pas "
     "lui-même publié (permet de préparer plusieurs jurys avant une mise en ligne "
-    "coordonnée, ex. jour de proclamation du BAC).",
+    "coordonnée, ex. jour de proclamation du BAC). Si l'analyse du fichier a signalé des "
+    "écarts (ex. nombre de lignes lues différent du nombre annoncé dans un communiqué "
+    "scanné), la publication exige `confirmer_ecarts=true` : l'admin atteste les avoir "
+    "vérifiés contre le document source.",
 )
 async def publish_ingestion(
     request: Request,
     ingestion_id: uuid.UUID,
+    confirmer_ecarts: bool = False,
     current_utilisateur: Utilisateur = Depends(get_current_utilisateur),
     administration: Administration = Depends(get_current_administration),
     db: AsyncSession = Depends(get_db),
@@ -320,6 +324,17 @@ async def publish_ingestion(
         )
     if not ingestion.apercu_donnees:
         raise HTTPException(status_code=400, detail="Aucune ligne à publier")
+    # File-level warnings (OCR count gap, unrecognised columns) are not tied to a row, so
+    # row correction cannot clear them. Publishing anyway is a human decision, never a
+    # silent one: a candidate missing from an OCR read would later be told "not on the
+    # list" once the phase is closed.
+    if ingestion.erreurs_fichier and not confirmer_ecarts:
+        raise HTTPException(
+            status_code=409,
+            detail="Le fichier présente des écarts à vérifier avant publication : "
+            + " ".join(ingestion.erreurs_fichier)
+            + " Vérifiez-les contre le document source, puis confirmez la publication.",
+        )
 
     examen = await db.get(Examen, ingestion.examen_id)
     try:
@@ -348,7 +363,11 @@ async def publish_ingestion(
         administration_id=administration.id,
         action=ActionAuditLog.PUBLISH_INGESTION,
         request=request,
-        details={"ingestion_id": str(ingestion.id)},
+        details={
+            "ingestion_id": str(ingestion.id),
+            # Traceability of the human decision to publish despite file warnings.
+            "ecarts_confirmes": list(ingestion.erreurs_fichier or []),
+        },
     )
     await db.commit()
     await db.refresh(ingestion)

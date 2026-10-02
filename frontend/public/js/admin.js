@@ -285,13 +285,13 @@ function renderApercu() {
   document.getElementById("apercu-statut").textContent =
     `${ingestion.statut}${phase} — ${ingestion.nombre_lignes_detectees} ligne(s), ${ingestion.nombre_erreurs} erreur(s)`;
 
-  const erreursFichierEl = document.getElementById("apercu-erreurs-fichier");
-  if (ingestion.erreurs_fichier && ingestion.erreurs_fichier.length) {
-    erreursFichierEl.textContent = ingestion.erreurs_fichier.join(" ");
-    erreursFichierEl.classList.remove("hidden");
-  } else {
-    erreursFichierEl.classList.add("hidden");
-  }
+  const blocErreursFichier = document.getElementById("bloc-erreurs-fichier");
+  const aDesEcarts = Boolean(ingestion.erreurs_fichier && ingestion.erreurs_fichier.length);
+  document.getElementById("apercu-erreurs-fichier").textContent = aDesEcarts
+    ? ingestion.erreurs_fichier.join(" ")
+    : "";
+  blocErreursFichier.classList.toggle("hidden", !aDesEcarts);
+  document.getElementById("case-confirmer-ecarts").checked = false;
 
   const corps = document.getElementById("corps-table-apercu");
   const classeChamp =
@@ -345,8 +345,9 @@ document.getElementById("btn-publier").addEventListener("click", async () => {
     });
     renderApercu();
 
+    const confirmerEcarts = document.getElementById("case-confirmer-ecarts").checked;
     etat.ingestionCourante = await apiFetch(
-      `/api/v1/admin/ingestions/${etat.ingestionCourante.id}/publish`,
+      `/api/v1/admin/ingestions/${etat.ingestionCourante.id}/publish?confirmer_ecarts=${confirmerEcarts}`,
       { method: "POST", headers: enTeteAuth() }
     );
     document.getElementById("apercu-statut").textContent = etat.ingestionCourante.statut;
