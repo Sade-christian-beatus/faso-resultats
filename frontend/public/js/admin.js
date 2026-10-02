@@ -337,6 +337,8 @@ function lireCorrectionsDepuisTable() {
 document.getElementById("btn-publier").addEventListener("click", async () => {
   const messageEl = document.getElementById("message-apercu");
   const lignes = lireCorrectionsDepuisTable();
+  // Read before saving: saving re-renders the preview, which unticks the box.
+  const confirmerEcarts = document.getElementById("case-confirmer-ecarts").checked;
   try {
     etat.ingestionCourante = await apiFetch(`/api/v1/admin/ingestions/${etat.ingestionCourante.id}`, {
       method: "PATCH",
@@ -345,7 +347,6 @@ document.getElementById("btn-publier").addEventListener("click", async () => {
     });
     renderApercu();
 
-    const confirmerEcarts = document.getElementById("case-confirmer-ecarts").checked;
     etat.ingestionCourante = await apiFetch(
       `/api/v1/admin/ingestions/${etat.ingestionCourante.id}/publish?confirmer_ecarts=${confirmerEcarts}`,
       { method: "POST", headers: enTeteAuth() }
