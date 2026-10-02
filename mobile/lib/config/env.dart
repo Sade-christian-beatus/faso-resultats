@@ -23,7 +23,13 @@ class EnvConfig {
           defaultValue: 'http://10.0.2.2:8000',
         );
       case Env.prod:
-        return 'https://api.fasoresultats.bf';
+        // Same origin as the web site: nginx forwards /api to the backend
+        // (deploy/nginx). The domain is not reserved yet (ROADMAP § hébergement):
+        // build with --dart-define=API_BASE_URL=https://<domaine> until it is.
+        return const String.fromEnvironment(
+          'API_BASE_URL',
+          defaultValue: 'https://fasoresultats.bf',
+        );
     }
   }
 }

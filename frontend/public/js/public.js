@@ -478,7 +478,11 @@ async function chargerDonnees() {
     zonePublications.innerHTML =
       '<li class="px-5 py-6 text-sm text-red-600">Impossible de charger la liste des examens.</li>';
     renderCategories();
-    afficherMessage("Impossible de charger la liste des examens. Vérifiez votre connexion et réessayez.");
+    afficherMessage(
+      examens.reason.status === 429
+        ? escapeHtml(examens.reason.message)
+        : "Impossible de charger la liste des examens. Vérifiez votre connexion et réessayez."
+    );
     return;
   }
   etat.examens = examens.value;
@@ -607,9 +611,11 @@ form.addEventListener("submit", async (event) => {
     afficherParcours(parcours);
   } catch (erreur) {
     afficherMessage(
-      erreur.message.includes("Aucun résultat")
-        ? "Aucun résultat trouvé pour ce numéro de PV. Vérifiez les informations saisies."
-        : "Une erreur est survenue. Veuillez réessayer dans quelques instants."
+      erreur.status === 429
+        ? escapeHtml(erreur.message)
+        : erreur.message.includes("Aucun résultat")
+          ? "Aucun résultat trouvé pour ce numéro de PV. Vérifiez les informations saisies."
+          : "Une erreur est survenue. Veuillez réessayer dans quelques instants."
     );
   }
 });

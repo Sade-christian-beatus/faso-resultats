@@ -30,7 +30,7 @@ faso-resultats/
 │   ├── seed.py                Peuple l'admin par défaut + examens d'exemple
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/public/          HTML/CSS/JS vanilla + Tailwind CDN, servi par nginx
+├── frontend/public/          HTML/CSS/JS vanilla + CSS Tailwind pré-généré, servi par nginx
 │   ├── index.html             Consultation publique
 │   ├── admin.html              Interface admin (login, examens, import)
 │   ├── candidat.html           Espace candidat
@@ -645,15 +645,25 @@ et examen) sont des étapes distinctes, contrôlées séparément.
 
 ## Frontend (`frontend/public/`)
 
-HTML/CSS/JS vanilla + Tailwind via CDN (`<script src="https://cdn.tailwindcss.com">`),
-conformément à la stack verrouillée. Aucun bundler, aucune dépendance npm.
+HTML/CSS/JS vanilla, servi tel quel par nginx (aucun bundler JS). Depuis le
+2026-10-02, le CSS Tailwind est **pré-généré** au lieu d'être compilé dans le
+navigateur par le script CDN (décision du développeur, suite à l'audit du
+2026-10-02 § 4.9) : une seule feuille `public/css/app.css` (≈ 30 Ko, ≈ 6 Ko
+compressée) partagée par les trois pages, aucun script à exécuter sur le
+téléphone pour styler la page, aucune dépendance à un serveur étranger.
 
-Identité visuelle (`docs/CHARTE_GRAPHIQUE.md`) partagée par les trois pages :
-`js/theme.js` (chargé juste après le CDN Tailwind) déclare la palette `faso-*`
-(échelle autour du vert officiel #00A651), `rouge`, `jaune`, `nuit`, `clair` et
-la police Poppins ; `css/brand.css` porte la barre tricolore, le logotype texte
-et le slogan, et sert aussi de filet de sécurité si le CDN Tailwind ne charge
-pas (pages lisibles et aux couleurs de la marque même sans utilitaires).
+- Source : `frontend/src/app.css` (polices Poppins auto-hébergées, styles de la
+  charte, animations) + `frontend/tailwind.config.js` (palette `faso-*` autour du
+  vert officiel #00A651, `rouge`, `jaune`, `nuit`, `clair`, police Poppins).
+- Régénération après toute modification du HTML, du JS ou de `src/app.css` :
+  `cd frontend && npm install && npm run build:css` (seul outil npm du projet,
+  Tailwind 3.4 épinglé, utilisé au développement uniquement). `app.css` est
+  commité ; la CI (`.github/workflows/frontend-ci.yml`) échoue s'il est obsolète.
+- Les classes sont trouvées en analysant le HTML et le JS : toujours les écrire
+  en entier dans le code (`"bg-red-700"`, jamais `` `bg-${couleur}-700` ``).
+- Aucun style ni script inline dans les pages : la politique de sécurité du
+  contenu de production (`deploy/nginx/snippets/security-headers.conf`) n'autorise
+  que les ressources servies par la plateforme.
 
 - **`index.html` + `js/public.js`** : page d'accueil publique, organisée selon
   la maquette web (2026-09-30) en 5 blocs : en-tête (navigation par catégorie,
@@ -701,12 +711,11 @@ conditions réelles de navigateur :
    `lireCorrectionsDepuisTable()` (`admin.js`), ce qui faisait planter
    l'insertion PostgreSQL (`NUMERIC(4,2)` refuse une chaîne vide) au moment
    de la publication. Corrigé.
-3. **`.hidden` de Tailwind dépend entièrement du CDN** : si le CDN est lent
-   ou indisponible (réaliste en 3G), la classe `hidden` ne fait plus rien et
-   le formulaire de connexion et le tableau de bord admin s'affichent
-   simultanément. Un filet de sécurité CSS inline (`<style>.hidden{display:none}</style>`)
-   a été ajouté pour que cet état reste correct indépendamment du CDN — la
-   mise en forme visuelle, elle, reste dégradée sans Tailwind.
+3. **`.hidden` de Tailwind dépendait entièrement du CDN** : si le CDN était
+   lent ou indisponible (réaliste en 3G), le formulaire de connexion et le
+   tableau de bord admin s'affichaient simultanément. Un filet de sécurité CSS
+   inline avait été ajouté ; devenu sans objet depuis le CSS pré-généré
+   (2026-10-02) et retiré.
 
 ### Rendu visuel
 
@@ -797,3 +806,22 @@ visuel). Pistes restantes avant une vraie mise en production :
 - Faire valider `docs/CIL.md` par la CIL / un professionnel du droit —
   plusieurs points (base légale, durée de conservation, responsable de
   traitement) y sont explicitement marqués comme non tranchés.
+
+## Déploiement (depuis le 2026-10-02)
+
+Procédure complète : `docs/DEPLOIEMENT.md`. Deux environnements Docker, mêmes
+règles nginx (`deploy/nginx/snippets/`) :
+
+| | Développement (`docker-compose.yml`) | Production (`docker-compose.prod.yml`) |
+|---|---|---|
+| Accès | `http://localhost:8080` (et `http://<IP du PC>:8080` depuis un téléphone) | `https://<domaine>` uniquement (HTTP redirigé, HSTS) |
+| API | `/api` via nginx ; aussi `:8000` (doc `/docs`) | `/api` via nginx uniquement ; `/docs` non exposé |
+| Code | monté depuis le poste, `--reload` | dans les images, utilisateur non-root |
+| Base / Redis | ports publiés pour le débogage (base) | jamais publiés |
+| Migrations | manuelles (`alembic upgrade head`) | service `migrate`, avant le démarrage de l'API |
+| Limitation de débit | compteurs en mémoire (1 processus) | compteurs dans Redis, partagés entre workers ; IP réelle via `--proxy-headers` |
+
+Le web appelle toujours l'API sur sa propre origine (`js/api.js`) : plus de
+port codé en dur, pas de CORS à gérer côté navigateur. L'app mobile utilise
+la même URL de base en production (`--dart-define=API_BASE_URL`, défaut
+`https://fasoresultats.bf`).

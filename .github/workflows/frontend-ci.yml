@@ -1,0 +1,64 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - "deploy/nginx/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "deploy/nginx/**"
+      - ".github/workflows/frontend-ci.yml"
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  css-and-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      # public/css/app.css is committed (the server only serves static files). A class
+      # used in the HTML/JS but missing from it would silently render unstyled.
+      - name: app.css is up to date
+        run: |
+          npm run build:css
+          git diff --exit-code -- public/css/app.css || {
+            echo "::error::public/css/app.css est obsolète : lancez 'npm run build:css' dans frontend/ et committez le résultat."
+            exit 1
+          }
+      - name: JavaScript syntax
+        run: for f in public/js/*.js; do node --check "$f"; done
+      # The production pages must not depend on any foreign server (CSP 'self').
+      - name: No external resources in the pages
+        run: |
+          if grep -nE '(src|href)="https?://' public/*.html; then
+            echo "::error::Ressource externe dans une page : tout doit être servi par la plateforme."
+            exit 1
+          fi
+
+  # The production web image (static files + nginx rules) must build and its
+  # configuration must be valid.
+  nginx-image:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/nginx/Dockerfile -t faso-web .
+      - name: nginx -t on the rendered production config
+        run: |
+          mkdir -p le/live/exemple.bf
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=exemple.bf" \
+            -keyout le/live/exemple.bf/privkey.pem -out le/live/exemple.bf/fullchain.pem
+          docker run --rm -e DOMAINE=exemple.bf --add-host backend:127.0.0.1 \
+            -v "$PWD/le:/etc/letsencrypt:ro" faso-web \
+            sh -c '/docker-entrypoint.d/20-envsubst-on-templates.sh && nginx -t'

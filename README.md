@@ -65,6 +65,13 @@ Les services disponibles :
 | API docs  | http://localhost:8000/docs   |
 | Health    | http://localhost:8000/health |
 
+Depuis un téléphone sur le même Wi-Fi : `http://<IP du PC>:8080` (nginx
+transmet `/api` au backend, comme en production).
+
+**Mise en production** (serveur, HTTPS, sauvegardes) : voir
+[`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md). Ne jamais lancer `seed.py` en
+production.
+
 Identifiants créés par le seed (voir `backend/seed.py`) :
 
 | Compte | Email | Mot de passe |
@@ -101,6 +108,19 @@ python seed.py
 uvicorn app.main:app --reload
 ```
 
+## Styles du site web
+
+Le CSS des pages (`frontend/public/css/app.css`) est pré-généré avec Tailwind.
+Après toute modification du HTML, du JS ou de `frontend/src/app.css` :
+
+```bash
+cd frontend
+npm install        # une seule fois
+npm run build:css  # ou npm run watch:css pendant le développement
+```
+
+Committer `public/css/app.css` : la CI échoue s'il n'est pas à jour.
+
 ## Tests
 
 ```powershell
@@ -122,7 +142,9 @@ check`, downgrade complet, ré-upgrade).
 ```
 faso-resultats/
 ├── backend/           FastAPI + SQLAlchemy
-├── frontend/          HTML/CSS/JS vanilla
+├── frontend/          HTML/CSS/JS vanilla (CSS Tailwind pré-généré)
+├── deploy/            Production : nginx, réglages, sauvegarde
+├── docker-compose.prod.yml
 ├── docs/              Documentation technique
 └── docker-compose.yml
 ```

@@ -1,0 +1,45 @@
+# Production site. Rendered at container start by the nginx image (envsubst on
+# ${DOMAINE}); nginx variables are written $var (no braces) so they are left alone.
+# See docs/DEPLOIEMENT.md.
+# IPv4 only inside the container: docker networks have no IPv6 by default and nginx
+# refuses to start on "listen [::]" there. Docker still publishes ports 80/443 on the
+# host's IPv4 and IPv6 addresses.
+
+upstream backend_api {
+    server backend:8000;
+    keepalive 16;
+}
+
+# HTTP: only the Let's Encrypt challenge, everything else goes to HTTPS.
+server {
+    listen 80;
+    server_name ${DOMAINE};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAINE};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAINE}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAINE}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    server_tokens off;
+    include /etc/nginx/snippets/security-headers.conf;
+    # HTTPS only from now on for a year (browsers refuse plain HTTP afterwards).
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    include /etc/nginx/snippets/api.conf;
+    include /etc/nginx/snippets/static.conf;
+}

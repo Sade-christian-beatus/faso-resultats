@@ -68,7 +68,7 @@
 | Parsing Excel | openpyxl | |
 | Tests | pytest + httpx | |
 | Formatage | black (line length 100) + ruff | |
-| Frontend web | HTML/CSS/JS vanilla + Tailwind CDN | Objectif < 500 Ko |
+| Frontend web | HTML/CSS/JS vanilla + Tailwind (CSS pré-généré, `npm run build:css`) | Objectif < 500 Ko ; CDN abandonné le 2026-10-02 |
 | Conteneurisation | Docker + docker-compose | Impératif pour portabilité |
 | Versionnement | Git + GitHub (repo privé) | |
 
@@ -589,6 +589,25 @@ Après chaque étape majeure, produire un résumé structuré :
   de proxy `/api` dans nginx, compose de dev uniquement, limitation de débit qui
   verrait tous les visiteurs comme une seule IP derrière un proxy) — priorité
   n° 1 avant toute mise en ligne.
+- **2026-10-02 — Configuration de production et CSS pré-généré**, sur décision
+  du développeur après l'audit du même jour. `docker-compose.prod.yml` + `deploy/`
+  (nginx : HTTPS Let's Encrypt, HSTS, CSP stricte `'self'`, gzip, cache, proxy
+  `/api`), migrations dans un service dédié, API non-root avec
+  `--proxy-headers` et compteurs de limitation dans Redis, script de création du
+  premier super-admin (`creer_super_admin.py`, jamais `seed.py` en production),
+  script de sauvegarde. Procédure : `docs/DEPLOIEMENT.md`. **Testé de bout en
+  bout dans Docker** (pas seulement relu) : un visiteur bloqué ne contourne pas la
+  limite en falsifiant `X-Forwarded-For` et n'en bloque pas un autre ; sauvegarde
+  **restaurée** avec succès. Bugs trouvés par ces tests : nginx ne démarrait pas
+  (écoute IPv6 sur un réseau Docker sans IPv6) ; les projets compose dev et prod
+  portaient le même nom (conteneurs et volumes partagés) ; la case « écarts
+  vérifiés » de l'admin était décochée avant d'être lue. **Stack modifiée** :
+  Tailwind n'est plus chargé par CDN mais compilé en `public/css/app.css`
+  (≈ 30 Ko pour les 3 pages, commité, vérifié par `frontend-ci.yml`) ; Poppins
+  auto-hébergée ; plus aucune ressource externe dans les pages. Le web appelle
+  l'API sur sa propre origine (aussi en développement : le site marche depuis un
+  téléphone sur le même Wi-Fi). Pages admin et candidat : `<!DOCTYPE>` et
+  `lang="fr"` manquants ajoutés (rendu en mode quirks jusque-là).
 
 ---
 

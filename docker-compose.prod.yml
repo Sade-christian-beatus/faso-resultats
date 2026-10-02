@@ -1,0 +1,112 @@
+# Production stack — see docs/DEPLOIEMENT.md for the full procedure.
+#
+#   docker compose -f docker-compose.prod.yml --env-file deploy/production.env up -d --build
+#
+# Differences with docker-compose.yml (development):
+# - only the web server is reachable from outside (ports 80/443); the database, Redis
+#   and the API stay on the internal docker network;
+# - no source code mounted, no --reload: the images contain the code;
+# - HTTPS (Let's Encrypt) and security headers in nginx (deploy/nginx);
+# - migrations run once, before the API starts (service "migrate");
+# - rate-limit counters shared in Redis between the API workers.
+
+# Distinct from the development project ("faso-resultats", the folder name): both can
+# never share containers or volumes, even on the same machine.
+name: faso-resultats-prod
+
+x-backend: &backend
+  build: ./backend
+  restart: unless-stopped
+  env_file: deploy/production.env
+  environment:
+    ENVIRONMENT: production
+    DATABASE_URL: postgresql+asyncpg://faso:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans deploy/production.env}@db:5432/faso_resultats
+    REDIS_URL: redis://redis:6379/0
+    RATE_LIMIT_STORAGE_URI: redis://redis:6379/1
+    CORS_ORIGINS: https://${DOMAINE:?DOMAINE manquant dans deploy/production.env}
+    UPLOADS_DIR: /app/uploads
+  volumes:
+    - uploads_data:/app/uploads
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: faso_resultats
+      POSTGRES_USER: faso
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans deploy/production.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faso -d faso_resultats"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Cache and rate-limit counters only: nothing worth persisting to disk.
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/nginx/Dockerfile
+    restart: unless-stopped
+    environment:
+      DOMAINE: ${DOMAINE}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Certificate tool, never started by "up" (profile). First certificate and renewal:
+  # see docs/DEPLOIEMENT.md § HTTPS.
+  certbot:
+    image: certbot/certbot
+    profiles: ["outils"]
+    ports:
+      - "80:80"
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+
+volumes:
+  postgres_data:
+  uploads_data:
+  letsencrypt:
+  certbot_webroot:

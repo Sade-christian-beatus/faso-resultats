@@ -65,6 +65,11 @@ class Settings(BaseSettings):
 
     rate_limit_public: str = "30/minute"
     rate_limit_login: str = "5/minute"
+    # Where request counters live. "memory://" counts per process: fine for one dev
+    # server, wrong with several uvicorn workers (each worker gets its own quota). In
+    # production, point it at Redis (e.g. redis://redis:6379/1) so all workers share
+    # the counters.
+    rate_limit_storage_uri: str = "memory://"
     # Verrouillage de compte admin après échecs répétés (audit 2026-08-17) :
     # indépendant du rate-limit IP ci-dessus, qui ne protège pas contre un
     # brute-force distribué sur plusieurs IP visant un seul compte.

@@ -49,12 +49,19 @@ services:
       redis:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # The image runs as a non-root user in production; in development the source is
+    # mounted from the host and existing volumes may belong to root.
+    user: root
 
   frontend:
     image: nginx:alpine
     restart: unless-stopped
     volumes:
       - ./frontend/public:/usr/share/nginx/html:ro
+      # Same nginx rules as production (deploy/nginx): /api is forwarded to the
+      # backend, so the pages call the API on their own origin.
+      - ./deploy/nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/snippets:/etc/nginx/snippets:ro
     ports:
       - "8080:80"
     depends_on:
