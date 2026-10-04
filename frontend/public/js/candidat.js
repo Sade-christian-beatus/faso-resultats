@@ -2,7 +2,34 @@ const etat = {
   token: localStorage.getItem("faso_candidat_token") || null,
   telephoneEnCoursDeValidation: null,
   examens: [],
+  administrations: new Map(),
 };
+
+const TEXTE_SALUTATION_DEFAUT = "Tous vos examens et concours au même endroit.";
+const DATE_FR = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+const LIBELLES_TYPE_EXAMEN = {
+  BAC_GENERAL: "BAC général",
+  BAC_TECHNOLOGIQUE: "BAC technologique",
+  BAC_PROFESSIONNEL: "BAC professionnel",
+  CONCOURS_DIRECT: "Concours direct",
+  CD_CATEGORIE_A: "Concours direct cat. A",
+  CD_CATEGORIE_B: "Concours direct cat. B",
+  CD_CATEGORIE_C: "Concours direct cat. C",
+  CD_CATEGORIE_D: "Concours direct cat. D",
+  CONCOURS_PROFESSIONNEL: "Concours professionnel",
+  ARMEE: "Armée",
+  POLICE: "Police",
+  DOUANES: "Douanes",
+  GENDARMERIE: "Gendarmerie",
+  EAUX_FORETS: "Eaux et forêts",
+  SECURITE_PENITENTIAIRE: "Sécurité pénitentiaire",
+  AUTRE: "Autre",
+};
+
+function titreExamen(examen) {
+  return `${LIBELLES_TYPE_EXAMEN[examen.type_examen] || examen.type_examen} ${examen.annee}`;
+}
 
 const sectionAuth = document.getElementById("section-auth");
 const sectionDashboard = document.getElementById("section-dashboard");
@@ -39,6 +66,7 @@ function afficherConnecte(connecte) {
 function deconnecter() {
   etat.token = null;
   localStorage.removeItem("faso_candidat_token");
+  document.getElementById("salutation").textContent = TEXTE_SALUTATION_DEFAUT;
   afficherConnecte(false);
   formConnexion.classList.remove("hidden");
   formInscription.classList.add("hidden");
@@ -195,7 +223,10 @@ function rendreDernierResultat(c) {
     return `${libellePhase}<p class="text-sm text-slate-700">Toutes les listes de cette phase sont publiées : vous n'y figurez pas.</p>`;
   }
   const couleur = styleDecision(c.dernier_resultat_statut).texte;
-  return `${libellePhase}<p class="${phase ? "" : "mt-2 "}text-lg font-semibold ${couleur}">${escapeHtml(c.dernier_resultat_statut)}</p>`;
+  const date = c.dernier_resultat_publie_at
+    ? `<p class="text-xs text-slate-500">Publié le ${DATE_FR.format(new Date(c.dernier_resultat_publie_at))}</p>`
+    : "";
+  return `${libellePhase}<p class="${phase ? "" : "mt-2 "}text-lg font-semibold ${couleur}">${escapeHtml(c.dernier_resultat_statut)}</p>${date}`;
 }
 
 function rendreCandidatures(candidatures) {
@@ -208,14 +239,22 @@ function rendreCandidatures(candidatures) {
   zone.innerHTML = candidatures
     .map((c) => {
       const attenteOtp = attenteConfirmationOtp(c);
+      const examen = etat.examens.find((e) => e.id === c.examen_id);
+      const administration = etat.administrations.get(c.administration_id);
       const style = attenteOtp
         ? { texte: "Confirmation par code requise", classe: "bg-sky-100 text-sky-800" }
         : STYLE_STATUT[c.statut_verification] || STYLE_STATUT.EN_ATTENTE;
       return `
-      <div class="carte-candidature bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-sm text-slate-500">Récépissé n° ${escapeHtml(c.numero_recepisse)}</p>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${style.classe}">${style.texte}</span>
+      <div class="carte-candidature bg-white rounded-2xl ring-1 ring-slate-200 p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="font-semibold text-nuit">${escapeHtml(examen ? titreExamen(examen) : "Examen")}</p>
+            <p class="text-xs text-slate-500 truncate">${escapeHtml(examen ? examen.libelle : "")}${
+              administration ? ` · ${escapeHtml(administration.sigle)}` : ""
+            }</p>
+            <p class="text-xs text-slate-500 mt-1">Récépissé n° ${escapeHtml(c.numero_recepisse)}</p>
+          </div>
+          <span class="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${style.classe}">${style.texte}</span>
         </div>
         ${rendreDernierResultat(c)}
         ${
@@ -240,6 +279,7 @@ function rendreCandidatures(candidatures) {
 
   zone.querySelectorAll(".btn-retirer-candidature").forEach((bouton) => {
     bouton.addEventListener("click", async () => {
+      if (!window.confirm("Retirer cette candidature de votre espace ? Votre résultat reste consultable par numéro de PV.")) return;
       try {
         await apiFetch(`/api/v1/candidat/candidatures/${bouton.dataset.id}`, {
           method: "DELETE",
@@ -279,6 +319,12 @@ async function chargerCandidatures() {
     const candidatures = await apiFetch("/api/v1/candidat/candidatures", { headers: enTeteAuth() });
     rendreCandidatures(candidatures);
   } catch (erreur) {
+    if (erreur.status === 401) {
+      // Session expired (30 days) or account deleted elsewhere: back to sign-in.
+      deconnecter();
+      afficherMessageAuth("Votre session a expiré. Connectez-vous à nouveau.");
+      return;
+    }
     document.getElementById("zone-candidatures").innerHTML =
       '<p class="text-sm text-red-600 px-1">Impossible de charger vos candidatures.</p>';
   }
@@ -287,13 +333,20 @@ async function chargerCandidatures() {
 async function chargerExamensPourAjout() {
   const select = document.getElementById("ajout-examen");
   try {
-    etat.examens = await apiFetch("/api/v1/public/exams");
+    const [examens, administrations] = await Promise.all([
+      apiFetch("/api/v1/public/exams"),
+      apiFetch("/api/v1/public/administrations").catch(() => []),
+    ]);
+    etat.examens = examens;
+    etat.administrations = new Map(administrations.map((a) => [a.id, a]));
     select.innerHTML = etat.examens
       // Exam labels are typed by each administration's admins: escaped like every
       // other value shown in the candidate space (a session token lives in this page).
       .map(
         (e) =>
-          `<option value="${escapeHtml(e.id)}|${escapeHtml(e.administration_id)}">${escapeHtml(e.annee)} — ${escapeHtml(e.libelle)}</option>`
+          `<option value="${escapeHtml(e.id)}|${escapeHtml(e.administration_id)}">${escapeHtml(titreExamen(e))} — ${escapeHtml(e.libelle)}${
+            etat.administrations.get(e.administration_id) ? ` (${escapeHtml(etat.administrations.get(e.administration_id).sigle)})` : ""
+          }</option>`
       )
       .join("");
   } catch (erreur) {
@@ -335,9 +388,60 @@ document.getElementById("form-ajout-candidature").addEventListener("submit", asy
   }
 });
 
+// Exams first: each candidature card shows its exam's name.
 async function chargerDashboard() {
-  await Promise.all([chargerCandidatures(), chargerExamensPourAjout()]);
+  await chargerExamensPourAjout();
+  await Promise.all([chargerCandidatures(), chargerSalutation()]);
 }
+
+async function chargerSalutation() {
+  try {
+    const profil = await apiFetch("/api/v1/candidat/me", { headers: enTeteAuth() });
+    document.getElementById("salutation").textContent = `Bonjour ${profil.nom_complet}.`;
+  } catch (erreur) {
+    // The greeting is cosmetic; an expired session is handled by chargerCandidatures.
+  }
+}
+
+// --- Mes données (CIL rights: portability and erasure) ---
+
+const messageDonnees = document.getElementById("message-donnees");
+
+document.getElementById("btn-exporter-donnees").addEventListener("click", async () => {
+  messageDonnees.className = "text-xs mt-3 text-slate-500";
+  messageDonnees.textContent = "Préparation…";
+  try {
+    const donnees = await apiFetch("/api/v1/candidat/me/export", { headers: enTeteAuth() });
+    const fichier = new Blob([JSON.stringify(donnees, null, 2)], { type: "application/json" });
+    const lien = document.createElement("a");
+    lien.href = URL.createObjectURL(fichier);
+    lien.download = "mes-donnees-faso-resultats.json";
+    lien.click();
+    URL.revokeObjectURL(lien.href);
+    messageDonnees.textContent = "Fichier téléchargé.";
+  } catch (erreur) {
+    messageDonnees.className = "text-xs mt-3 text-red-700";
+    messageDonnees.textContent = "Téléchargement impossible. Réessayez dans quelques instants.";
+  }
+});
+
+document.getElementById("btn-supprimer-compte").addEventListener("click", async () => {
+  const confirme = window.confirm(
+    "Supprimer définitivement votre espace candidat ?\n\n" +
+      "Votre profil, vos candidatures et leur historique sont effacés immédiatement. " +
+      "Les résultats publiés par les administrations ne sont pas concernés : vous pourrez " +
+      "toujours les consulter par numéro de PV."
+  );
+  if (!confirme) return;
+  try {
+    await apiFetch("/api/v1/candidat/me", { method: "DELETE", headers: enTeteAuth() });
+    deconnecter();
+    afficherMessageAuth("Votre espace candidat a été supprimé.", false);
+  } catch (erreur) {
+    messageDonnees.className = "text-xs mt-3 text-red-700";
+    messageDonnees.textContent = "Suppression impossible. Réessayez dans quelques instants.";
+  }
+});
 
 // --- Démarrage ---
 

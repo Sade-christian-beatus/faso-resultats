@@ -609,6 +609,8 @@ form.addEventListener("submit", async (event) => {
     const parcours = await apiFetch(`/api/v1/public/results/progress?${params.toString()}`);
     viderMessage();
     afficherParcours(parcours);
+    // On a phone the result lands below the fold: bring it into view.
+    zoneResultats.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (erreur) {
     afficherMessage(
       erreur.status === 429
