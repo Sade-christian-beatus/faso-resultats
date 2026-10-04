@@ -105,8 +105,10 @@ Le mot de passe (12 caractères minimum) est saisi sans s'afficher. **Ne
 jamais lancer `seed.py` en production** : il crée des administrations, des
 résultats fictifs et des comptes au mot de passe public.
 
-Ensuite, depuis `https://<domaine>/admin.html` : créer les administrations
-clientes et leurs comptes admin.
+Ensuite, se connecter avec ce compte sur `https://<domaine>/admin.html` :
+la section **Plateforme** permet d'ajouter les administrations clientes, de
+créer le compte de leurs agents (mot de passe provisoire à transmettre de vive
+voix) et de changer leur statut (pilote, actif, suspendu, résilié).
 
 ## 7. Vérifier
 
@@ -127,7 +129,23 @@ Les certificats Let's Encrypt durent 90 jours. Tâche `cron` du serveur
 17 3,15 * * * cd /opt/faso-resultats && docker compose -f docker-compose.prod.yml --env-file deploy/production.env run --rm certbot renew --webroot -w /var/www/certbot --quiet && docker compose -f docker-compose.prod.yml --env-file deploy/production.env exec web nginx -s reload
 ```
 
-## 9. Sauvegardes
+## 9. Purge quotidienne des données candidat
+
+Supprime les espaces candidat inactifs et les candidatures liées à une
+administration résiliée depuis plus de 6 mois (`backend/purge_candidats.py`,
+durées dans `docs/CIL_PROFIL_CANDIDAT.md` § 5). C'est ce que promet la
+politique de confidentialité publiée sur le site : à planifier dès la mise en
+service.
+
+```cron
+10 2 * * * cd /opt/faso-resultats && docker compose -f docker-compose.prod.yml --env-file deploy/production.env run --rm backend python purge_candidats.py >> /var/log/faso-purge.log 2>&1
+```
+
+Les journaux des conteneurs (adresses IP, numéros de PV recherchés) sont
+limités à 5 fichiers de 10 Mo par service (`docker-compose.prod.yml`) :
+ils ne s'accumulent jamais indéfiniment.
+
+## 10. Sauvegardes
 
 ```cron
 40 2 * * * /opt/faso-resultats/deploy/sauvegarde.sh /var/backups/faso-resultats >> /var/log/faso-sauvegarde.log 2>&1
@@ -145,7 +163,7 @@ docker compose -f docker-compose.prod.yml --env-file deploy/production.env exec 
   pg_restore -U faso -d faso_resultats --clean --if-exists < /var/backups/faso-resultats/base-AAAAMMJJ-HHMM.dump
 ```
 
-## 10. Mettre à jour la plateforme
+## 11. Mettre à jour la plateforme
 
 ```bash
 cd /opt/faso-resultats
