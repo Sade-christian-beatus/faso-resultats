@@ -33,10 +33,44 @@ function enTeteAuth() {
   return { Authorization: `Bearer ${etat.token}` };
 }
 
+const sectionPlateforme = document.getElementById("section-plateforme");
+
 function afficherConnecte(connecte) {
   sectionConnexion.classList.toggle("hidden", connecte);
-  sectionAdmin.classList.toggle("hidden", !connecte);
   btnDeconnexion.classList.toggle("hidden", !connecte);
+  document.getElementById("admin-identite").classList.toggle("hidden", !connecte);
+  if (!connecte) {
+    sectionAdmin.classList.add("hidden");
+    sectionPlateforme.classList.add("hidden");
+  }
+}
+
+// Opens the right dashboard for the signed-in account: an administration's agents get
+// exams and imports; platform accounts (SUPER_ADMIN, not attached to an administration)
+// get the management of administrations. Before, a super-admin was sent to the
+// administration routes, got an error and read "Email ou mot de passe incorrect".
+async function demarrerSession() {
+  const moi = await apiFetch("/api/v1/admin/me", { headers: enTeteAuth() });
+  etat.moi = moi;
+  afficherConnecte(true);
+  document.getElementById("admin-nom").textContent = moi.nom_complet;
+  const estPlateforme = !moi.administration_id;
+  sectionAdmin.classList.toggle("hidden", estPlateforme);
+  sectionPlateforme.classList.toggle("hidden", !estPlateforme);
+  if (estPlateforme) {
+    document.getElementById("admin-administration").textContent = "Plateforme Faso Résultats";
+    await chargerPlateforme();
+    return;
+  }
+  await chargerExamens();
+  // Header label only: the dashboard works without it.
+  try {
+    const liste = await apiFetch("/api/v1/public/administrations");
+    const trouvee = liste.find((a) => a.id === moi.administration_id);
+    document.getElementById("admin-administration").textContent = trouvee ? trouvee.sigle : "Administration";
+  } catch (erreur) {
+    document.getElementById("admin-administration").textContent = "Administration";
+  }
 }
 
 function deconnecter() {
@@ -55,18 +89,27 @@ document.getElementById("form-connexion").addEventListener("submit", async (even
   const email = document.getElementById("input-email").value.trim();
   const password = document.getElementById("input-password").value;
 
+  let reponse;
   try {
-    const reponse = await apiFetch("/api/v1/admin/login", {
+    reponse = await apiFetch("/api/v1/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    etat.token = reponse.access_token;
-    sessionStorage.setItem("faso_admin_token", etat.token);
-    afficherConnecte(true);
-    await chargerExamens();
   } catch (erreur) {
-    messageEl.textContent = "Email ou mot de passe incorrect.";
+    // 401: wrong credentials; 423/429: account locked or too many attempts — the API
+    // message says which, in French.
+    messageEl.textContent =
+      erreur.status === 401 ? "Email ou mot de passe incorrect." : erreur.message;
+    return;
+  }
+  etat.token = reponse.access_token;
+  sessionStorage.setItem("faso_admin_token", etat.token);
+  try {
+    await demarrerSession();
+  } catch (erreur) {
+    deconnecter();
+    messageEl.textContent = "Connexion réussie, mais le tableau de bord n'a pas pu se charger. Réessayez.";
   }
 });
 
@@ -77,9 +120,40 @@ btnDeconnexion.addEventListener("click", deconnecter);
 const LIBELLES_EXAMEN = {
   CEP: "CEP",
   BEPC: "BEPC",
+  BEP: "BEP",
+  CAP: "CAP",
   BAC: "BAC",
+  BAC_GENERAL: "BAC général",
+  BAC_TECHNOLOGIQUE: "BAC technologique",
+  BAC_PROFESSIONNEL: "BAC professionnel",
+  CQP: "CQP",
+  BQP: "BQP",
+  BPT: "BPT",
   CONCOURS_DIRECT: "Concours direct",
+  CD_CATEGORIE_A: "Concours direct cat. A",
+  CD_CATEGORIE_B: "Concours direct cat. B",
+  CD_CATEGORIE_C: "Concours direct cat. C",
+  CD_CATEGORIE_D: "Concours direct cat. D",
+  CONCOURS_PROFESSIONNEL: "Concours professionnel",
+  ARMEE: "Armée",
+  POLICE: "Police",
+  DOUANES: "Douanes",
+  GENDARMERIE: "Gendarmerie",
+  EAUX_FORETS: "Eaux et forêts",
+  SECURITE_PENITENTIAIRE: "Sécurité pénitentiaire",
+  AUTRE: "Autre",
 };
+
+const LIBELLES_STATUT_EXAMEN = { DRAFT: "Brouillon", PUBLISHED: "Publié" };
+
+// Publishing an exam makes all its published lists visible to every candidate at once:
+// always an explicit, confirmed action.
+function confirmerPublicationExamen(examen) {
+  const nom = examen ? `${LIBELLES_EXAMEN[examen.type_examen] || examen.type_examen} ${examen.annee} — ${examen.libelle}` : "cet examen";
+  return window.confirm(
+    `Publier « ${nom} » ?\n\nLes résultats déjà importés deviennent immédiatement consultables par tous les candidats.`
+  );
+}
 
 async function chargerExamens() {
   etat.examens = await apiFetch("/api/v1/admin/exams", { headers: enTeteAuth() });
@@ -119,7 +193,7 @@ function renderExamens() {
         <td>
           <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
             e.statut === "PUBLISHED" ? "bg-faso-100 text-faso-700" : "bg-slate-100 text-slate-600"
-          }">${e.statut}</span>
+          }">${escapeHtml(LIBELLES_STATUT_EXAMEN[e.statut] || e.statut)}</span>
         </td>
         <td class="text-right">
           ${
@@ -134,6 +208,7 @@ function renderExamens() {
 
   corps.querySelectorAll(".btn-publier-examen").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      if (!confirmerPublicationExamen(etat.examens.find((e) => e.id === btn.dataset.id))) return;
       await apiFetch(`/api/v1/admin/exams/${btn.dataset.id}/publish`, {
         method: "POST",
         headers: enTeteAuth(),
@@ -372,6 +447,7 @@ async function afficherMessagePublicationTerminee(messageEl) {
         Publier l'examen maintenant
       </button>`;
     document.getElementById("btn-publier-examen-maintenant").addEventListener("click", async () => {
+      if (!confirmerPublicationExamen(examen)) return;
       await apiFetch(`/api/v1/admin/exams/${examen.id}/publish`, {
         method: "POST",
         headers: enTeteAuth(),
@@ -385,6 +461,7 @@ async function afficherMessagePublicationTerminee(messageEl) {
 }
 
 document.getElementById("btn-rejeter").addEventListener("click", async () => {
+  if (!window.confirm("Rejeter cet import ? Aucun résultat ne sera créé ; il faudra importer le fichier à nouveau.")) return;
   await apiFetch(`/api/v1/admin/ingestions/${etat.ingestionCourante.id}/reject`, {
     method: "POST",
     headers: enTeteAuth(),
@@ -395,8 +472,7 @@ document.getElementById("btn-rejeter").addEventListener("click", async () => {
 // --- Démarrage ---
 
 if (etat.token) {
-  afficherConnecte(true);
-  chargerExamens().catch(deconnecter);
+  demarrerSession().catch(deconnecter);
 } else {
   afficherConnecte(false);
 }

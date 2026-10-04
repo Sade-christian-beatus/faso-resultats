@@ -16,12 +16,16 @@ async function apiFetch(path, options = {}) {
     body = null;
   }
   if (!response.ok) {
-    // Rate limit reached (proclamation day): the visitor only has to wait, say so.
+    // The API's own French message when there is one (e.g. "account locked" on admin
+    // login). The rate limiter answers 429 without one: then the visitor only has to
+    // wait (proclamation day), say so.
     const message =
-      response.status === 429
-        ? MESSAGE_TROP_DE_REQUETES
-        : (body && body.detail) || "Une erreur est survenue. Veuillez réessayer.";
-    const erreur = new Error(typeof message === "string" ? message : JSON.stringify(message));
+      (body && body.detail) ||
+      (response.status === 429 ? MESSAGE_TROP_DE_REQUETES : "Une erreur est survenue. Veuillez réessayer.");
+    // A list means a field validation error (422): never show raw JSON to a person.
+    const erreur = new Error(
+      typeof message === "string" ? message : "Certaines informations saisies ne sont pas valides. Vérifiez-les."
+    );
     erreur.status = response.status;
     throw erreur;
   }

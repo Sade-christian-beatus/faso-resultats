@@ -6,177 +6,212 @@
 <title>Faso Résultats — Administration</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
 <meta name="theme-color" content="#007A3D" />
 <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="css/app.css" />
 </head>
-<body class="bg-clair text-nuit min-h-screen">
+<body class="bg-clair text-nuit min-h-screen flex flex-col">
   <div class="barre-drapeau"></div>
 
-  <div class="max-w-4xl mx-auto px-4 py-8">
-    <header class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <img src="assets/logo-symbole.webp" alt="" width="40" height="40" class="w-10 h-10 shrink-0" />
-        <div>
-          <h1 class="logo-texte text-lg"><span class="logo-faso">Faso</span><span class="logo-etoile" aria-hidden="true">★</span> <span class="logo-resultats">Résultats</span></h1>
-          <p class="text-xs text-slate-500">Espace administration</p>
-        </div>
-      </div>
-      <button
-        id="btn-deconnexion"
-        class="text-sm text-slate-500 hover:text-red-600 transition hidden"
-      >
-        Se déconnecter
-      </button>
-    </header>
-
-    <!-- Connexion -->
-    <section id="section-connexion" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 max-w-sm mx-auto">
-      <h2 class="font-semibold text-slate-800 mb-4">Connexion</h2>
-      <form id="form-connexion" class="space-y-3">
-        <input
-          id="input-email"
-          type="email"
-          required
-          placeholder="Email"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition"
-        />
-        <input
-          id="input-password"
-          type="password"
-          required
-          placeholder="Mot de passe"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500 transition"
-        />
-        <button
-          type="submit"
-          class="w-full bg-faso-700 text-white font-medium rounded-lg px-4 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition shadow-sm"
-        >
-          Se connecter
+  <header class="bg-white border-b border-slate-100">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <a href="index.html" class="flex items-center gap-3 min-w-0" aria-label="Faso Résultats — accueil du site">
+        <img src="assets/logo.webp" alt="" width="720" height="354" class="h-10 sm:h-11 w-auto shrink-0" />
+        <span class="hidden sm:block text-sm text-slate-500 border-l border-slate-200 pl-3">Espace administration</span>
+      </a>
+      <div class="flex items-center gap-3 min-w-0">
+        <p id="admin-identite" class="hidden text-right text-xs leading-tight min-w-0">
+          <strong id="admin-administration" class="block text-sm text-nuit truncate"></strong>
+          <span id="admin-nom" class="hidden sm:block text-slate-500 truncate"></span>
+        </p>
+        <button id="btn-deconnexion" type="button" class="hidden shrink-0 text-sm text-slate-600 border border-slate-200 rounded-full px-3 py-1.5 hover:text-red-700 hover:border-red-200 transition">
+          Se déconnecter
         </button>
-      </form>
-      <p id="message-connexion" class="text-sm text-red-600 mt-3"></p>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-5xl mx-auto px-4 py-8">
+    <!-- Connexion -->
+    <section id="section-connexion" class="max-w-sm mx-auto">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold tracking-tight">Espace administration</h1>
+        <p class="text-sm text-slate-600 mt-1">Réservé aux agents des administrations partenaires.</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-6">
+        <form id="form-connexion" class="space-y-4">
+          <div>
+            <label for="input-email" class="block text-sm font-medium text-slate-700 mb-1">Adresse e-mail</label>
+            <input id="input-email" type="email" required autocomplete="username" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+          </div>
+          <div>
+            <label for="input-password" class="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
+            <input id="input-password" type="password" required autocomplete="current-password" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+          </div>
+          <button type="submit" class="w-full bg-faso-700 text-white font-medium rounded-lg px-4 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition shadow-sm">
+            Se connecter
+          </button>
+        </form>
+        <p id="message-connexion" class="text-sm text-red-700 mt-3" role="alert"></p>
+      </div>
+      <p class="text-xs text-slate-500 text-center mt-4">
+        Après plusieurs échecs, le compte est verrouillé temporairement par sécurité.
+      </p>
     </section>
 
     <!-- Tableau de bord admin -->
     <section id="section-admin" class="hidden space-y-6">
+      <!-- Étapes de publication : rappel du circuit obligatoire (validation humaine) -->
+      <ol class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" aria-label="Étapes de publication">
+        <li class="bg-white rounded-xl ring-1 ring-slate-200 px-3 py-2"><strong class="block text-faso-700">1. Examen</strong>Créer l'examen</li>
+        <li class="bg-white rounded-xl ring-1 ring-slate-200 px-3 py-2"><strong class="block text-faso-700">2. Import</strong>Déposer le fichier officiel</li>
+        <li class="bg-white rounded-xl ring-1 ring-slate-200 px-3 py-2"><strong class="block text-faso-700">3. Vérification</strong>Relire et corriger</li>
+        <li class="bg-white rounded-xl ring-1 ring-slate-200 px-3 py-2"><strong class="block text-faso-700">4. Publication</strong>Rendre public</li>
+      </ol>
+
       <!-- Examens -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <h2 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 text-faso-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-          </svg>
-          Examens
+      <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6">
+        <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-faso-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+          Examens et concours
         </h2>
-        <form id="form-examen" class="flex flex-wrap gap-2 mb-4">
-          <select id="input-type-examen" class="border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-faso-500">
-            <option value="CEP">CEP</option>
-            <option value="BEPC">BEPC</option>
-            <option value="BAC">BAC</option>
-            <option value="CONCOURS_DIRECT">Concours direct</option>
-          </select>
-          <input
-            id="input-annee"
-            type="number"
-            required
-            placeholder="Année"
-            class="border border-slate-300 rounded-lg px-2 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-faso-500"
-          />
-          <input
-            id="input-libelle"
-            type="text"
-            required
-            placeholder="Libellé (ex : BAC 2026 - Session normale)"
-            class="border border-slate-300 rounded-lg px-2 py-2 flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-faso-500"
-          />
-          <button
-            type="submit"
-            class="bg-faso-700 text-white rounded-lg px-4 py-2 hover:bg-faso-800 active:bg-faso-900 transition"
-          >
-            Créer
-          </button>
-          <label class="basis-full flex items-center gap-2 text-sm text-slate-600">
-            <input id="input-multi-phases" type="checkbox" class="rounded border-slate-300" />
-            Concours en 3 phases (épreuves sportives → admissibilité → admission définitive)
+        <form id="form-examen" class="grid gap-3 sm:grid-cols-12 mb-2">
+          <div class="sm:col-span-4">
+            <label for="input-type-examen" class="block text-xs font-medium text-slate-600 mb-1">Type</label>
+            <select id="input-type-examen" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500">
+              <optgroup label="Examens scolaires">
+                <option value="BEPC" selected>BEPC</option>
+                <option value="BAC">BAC</option>
+                <option value="BAC_GENERAL">BAC général</option>
+                <option value="BAC_TECHNOLOGIQUE">BAC technologique</option>
+                <option value="BAC_PROFESSIONNEL">BAC professionnel</option>
+                <option value="BEP">BEP</option>
+                <option value="CAP">CAP</option>
+                <option value="CQP">CQP</option>
+                <option value="BQP">BQP</option>
+                <option value="BPT">BPT</option>
+              </optgroup>
+              <optgroup label="Concours directs (fonction publique)">
+                <option value="CONCOURS_DIRECT">Concours direct</option>
+                <option value="CD_CATEGORIE_A">Concours direct — catégorie A</option>
+                <option value="CD_CATEGORIE_B">Concours direct — catégorie B</option>
+                <option value="CD_CATEGORIE_C">Concours direct — catégorie C</option>
+                <option value="CD_CATEGORIE_D">Concours direct — catégorie D</option>
+              </optgroup>
+              <optgroup label="Concours professionnels">
+                <option value="CONCOURS_PROFESSIONNEL">Concours professionnel</option>
+              </optgroup>
+              <optgroup label="Concours paramilitaires">
+                <option value="ARMEE">Armée</option>
+                <option value="GENDARMERIE">Gendarmerie</option>
+                <option value="POLICE">Police</option>
+                <option value="DOUANES">Douanes</option>
+                <option value="EAUX_FORETS">Eaux et forêts</option>
+                <option value="SECURITE_PENITENTIAIRE">Sécurité pénitentiaire</option>
+              </optgroup>
+              <optgroup label="Autre">
+                <option value="AUTRE">Autre</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="input-annee" class="block text-xs font-medium text-slate-600 mb-1">Année</label>
+            <input id="input-annee" type="number" required min="2000" max="2100" placeholder="2026" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+          </div>
+          <div class="sm:col-span-6">
+            <label for="input-libelle" class="block text-xs font-medium text-slate-600 mb-1">Libellé affiché aux candidats</label>
+            <input id="input-libelle" type="text" required placeholder="Ex : BAC 2026 — session normale" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+          </div>
+          <label class="sm:col-span-9 flex items-start gap-2 text-sm text-slate-600">
+            <input id="input-multi-phases" type="checkbox" class="mt-1 rounded border-slate-300" />
+            <span>Concours en 3 phases (épreuves sportives → admissibilité → admission définitive)</span>
           </label>
+          <div class="sm:col-span-3 sm:text-right">
+            <button type="submit" class="w-full sm:w-auto bg-faso-700 text-white font-medium rounded-lg px-5 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition">
+              Créer l'examen
+            </button>
+          </div>
         </form>
-        <p id="message-examens" class="text-sm text-red-600 mb-3"></p>
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-slate-500 border-b border-slate-200">
-              <th class="py-2">Examen</th>
-              <th>Statut</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="corps-table-examens"></tbody>
-        </table>
+        <p id="message-examens" class="text-sm text-red-700 mb-3" role="alert"></p>
+        <div class="overflow-x-auto -mx-5 sm:mx-0 px-5 sm:px-0">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 font-medium">Examen</th>
+                <th class="py-2 font-medium">Statut</th>
+                <th class="py-2"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="corps-table-examens"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Import -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-semibold text-slate-800 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="w-4 h-4 text-faso-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <path d="M17 8l-5-5-5 5M12 3v12" />
-            </svg>
+      <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h2 class="font-semibold text-lg flex items-center gap-2">
+            <svg class="w-5 h-5 text-faso-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5M12 3v12" /></svg>
             Importer un fichier de résultats
           </h2>
-          <a
-            id="lien-modele-excel"
-            href="#"
-            class="text-sm text-faso-700 hover:underline hover:text-faso-800"
-          >Télécharger le modèle Excel</a>
+          <a id="lien-modele-excel" href="#" class="text-sm text-faso-700 underline underline-offset-2 hover:text-faso-900">Télécharger le modèle Excel</a>
         </div>
-        <form id="form-import" class="flex flex-wrap gap-2 items-center">
-          <select id="select-examen-import" class="border border-slate-300 rounded-lg px-2 py-2 flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-faso-500"></select>
-          <select id="select-phase-import" class="hidden border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-faso-500" title="Phase à laquelle appartient cette liste"></select>
-          <select id="select-type-fichier" class="border border-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-faso-500">
-            <option value="EXCEL">Excel (.xlsx)</option>
-            <option value="PDF">PDF (texte ou scanné, détecté automatiquement)</option>
-            <option value="PDF_OCR" disabled title="Pas encore fiable : le découpage en colonnes du texte reconnu ne fonctionne pas correctement sur un vrai document scanné.">PDF scanné (OCR) — bientôt disponible</option>
-          </select>
-          <input id="input-fichier" type="file" required class="text-sm" />
-          <input
-            id="input-decision-defaut"
-            type="text"
-            placeholder="Décision par défaut (optionnel, ex. ADMISSIBLE)"
-            class="border border-slate-300 rounded-lg px-2 py-2 min-w-[220px] focus:outline-none focus:ring-2 focus:ring-faso-500"
-          />
-          <button
-            type="submit"
-            class="bg-faso-700 text-white rounded-lg px-4 py-2 hover:bg-faso-800 active:bg-faso-900 transition"
-          >
-            Importer
-          </button>
+        <form id="form-import" class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="select-examen-import" class="block text-xs font-medium text-slate-600 mb-1">Examen concerné</label>
+            <select id="select-examen-import" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500"></select>
+          </div>
+          <div>
+            <label for="select-type-fichier" class="block text-xs font-medium text-slate-600 mb-1">Type de fichier</label>
+            <select id="select-type-fichier" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500">
+              <option value="EXCEL">Excel (.xlsx)</option>
+              <option value="PDF">PDF (texte ou scanné, détecté automatiquement)</option>
+              <option value="PDF_OCR" disabled title="Pas encore fiable : le découpage en colonnes du texte reconnu ne fonctionne pas correctement sur un vrai document scanné.">PDF scanné (OCR) — bientôt disponible</option>
+            </select>
+          </div>
+          <div id="bloc-phase-import" class="sm:col-span-2">
+            <label for="select-phase-import" class="sr-only">Phase de cette liste</label>
+            <select id="select-phase-import" class="hidden w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" title="Phase à laquelle appartient cette liste"></select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="input-fichier" class="block text-xs font-medium text-slate-600 mb-1">Fichier officiel</label>
+            <input id="input-fichier" type="file" required accept=".xlsx,.pdf" class="block w-full text-sm text-slate-600 border border-dashed border-slate-300 rounded-lg p-2 file:mr-3 file:rounded-md file:border-0 file:bg-faso-50 file:px-3 file:py-2 file:font-medium file:text-faso-800 hover:file:bg-faso-100" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="input-decision-defaut" class="block text-xs font-medium text-slate-600 mb-1">Décision par défaut <span class="font-normal text-slate-400">(optionnel)</span></label>
+            <input id="input-decision-defaut" type="text" placeholder="Ex : ADMISSIBLE" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            <p class="text-xs text-slate-500 mt-1">
+              S'applique aux lignes sans colonne décision dans le fichier (ex. une liste
+              d'admissibilité où la décision vaut pour tout le document).
+            </p>
+          </div>
+          <div class="sm:col-span-2 sm:text-right">
+            <button type="submit" class="w-full sm:w-auto bg-faso-700 text-white font-medium rounded-lg px-5 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition">
+              Importer et prévisualiser
+            </button>
+          </div>
         </form>
-        <p class="text-xs text-slate-500 mt-2">
-          La décision par défaut s'applique aux lignes sans colonne décision propre
-          dans le fichier (ex. une liste d'admissibilité à un concours, où la
-          décision vaut pour tout le document). Pas de fichier compatible ? Partez du
-          modèle Excel ci-dessus.
-        </p>
-        <p id="message-import" class="text-sm text-red-600 mt-3"></p>
+        <p id="message-import" class="text-sm text-red-700 mt-3" role="alert"></p>
       </div>
 
       <!-- Aperçu / correction -->
-      <div id="section-apercu" class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 hidden">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="font-semibold text-slate-800">
-            Aperçu de l'import — <span id="apercu-statut" class="text-slate-500 font-normal"></span>
+      <div id="section-apercu" class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6 hidden">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <h2 class="font-semibold text-lg">
+            Vérification avant publication
+            <span id="apercu-statut" class="block text-sm text-slate-500 font-normal"></span>
           </h2>
-          <div class="space-x-2">
-            <button id="btn-publier" class="text-sm bg-faso-700 text-white rounded-lg px-3 py-1.5 hover:bg-faso-800 active:bg-faso-900 transition">
-              Enregistrer et publier
-            </button>
-            <button id="btn-rejeter" class="text-sm bg-red-600 text-white rounded-lg px-3 py-1.5 hover:bg-red-700 active:bg-red-800 transition">
+          <div class="flex gap-2">
+            <button id="btn-rejeter" type="button" class="text-sm text-red-700 border border-red-200 rounded-lg px-3 py-2 hover:bg-red-50 transition">
               Rejeter
+            </button>
+            <button id="btn-publier" type="button" class="text-sm font-medium bg-faso-700 text-white rounded-lg px-4 py-2 hover:bg-faso-800 active:bg-faso-900 transition">
+              Enregistrer et publier
             </button>
           </div>
         </div>
-        <div id="bloc-erreurs-fichier" class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hidden">
+        <div id="bloc-erreurs-fichier" class="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hidden">
           <p id="apercu-erreurs-fichier"></p>
           <!-- File-level warnings cannot be fixed row by row: publishing requires this
                explicit, audit-logged confirmation (confirmer_ecarts). -->
@@ -185,37 +220,150 @@
             <span>J'ai vérifié ces écarts contre le document source officiel.</span>
           </label>
         </div>
-        <p class="text-sm text-slate-500 mb-3">
-          Corrigez directement les champs ci-dessous si besoin, puis cliquez sur
-          « Enregistrer et publier » : vos corrections sont sauvegardées et les résultats
-          sont publiés en une seule étape. Toute ligne en erreur doit être corrigée avant de
-          pouvoir publier. Les résultats ne seront visibles du public qu'une fois l'examen
-          lui-même publié (utile pour préparer plusieurs jurys avant une mise en ligne groupée).
+        <p class="text-sm text-slate-600 mb-3">
+          Relisez chaque ligne contre le document officiel et corrigez directement dans le
+          tableau. Toute ligne en erreur doit être corrigée avant de publier. Les résultats ne
+          sont visibles du public qu'une fois l'examen lui-même publié.
         </p>
-        <div class="overflow-x-auto rounded-lg border border-slate-100">
+        <div class="overflow-x-auto rounded-lg border border-slate-200">
           <table class="w-full text-sm">
             <thead>
               <tr class="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
-                <th class="py-2 pr-2 pl-3">Ligne</th>
-                <th class="pr-2">N° PV</th>
-                <th class="pr-2">Jury</th>
-                <th class="pr-2">Nom</th>
-                <th class="pr-2">Prénom</th>
-                <th class="pr-2">Décision</th>
-                <th class="pr-2">Moyenne</th>
-                <th class="pr-2">N°CNIB</th>
-                <th>Erreurs</th>
+                <th class="py-2 pr-2 pl-3 font-medium">Ligne</th>
+                <th class="pr-2 font-medium">N° PV</th>
+                <th class="pr-2 font-medium">Jury</th>
+                <th class="pr-2 font-medium">Nom</th>
+                <th class="pr-2 font-medium">Prénom</th>
+                <th class="pr-2 font-medium">Décision</th>
+                <th class="pr-2 font-medium">Moyenne</th>
+                <th class="pr-2 font-medium">N° CNIB</th>
+                <th class="font-medium">Erreurs</th>
               </tr>
             </thead>
             <tbody id="corps-table-apercu"></tbody>
           </table>
         </div>
-        <p id="message-apercu" class="text-sm mt-3"></p>
+        <p id="message-apercu" class="text-sm mt-3" role="status"></p>
       </div>
     </section>
-  </div>
+
+    <!-- Plateforme (SUPER_ADMIN, accounts not attached to an administration) -->
+    <section id="section-plateforme" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6">
+        <h2 class="font-semibold text-lg mb-1">Administrations clientes</h2>
+        <p class="text-sm text-slate-600 mb-4">
+          Seules les administrations <strong>actives</strong> ou <strong>pilotes</strong> sont visibles du public.
+          Suspendre masque immédiatement leurs résultats ; résilier engage la purge des espaces candidats liés.
+        </p>
+        <p id="message-plateforme" class="text-sm mb-3" role="status"></p>
+        <div class="overflow-x-auto -mx-5 sm:mx-0 px-5 sm:px-0">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-500 border-b border-slate-200">
+                <th class="py-2 font-medium">Administration</th>
+                <th class="py-2 font-medium">Référent</th>
+                <th class="py-2 font-medium">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="corps-table-administrations"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6 items-start">
+        <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6">
+          <h2 class="font-semibold text-lg mb-4">Ajouter une administration</h2>
+          <form id="form-administration" class="grid gap-3 sm:grid-cols-2">
+            <div class="">
+              <label for="adm-sigle" class="block text-xs font-medium text-slate-600 mb-1">Sigle</label>
+              <input id="adm-sigle" type="text" required maxlength="50" placeholder="Ex : OCECOS" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="">
+              <label for="adm-code" class="block text-xs font-medium text-slate-600 mb-1">Code interne</label>
+              <input id="adm-code" type="text" required maxlength="50" pattern="[a-z0-9-]+" placeholder="Ex : ocecos" title="Lettres minuscules, chiffres et tirets" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="adm-nom" class="block text-xs font-medium text-slate-600 mb-1">Nom officiel</label>
+              <input id="adm-nom" type="text" required maxlength="255" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="adm-ministere" class="block text-xs font-medium text-slate-600 mb-1">Ministère de tutelle</label>
+              <input id="adm-ministere" type="text" required maxlength="255" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="">
+              <label for="adm-referent-nom" class="block text-xs font-medium text-slate-600 mb-1">Référent — nom</label>
+              <input id="adm-referent-nom" type="text" required maxlength="255" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="">
+              <label for="adm-referent-telephone" class="block text-xs font-medium text-slate-600 mb-1">Référent — téléphone</label>
+              <input id="adm-referent-telephone" type="tel" required maxlength="20" placeholder="+226…" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="adm-referent-email" class="block text-xs font-medium text-slate-600 mb-1">Référent — e-mail</label>
+              <input id="adm-referent-email" type="email" required  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="adm-statut" class="block text-xs font-medium text-slate-600 mb-1">Statut de départ</label>
+              <select id="adm-statut" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500">
+                <option value="PILOTE" selected>Pilote (phase de test, visible du public)</option>
+                <option value="ACTIF">Actif (convention signée)</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2 sm:text-right">
+              <button type="submit" class="w-full sm:w-auto bg-faso-700 text-white font-medium rounded-lg px-5 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition">Ajouter l'administration</button>
+            </div>
+          </form>
+          <p id="message-form-administration" class="text-sm mt-3" role="status"></p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-5 sm:p-6">
+          <h2 class="font-semibold text-lg mb-4">Créer un compte agent</h2>
+          <form id="form-utilisateur" class="grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label for="util-administration" class="block text-xs font-medium text-slate-600 mb-1">Administration</label>
+              <select id="util-administration" required class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500"></select>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="util-nom" class="block text-xs font-medium text-slate-600 mb-1">Nom complet</label>
+              <input id="util-nom" type="text" required maxlength="255" autocomplete="off" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="util-email" class="block text-xs font-medium text-slate-600 mb-1">E-mail (identifiant de connexion)</label>
+              <input id="util-email" type="email" required autocomplete="off" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="util-role" class="block text-xs font-medium text-slate-600 mb-1">Rôle</label>
+              <select id="util-role" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500">
+                <option value="ADMIN_ADMINISTRATION" selected>Administrateur (tous les droits sur son administration)</option>
+                <option value="OPERATEUR_INGESTION">Opérateur d'import (importe et vérifie les listes)</option>
+                <option value="OPERATEUR_PUBLICATION">Opérateur de publication (publie les examens)</option>
+                <option value="LECTEUR">Lecteur (consultation seule)</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="util-mot-de-passe" class="block text-xs font-medium text-slate-600 mb-1">Mot de passe provisoire (12 caractères minimum)</label>
+              <input id="util-mot-de-passe" type="password" required minlength="12" autocomplete="new-password" class="w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-faso-500 focus:border-faso-500" />
+            </div>
+            <p class="sm:col-span-2 text-xs text-slate-500">Transmettez ce mot de passe à l'agent par un canal sûr (en main propre, par téléphone), jamais par e-mail.</p>
+            <div class="sm:col-span-2 sm:text-right">
+              <button type="submit" class="w-full sm:w-auto bg-faso-700 text-white font-medium rounded-lg px-5 py-2.5 hover:bg-faso-800 active:bg-faso-900 transition">Créer le compte</button>
+            </div>
+          </form>
+          <p id="message-form-utilisateur" class="text-sm mt-3" role="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-white border-t border-slate-100 text-xs text-slate-500">
+    <div class="max-w-5xl mx-auto px-4 py-5 flex flex-col sm:flex-row gap-2 items-center justify-between">
+      <p>Faso Résultats · Une initiative de LUPORA Group, Ouagadougou</p>
+      <p>Assistance : <a href="tel:+22656121818" class="hover:text-faso-700">56 12 18 18</a> · <a href="tel:+22662291818" class="hover:text-faso-700">62 29 18 18</a></p>
+    </div>
+  </footer>
 
   <script src="js/api.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/admin-plateforme.js"></script>
 </body>
 </html>
