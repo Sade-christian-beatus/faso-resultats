@@ -608,6 +608,23 @@ Après chaque étape majeure, produire un résumé structuré :
   l'API sur sa propre origine (aussi en développement : le site marche depuis un
   téléphone sur le même Wi-Fi). Pages admin et candidat : `<!DOCTYPE>` et
   `lang="fr"` manquants ajoutés (rendu en mode quirks jusque-là).
+- **2026-10-04 — Refonte des pages web candidat et admin, pages légales,
+  README réécrit.** Testé dans Chromium contre la stack de développement (CSP
+  stricte active), téléphone et ordinateur. **Manques réels comblés** : aucune
+  interface ne permettait au SUPER_ADMIN d'ajouter une administration ou ses
+  agents (et `admin.html` lui affichait « Email ou mot de passe incorrect »
+  après une connexion réussie) → section Plateforme ; les droits CIL (export,
+  suppression du compte) n'étaient exerçables que depuis l'app mobile → rubrique
+  « Mes données » sur le web ; la politique de confidentialité citée au
+  consentement n'existait pas sur le web → `confidentialite.html` et
+  `conditions.html` ; la purge réglementaire `purge_candidats.py` n'était
+  planifiée nulle part → cron dans `docs/DEPLOIEMENT.md` ; journaux Docker de
+  production non plafonnés (IP et numéros de PV recherchés) → 5 × 10 Mo par
+  service. Aussi : débordement horizontal de l'admin sur téléphone, statuts en
+  anglais (« PUBLISHED »), confirmations ajoutées avant de publier un examen, de
+  rejeter un import, de retirer une candidature ; 18 types d'examen proposés à
+  la création (le CEP, hors périmètre, n'est plus proposé) ; manifeste web pour
+  « Ajouter à l'écran d'accueil ».
 
 ---
 

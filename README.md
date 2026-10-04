@@ -1,152 +1,351 @@
 # Faso Résultats
 
-Faso Résultats — la plateforme SaaS de publication des résultats d'examens et
-concours pour les administrations burkinabè. Chaque administration cliente
-(OCECOS, Office du BAC, AGRE, etc.) dispose de son propre espace : elle importe
-ses résultats, les valide, et les publie sous sa propre identité, pendant que
-les candidats consultent leur résultat par numéro de PV sur un portail unique.
+**La plateforme burkinabè des résultats d'examens et de concours.**
+*Vos résultats en un clic.*
 
-Voir `docs/PIVOT_SAAS_B2G.md` pour le positionnement détaillé et
-`docs/MULTI_TENANCY.md` pour l'architecture d'isolation entre administrations.
-Le CEP est hors périmètre (couvert par SIGEC-CEP) ; voir `docs/CONTEXTE_METIER.md`
-pour la cartographie complète du paysage concurrentiel.
+Faso Résultats permet aux **administrations burkinabè** (OCECOS, Office du BAC,
+ministères, AGRE…) de publier leurs résultats d'examens et de concours, et aux
+**candidats** de les consulter simplement par numéro de PV — sur le web, sur
+l'application mobile, et demain par SMS et USSD.
 
-## Configuration obligatoire
+Chaque administration dispose de son propre espace isolé : elle importe ses
+listes officielles (Excel ou PDF, y compris scannés), les **vérifie ligne par
+ligne**, puis les publie sous sa propre responsabilité. Les candidats, eux,
+consultent sur un portail unique.
 
-L'application **refuse de démarrer** sans ces variables (`backend/.env`, jamais
-commité) :
+<p align="center">
+  <img src="docs/captures/web-accueil.webp" alt="Page d'accueil du site Faso Résultats" width="760" />
+</p>
 
-| Variable | Rôle | Génération |
-|---|---|---|
-| `JWT_SECRET_KEY` | Signature des tokens admin et candidat | Chaîne aléatoire quelconque |
-| `CANDIDAT_ENCRYPTION_KEY` | Chiffrement au repos (CNIB, téléphone, date de naissance du profil candidat) | `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
-| `CANDIDAT_HASH_PEPPER` | Pepper des hash de recherche (CNIB, téléphone) | Chaîne aléatoire quelconque |
+> Projet porté par **LUPORA Group** (Ouagadougou). Périmètre : Burkina Faso
+> uniquement. Le CEP est hors périmètre (couvert par SIGEC-CEP).
 
-`CANDIDAT_ENCRYPTION_KEY` doit être une **vraie clé Fernet** (32 octets
-base64 url-safe) : sans elle, ou avec une valeur invalide, `app.config.get_settings()`
-lève une `RuntimeError` explicite au premier import de l'application (donc
-avant même de démarrer `uvicorn`, `alembic` ou `seed.py`). Ne jamais réutiliser
-la même clé entre environnements (dev/staging/prod), ne jamais la committer en
-clair.
+---
 
-`JWT_SECRET_KEY` et `CANDIDAT_HASH_PEPPER` ont une valeur par défaut de
-développement (`change-me-in-production`, publique dans le code source) pour
-que l'app démarre sans `.env` local. **Ce défaut est refusé si
-`ENVIRONMENT=production`** (audit 2026-07-08, `app.config._valider_secrets_production`)
-: un déploiement production qui oublierait de les surcharger ne démarre pas
-plutôt que de tourner silencieusement avec des secrets publics (tokens
-forgeables, pepper de hash connu).
+## Sommaire
 
-## Démarrage rapide (Docker)
+1. [Fonctionnalités](#fonctionnalités)
+2. [Aperçu](#aperçu)
+3. [Architecture et technologies](#architecture-et-technologies)
+4. [Démarrer en local (Docker)](#démarrer-en-local-docker)
+5. [Développer sans Docker](#développer-sans-docker)
+6. [Application mobile](#application-mobile)
+7. [Styles du site web](#styles-du-site-web)
+8. [Tests et intégration continue](#tests-et-intégration-continue)
+9. [Mise en production](#mise-en-production)
+10. [Sécurité et données personnelles](#sécurité-et-données-personnelles)
+11. [Structure du dépôt](#structure-du-dépôt)
+12. [Documentation](#documentation)
+13. [État du projet](#état-du-projet)
 
-**Prérequis :** Docker Desktop installé et démarré sur Windows 11.
+---
 
-```powershell
-# 1. Cloner le dépôt
-git clone <repo-url>
+## Fonctionnalités
+
+### Pour les candidats
+
+- **Consulter un résultat sans compte** : choisir l'examen, saisir son numéro de
+  PV (et son jury si besoin) — web et mobile.
+- **Concours en plusieurs phases** (police, gendarmerie, douanes…) : une frise
+  montre la situation à chaque phase. « Vous ne figurez pas sur la liste » n'est
+  affiché **qu'une fois la phase clôturée** par l'administration, jamais avant.
+- **Espace candidat** (facultatif) : suivre tous ses examens et concours au même
+  endroit, connexion par code SMS, résultats rapprochés de son identité.
+- **Droits sur ses données** : télécharger toutes ses données, supprimer son
+  espace à tout moment.
+- **Application mobile** Android / iOS, utilisable hors connexion pour les
+  résultats déjà consultés.
+
+### Pour les administrations
+
+- **Import des listes officielles** : Excel, PDF texte, PDF scanné
+  (reconnaissance de caractères en français), modèle Excel fourni.
+- **Validation humaine obligatoire** : aperçu, correction ligne par ligne,
+  publication explicite. Les écarts détectés dans un fichier (ex. nombre de
+  lignes lues différent du nombre annoncé) doivent être **confirmés** avant
+  publication, et cette confirmation est journalisée.
+- **Publication par phase**, clôture de phase, publication groupée d'un examen
+  (ex. jour de proclamation du BAC).
+- **Traçabilité** : chaque résultat est rattaché à son fichier source ; journal
+  d'audit des actions sensibles.
+
+### Pour la plateforme
+
+- **Multi-administrations** : chaque administration ne voit que ses propres
+  données ; un super-admin gère les administrations clientes.
+- **API B2B** (fondation) : accès des partenaires par clé API avec quota.
+- **Tenue en charge** : cache Redis, limitation du nombre de requêtes par
+  visiteur, pages légères pour la 3G.
+
+---
+
+## Aperçu
+
+| Espace candidat (web) | Espace administration (web) |
+|:---:|:---:|
+| <img src="docs/captures/web-espace-candidat.webp" alt="Espace candidat" width="420" /> | <img src="docs/captures/web-administration.webp" alt="Espace administration" width="420" /> |
+
+| Application mobile — accueil | Application mobile — concours par phases |
+|:---:|:---:|
+| <img src="docs/captures/mobile-accueil.webp" alt="Accueil de l'application mobile" width="240" /> | <img src="docs/captures/mobile-parcours.webp" alt="Suivi d'un concours phase par phase" width="240" /> |
+
+---
+
+## Architecture et technologies
+
+```
+Candidats (web · mobile · SMS/USSD à venir)        Agents des administrations
+                 │                                            │
+                 └──────────────► nginx (HTTPS) ◄─────────────┘
+                                 │        │
+                       pages web │        │ /api
+                                          ▼
+                                 API FastAPI ──► Redis (cache, limitation)
+                                          │
+                                          ▼
+                                     PostgreSQL
+                                          ▲
+                         Import : Excel · PDF · PDF scanné (OCR)
+```
+
+| Couche | Technologie |
+|--------|-------------|
+| API | Python 3.11, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2 |
+| Base de données | PostgreSQL 15+ |
+| Cache et limitation de débit | Redis (repli en mémoire), slowapi |
+| Import de fichiers | openpyxl, pdfplumber, pytesseract + OpenCV (OCR français) |
+| Authentification | JWT ; mots de passe bcrypt ; code SMS pour les candidats |
+| Site web | HTML/CSS/JS sans framework, CSS Tailwind pré-généré, aucune ressource externe |
+| Application mobile | Flutter (Android et iOS), Riverpod, go_router |
+| Déploiement | Docker Compose, nginx, Let's Encrypt |
+
+Détail technique complet : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## Démarrer en local (Docker)
+
+**Prérequis** : Docker et Docker Compose.
+
+```bash
+git clone <url-du-depot> faso-resultats
 cd faso-resultats
 
-# 2. Lancer tous les services
+# 1. Configuration locale (jamais commitée)
+cp backend/.env.example backend/.env
+# Générer la clé de chiffrement obligatoire et la coller dans CANDIDAT_ENCRYPTION_KEY :
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# 2. Démarrer
 docker compose up --build -d
 
-# 3. Appliquer les migrations
+# 3. Créer les tables puis charger les données de démonstration
 docker compose exec backend alembic upgrade head
-
-# 4. Peupler la base avec des données de test
 docker compose exec backend python seed.py
 ```
 
-Les services disponibles :
+| Service | Adresse |
+|---------|---------|
+| Site public | http://localhost:8080 |
+| Espace candidat | http://localhost:8080/candidat.html |
+| Espace administration | http://localhost:8080/admin.html |
+| Documentation de l'API | http://localhost:8000/docs |
 
-| Service   | URL                         |
-|-----------|-----------------------------|
-| Frontend  | http://localhost:8080        |
-| Admin     | http://localhost:8080/admin.html |
-| API docs  | http://localhost:8000/docs   |
-| Health    | http://localhost:8000/health |
+**Depuis un téléphone** sur le même Wi-Fi : `http://<adresse IP du PC>:8080`
+(nginx transmet `/api` au backend, comme en production).
 
-Depuis un téléphone sur le même Wi-Fi : `http://<IP du PC>:8080` (nginx
-transmet `/api` au backend, comme en production).
+### Comptes de démonstration (créés par `seed.py`)
 
-**Mise en production** (serveur, HTTPS, sauvegardes) : voir
-[`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md). Ne jamais lancer `seed.py` en
-production.
-
-Identifiants créés par le seed (voir `backend/seed.py`) :
-
-| Compte | Email | Mot de passe |
-|--------|-------|--------------|
+| Compte | Identifiant | Mot de passe |
+|--------|-------------|--------------|
 | Super-admin plateforme | `superadmin@faso-resultats.bf` | `ChangeMe123!` |
 | Admin OCECOS | `admin@ocecos.bf` | `ChangeMe123!` |
 | Admin Office du BAC | `admin@office-bac.bf` | `ChangeMe123!` |
 | Admin AGRE | `admin@agre.bf` | `ChangeMe123!` |
+| Candidats | téléphones `+22670000001` à `+22670000003` | code SMS affiché à l'écran en développement |
 
-## Développement local sans Docker
+⚠️ Ces comptes et données sont **fictifs** et réservés au développement :
+`seed.py` ne doit **jamais** être lancé en production.
 
-```powershell
-# Créer l'environnement virtuel
-python -m venv venv
-venv\Scripts\activate   # Windows
+### Configuration obligatoire
 
+L'API **refuse de démarrer** si la configuration est dangereuse :
+
+| Variable | Rôle |
+|----------|------|
+| `CANDIDAT_ENCRYPTION_KEY` | Chiffrement au repos de l'identité des candidats (clé Fernet). **Sa perte rend ces données illisibles** : la conserver hors du serveur. |
+| `JWT_SECRET_KEY` | Signature des sessions admin et candidat |
+| `CANDIDAT_HASH_PEPPER`, `API_KEY_PEPPER` | Secrets des empreintes de recherche (CNIB, téléphone) et des clés API |
+
+En production (`ENVIRONMENT=production`), une valeur de développement
+(`change-me-in-production`) est refusée au démarrage. Ne jamais réutiliser une
+clé entre environnements, ne jamais commiter un vrai secret.
+
+---
+
+## Développer sans Docker
+
+```bash
 cd backend
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Copier la config
-copy .env.example .env
-# Adapter DATABASE_URL pour pointer vers votre PostgreSQL local
-# Générer une vraie clé pour CANDIDAT_ENCRYPTION_KEY (obligatoire, voir ci-dessus) :
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-# ... puis coller le résultat dans .env
-
-# Migrations
+cp .env.example .env        # puis adapter DATABASE_URL et générer CANDIDAT_ENCRYPTION_KEY
 alembic upgrade head
-
-# Seed
 python seed.py
-
-# Démarrer l'API
 uvicorn app.main:app --reload
 ```
 
+L'OCR nécessite `tesseract` (avec la langue `fra`) et `poppler` installés sur
+la machine, comme dans l'image Docker.
+
+---
+
+## Application mobile
+
+Application Flutter dans [`mobile/`](mobile/) — procédure complète (émulateur,
+téléphone physique, iOS) dans [`mobile/README.md`](mobile/README.md).
+
+```bash
+cd mobile
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://<adresse IP du PC>:8000
+```
+
+Publication sur les stores (clé de signature, comptes développeur) :
+[`mobile/docs/RELEASE.md`](mobile/docs/RELEASE.md).
+
+---
+
 ## Styles du site web
 
-Le CSS des pages (`frontend/public/css/app.css`) est pré-généré avec Tailwind.
-Après toute modification du HTML, du JS ou de `frontend/src/app.css` :
+Le CSS des pages (`frontend/public/css/app.css`) est **pré-généré** avec
+Tailwind ; le site reste un ensemble de fichiers statiques. Après toute
+modification du HTML, du JavaScript ou de `frontend/src/app.css` :
 
 ```bash
 cd frontend
-npm install        # une seule fois
-npm run build:css  # ou npm run watch:css pendant le développement
+npm install          # une seule fois
+npm run build:css    # ou : npm run watch:css pendant le développement
 ```
 
-Committer `public/css/app.css` : la CI échoue s'il n'est pas à jour.
+Committer `public/css/app.css` : la CI échoue s'il n'est pas à jour. Écrire
+toujours les classes en entier dans le code (`"bg-red-700"`, jamais
+`` `bg-${couleur}-700` ``), sinon elles manquent au CSS généré.
 
-## Tests
+Identité visuelle (couleurs, police Poppins, logo) :
+[`docs/CHARTE_GRAPHIQUE.md`](docs/CHARTE_GRAPHIQUE.md).
 
-```powershell
-cd backend
-pytest
+---
+
+## Tests et intégration continue
+
+```bash
+# API (tests sur SQLite en mémoire, couverture minimale 60 %)
+cd backend && pytest
+ruff check . && black --check .
+
+# Application mobile
+cd mobile && flutter analyze && flutter test
 ```
 
-Les tests d'OCR nécessitent `tesseract` (avec la langue `fra`) et `poppler`
-installés sur la machine, comme dans l'image Docker. `CANDIDAT_ENCRYPTION_KEY`
-doit être définie (dans `backend/.env` ou l'environnement).
+Trois chaînes d'intégration continue (`.github/workflows/`) se déclenchent à
+chaque push :
 
-Chaque push touchant `backend/` déclenche la CI (`.github/workflows/backend-ci.yml`) :
-`ruff` + `black --check`, la suite `pytest` avec une couverture minimale de
-60 %, et les migrations Alembic sur un vrai PostgreSQL 16 (upgrade, `alembic
-check`, downgrade complet, ré-upgrade).
+| CI | Vérifie |
+|----|---------|
+| Backend CI | ruff, black, pytest avec couverture, migrations sur un vrai PostgreSQL (aller-retour complet) |
+| Mobile CI | format, analyse, tests, builds APK debug et release |
+| Frontend CI | CSS à jour, syntaxe JS, aucune ressource externe, configuration nginx de production valide |
 
-## Structure
+---
+
+## Mise en production
+
+Guide pas à pas, testé de bout en bout : **[`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md)**.
+
+En résumé : un serveur avec Docker, un nom de domaine, puis
+
+```bash
+cp deploy/production.env.example deploy/production.env   # remplir tous les secrets
+# certificat HTTPS (Let's Encrypt), puis :
+docker compose -f docker-compose.prod.yml --env-file deploy/production.env up -d --build
+docker compose -f docker-compose.prod.yml --env-file deploy/production.env \
+  run --rm backend python creer_super_admin.py
+```
+
+Le guide couvre aussi le renouvellement du certificat, les sauvegardes (et leur
+restauration), la purge réglementaire des données et les mises à jour.
+
+---
+
+## Sécurité et données personnelles
+
+- Identité des candidats (CNIB, date de naissance, téléphone) **chiffrée** en
+  base ; aucune liste de candidats consultable (il faut un numéro de PV précis).
+- Limitation du nombre de requêtes par visiteur ; verrouillage des comptes après
+  échecs de connexion ; journal d'audit.
+- En production : HTTPS obligatoire, politique de sécurité du contenu stricte,
+  seul le serveur web exposé, journaux plafonnés.
+- Conformité à la réglementation burkinabè (CIL) : [`docs/CIL.md`](docs/CIL.md)
+  et [`docs/CIL_PROFIL_CANDIDAT.md`](docs/CIL_PROFIL_CANDIDAT.md) ; pages
+  publiques [confidentialité](frontend/public/confidentialite.html) et
+  [conditions d'utilisation](frontend/public/conditions.html).
+
+Dernier audit complet : [`docs/AUDIT_2026-10-02.md`](docs/AUDIT_2026-10-02.md).
+
+---
+
+## Structure du dépôt
 
 ```
 faso-resultats/
-├── backend/           FastAPI + SQLAlchemy
-├── frontend/          HTML/CSS/JS vanilla (CSS Tailwind pré-généré)
-├── deploy/            Production : nginx, réglages, sauvegarde
-├── docker-compose.prod.yml
-├── docs/              Documentation technique
-└── docker-compose.yml
+├── backend/                 API FastAPI
+│   ├── app/                 routes, services (import, phases, candidats), modèles
+│   ├── alembic/             migrations de la base
+│   ├── tests/               tests pytest
+│   ├── seed.py              données de démonstration (développement uniquement)
+│   ├── creer_super_admin.py premier compte en production
+│   └── purge_candidats.py   purge réglementaire quotidienne
+├── frontend/
+│   ├── public/              site web servi tel quel (HTML, JS, CSS généré, polices)
+│   └── src/app.css          source du CSS (Tailwind)
+├── mobile/                  application Flutter
+├── deploy/                  production : nginx, modèle de configuration, sauvegarde
+├── docs/                    documentation (voir ci-dessous)
+├── docker-compose.yml       environnement de développement
+└── docker-compose.prod.yml  environnement de production
 ```
 
-Voir `docs/ARCHITECTURE.md` pour le détail technique.
+---
+
+## Documentation
+
+| Document | Contenu |
+|----------|---------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Architecture technique, modèle de données, choix structurants |
+| [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md) | Mise en production pas à pas |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases du projet, décisions et prérequis |
+| [`docs/CONTEXTE_METIER.md`](docs/CONTEXTE_METIER.md) | Examens et concours du Burkina Faso, acteurs, concurrence |
+| [`docs/PIVOT_SAAS_B2G.md`](docs/PIVOT_SAAS_B2G.md) · [`docs/MULTI_TENANCY.md`](docs/MULTI_TENANCY.md) | Positionnement auprès des administrations, isolation entre elles |
+| [`docs/PROFIL_CANDIDAT_UNIFIE.md`](docs/PROFIL_CANDIDAT_UNIFIE.md) | Espace candidat et vérification d'identité |
+| [`docs/CIL.md`](docs/CIL.md) · [`docs/CIL_PROFIL_CANDIDAT.md`](docs/CIL_PROFIL_CANDIDAT.md) | Protection des données personnelles |
+| [`docs/CHARTE_GRAPHIQUE.md`](docs/CHARTE_GRAPHIQUE.md) | Identité visuelle |
+| [`docs/PARSER_PDF_FONCTION_PUBLIQUE.md`](docs/PARSER_PDF_FONCTION_PUBLIQUE.md) | Lecture des communiqués scannés |
+| [`docs/AUDIT_2026-10-02.md`](docs/AUDIT_2026-10-02.md) | Dernier audit complet |
+| [`CLAUDE.md`](CLAUDE.md) | Principes du projet et historique des décisions |
+
+---
+
+## État du projet
+
+| Phase | Contenu | Statut |
+|-------|---------|--------|
+| 1 | API, import, site public, administration | ✅ Terminée |
+| 2 | SMS (notifications, consultation) | 🔒 En attente du contrat opérateur |
+| 3 | Application mobile ; espace établissement | 🟡 Application bien avancée ; espace établissement à faire |
+| 4 | USSD ; API B2B | 🟡 Fondation API B2B en place ; USSD en attente du contrat opérateur |
+
+Prochaines étapes et prérequis (hébergement, structure juridique, démarches
+CIL et ANSSI) : [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+**Contact** : 56 12 18 18 · 62 29 18 18

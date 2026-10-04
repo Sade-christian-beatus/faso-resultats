@@ -676,15 +676,31 @@ téléphone pour styler la page, aucune dépendance à un serveur étranger.
   publiés et d'administrations, tirés de `/exams` et `/administrations`). Aucun
   appel API supplémentaire côté backend : le filtrage et la recherche d'examen se
   font dans le navigateur sur la liste déjà en cache.
-- **`admin.html` + `js/admin.js`** : connexion (JWT stocké en
+- **`candidat.html` + `js/candidat.js`** (refonte 2026-10-04) : connexion par code SMS,
+  inscription (consentement avec lien vers la politique de confidentialité),
+  candidatures avec le nom de l'examen et de l'administration, ajout, retrait
+  confirmé, et rubrique « Mes données » (export JSON, suppression du compte) :
+  les droits CIL sont exerçables depuis le web, plus seulement depuis l'app.
+- **`confidentialite.html`, `conditions.html`** (2026-10-04) : pages légales
+  publiques (contenu aligné sur `docs/CIL.md`, durées de conservation
+  annoncées comme en cours de validation avec la CIL).
+- **`manifest.webmanifest`** : le site s'installe sur l'écran d'accueil d'un
+  téléphone avec l'icône Faso Résultats.
+- **`admin.html` + `js/admin.js` + `js/admin-plateforme.js`** : l'ouverture de
+  session lit le profil (`/admin/me`) et affiche le tableau de bord de
+  l'administration de l'agent, ou, pour un compte plateforme (SUPER_ADMIN), la
+  section Plateforme (administrations clientes, statuts, comptes agents) —
+  auparavant aucune interface ne permettait d'ajouter une administration. Connexion (JWT stocké en
   `sessionStorage`, jamais en `localStorage`, pour limiter la durée de vie
   du token à l'onglet), création/publication d'examens, upload de fichier,
   aperçu éditable ligne par ligne (inputs liés à `apercu_donnees`),
   enregistrement des corrections (`PATCH`), publication/rejet.
-- **`js/api.js`** : wrapper `fetch` commun, détecte l'environnement de dev
-  (`localhost`/`127.0.0.1`) pour pointer vers `http://<hôte>:8000` ; en
-  production, `API_BASE` reste vide (même origine attendue derrière un
-  reverse proxy — à confirmer selon l'hébergement final).
+- **`js/api.js`** : wrapper `fetch` commun. L'API est toujours appelée sur la
+  même origine (`/api`, transmis au backend par nginx en développement comme en
+  production, voir § Déploiement). Message clair en cas de limitation (429) ;
+  les erreurs de validation (422) ne sont jamais affichées en JSON brut.
+- **`js/decision.js`** : couleur des décisions (règles du backend), partagée par
+  la page publique et l'espace candidat.
 - **`candidat.html` + `js/candidat.js`** : espace candidat plateforme (voir
   § Profil candidat unifié ci-dessous). Inscription (CNIB + nom + date de
   naissance + téléphone + consentement), connexion et inscription passent
