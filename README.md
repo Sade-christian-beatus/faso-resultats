@@ -74,6 +74,11 @@ Identifiants créés par le seed (voir `backend/seed.py`) :
 | Admin Office du BAC | `admin@office-bac.bf` | `ChangeMe123!` |
 | Admin AGRE | `admin@agre.bf` | `ChangeMe123!` |
 
+Pour changer ces mots de passe, créer un super-admin ou débloquer un compte :
+`docker compose exec backend python gerer_comptes.py --help`. Toutes les commandes
+d'exploitation locale (lancement, comptes, secrets, sauvegarde, dépannage) sont
+regroupées dans **`docs/GUIDE_LOCAL.md`**.
+
 ## Développement local sans Docker
 
 ```powershell
