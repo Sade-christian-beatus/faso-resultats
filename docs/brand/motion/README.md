@@ -17,11 +17,11 @@ par une pastille en haut à gauche et un sommaire en haut à droite de chaque se
 |---|---|---|
 | 0 – 5 s | Logo | Bandes du drapeau, symbole, logotype lettre par lettre, slogan |
 | 5 – 9 s | Jour de proclamation | « Des milliers de candidats attendent. » |
-| 9 – 13 s | Vue d'ensemble | Les cinq services côte à côte (SMS marqué « Bientôt ») |
+| 9 – 13 s | Vue d'ensemble | Les cinq services côte à côte |
 | 13 – 22 s | **01 Consultation simple** (vert) | Sans compte : examen → n° de PV → « ADMIS » |
 | 22 – 32 s | **02 Compte candidat unifié** (bleu) | Facultatif. Connexion par téléphone + code, candidatures de plusieurs administrations réunies, résultat retrouvé automatiquement par CNIB |
 | 32 – 42 s | **03 Concours paramilitaires** (violet) | Épreuves sportives → admissibilité → admission définitive ; « publication en cours » tant que la phase n'est pas clôturée |
-| 42 – 50 s | **04 SMS** (jaune, « Bientôt ») | Inscription en ligne (PV + téléphone + consentement), SMS à la publication, alerte à chaque phase |
+| 42 – 50 s | **04 SMS** (jaune) | Inscription en ligne (PV + téléphone + consentement), SMS à la publication, alerte à chaque phase |
 | 50 – 58 s | **05 Espace administrations** (bleu nuit) | Import → aperçu et correction → validation humaine → publication ; rôles, chiffrement, clôture des phases, audit |
 | 58 – 62 s | Signature | Logo officiel, « Ensemble pour une éducation plus accessible ! », LUPORA Group |
 
@@ -32,9 +32,10 @@ réservé).
 
 Les affirmations restent vérifiables, comme pour la page d'accueil (décision
 du 2026-09-30) : pas de « plateforme officielle » ni de « gratuit », l'app
-mobile n'est pas présentée comme publiée, le SMS est explicitement « bientôt »
-(Phase 2 non démarrée, dépend du contrat opérateur), pas de chiffres d'audience
-inventés.
+mobile n'est pas présentée comme publiée, pas de chiffres d'audience inventés.
+Le badge « Bientôt » du SMS a été retiré à la demande du porteur du projet
+(2026-10-06) ; la section SMS garde la mention « Service en préparation avec les
+opérateurs télécom », la Phase 2 n'étant pas démarrée.
 
 ## Modifier et ré-exporter
 
