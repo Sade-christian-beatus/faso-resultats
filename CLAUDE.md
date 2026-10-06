@@ -556,6 +556,13 @@ Après chaque étape majeure, produire un résumé structuré :
   photo de la bannière (illustration CSS en place) et URL des réseaux sociaux
   (`RESEAUX_SOCIAUX` dans `js/public.js`, icônes masquées tant que vide). La
   bande défilante du 2026-09-28 est remplacée par « Dernières publications ».
+- **2026-10-05 — Guide d'exploitation locale (`docs/GUIDE_LOCAL.md`) et script
+  `backend/gerer_comptes.py`.** Aucun endpoint ne permettait de changer un mot de
+  passe admin ni de créer un SUPER_ADMIN : le script couvre ces opérations (+
+  lister, activer/désactiver, débloquer après verrouillage), mot de passe saisi
+  au clavier (`getpass`), jamais en argument. Volontairement pas exposé dans
+  l'API ni journalisé dans `AuditLog` (outil d'exploitant ayant accès au
+  serveur). Commandes du guide exécutées contre PostgreSQL 16 + Redis réels.
 
 ---
 
