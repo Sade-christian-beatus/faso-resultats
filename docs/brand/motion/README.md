@@ -50,6 +50,26 @@ node render.mjs faso-resultats-motion.html faso-resultats-motion.mp4 30
 ```
 
 Prérequis : Node 18+ et ffmpeg. Environ 10 minutes de rendu.
+### Versions courtes par service (réseaux sociaux)
+
+Chaque version courte enchaîne une section complète et la signature finale
+(57,6 → 61,6 s), sans rien rendre en double : ce sont des extraits de la même
+timeline, montés par l'argument `segments` de `render.mjs`.
+
+| Fichier | Segments | Durée |
+|---|---|---|
+| `faso-resultats-01-consultation-simple.mp4` | `13.4-22.4,57.6-61.6` | 13 s |
+| `faso-resultats-02-compte-candidat.mp4` | `22.4-32.2,57.6-61.6` | 13,8 s |
+| `faso-resultats-03-concours-paramilitaires.mp4` | `32.2-42.4,57.6-61.6` | 14,2 s |
+| `faso-resultats-04-sms.mp4` | `42.4-49.8,57.6-61.6` | 11,4 s |
+| `faso-resultats-05-administrations.mp4` | `49.8-57.6,57.6-61.6` | 11,8 s |
+
+```bash
+node render.mjs faso-resultats-motion.html faso-resultats-01-consultation-simple.mp4 30 13.4-22.4,57.6-61.6
+```
+
+Si une scène est décalée (`--s` / `--e` dans le HTML), reporter ses nouvelles bornes ici.
+
 Pour une version plus légère (WhatsApp, réseaux sociaux) :
 
 ```bash
