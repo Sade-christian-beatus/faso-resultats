@@ -563,6 +563,16 @@ Après chaque étape majeure, produire un résumé structuré :
   au clavier (`getpass`), jamais en argument. Volontairement pas exposé dans
   l'API ni journalisé dans `AuditLog` (outil d'exploitant ayant accès au
   serveur). Commandes du guide exécutées contre PostgreSQL 16 + Redis réels.
+- **2026-11-17 — Analyse de marché (`docs/ANALYSE_MARCHE.md`) et modèles de
+  courriers institutionnels (`docs/courriers/`).** Constat structurant : depuis juin
+  2026, l'État publie lui-même les résultats du CEP sur un portail officiel
+  (`resultats.examens.gov.bf`, PV + date de naissance), et la Fonction publique a sa
+  plateforme (`concours.gov.bf`). Faso Résultats doit donc se présenter comme une
+  brique **complémentaire** (SMS/USSD — ~78 % de la population hors Internet —, app,
+  outil de publication pour les organisateurs non équipés), jamais comme un portail
+  concurrent ni comme « la plateforme officielle ». Chiffres issus de la presse, à
+  revérifier sur les communiqués officiels avant tout document remis à une
+  administration.
 
 ---
 

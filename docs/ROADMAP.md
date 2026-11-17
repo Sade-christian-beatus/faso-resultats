@@ -205,8 +205,8 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
      des Systèmes d'Information, https://anssi.bf/) pour obtenir les exigences de
      sécurité applicables à une plateforme traitant des données d'examens
      officiels. L'ANSSI a recommandé un **courrier officiel** de saisine plutôt
-     qu'une simple prise de contact — voir la lettre type préparée pour ce
-     courrier (à finaliser avec l'identité juridique de l'expéditeur, encore non
+     qu'une simple prise de contact — voir la lettre type
+     `docs/courriers/05_anssi.md` (à finaliser avec l'identité juridique de l'expéditeur, encore non
      tranchée, voir `docs/PIVOT_SAAS_B2G.md` § 9).
 2. **Tests de charge à grande échelle** — première mesure réelle effectuée le
    2026-07-07 (client `httpx` async local contre un serveur `uvicorn` mono-processus,
