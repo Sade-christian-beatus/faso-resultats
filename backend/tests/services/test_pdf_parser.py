@@ -116,3 +116,23 @@ def test_parser_pdf_document_type_incompatible_signale_toutes_les_lignes_en_erre
     assert resultat.nombre_erreurs == 1
     assert "numero_pv manquant" in resultat.lignes[0].erreurs
     assert "nom manquant" in resultat.lignes[0].erreurs
+
+
+def test_parser_pdf_ignore_l_entete_repetee_sur_chaque_page(tmp_path) -> None:
+    """Regression (audit 2026-11-16, C2): most official PDFs repeat the header at the top
+    of every page. Each repetition used to be imported as a candidate ("Numero PV",
+    "Nom", decision "DECISION") without any error. The multi-page test above disables
+    the repetition (repeatRows=0) and did not catch it."""
+    chemin = tmp_path / "entete_repetee.pdf"
+    lignes = [[str(n), "Ouaga 1", f"Nom{n}", f"Prenom{n}", "Admis"] for n in range(1, 80)]
+    doc = SimpleDocTemplate(str(chemin), pagesize=A4)
+    table = Table([["Numero PV", "Jury", "Nom", "Prenom", "Decision"], *lignes], repeatRows=1)
+    table.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.5, colors.black)]))
+    doc.build([table])
+
+    resultat = parser_pdf(str(chemin))
+
+    assert resultat.nombre_lignes == 79
+    assert [ligne.donnees["numero_pv"] for ligne in resultat.lignes] == [
+        str(n) for n in range(1, 80)
+    ]

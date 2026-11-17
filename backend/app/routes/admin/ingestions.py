@@ -1,3 +1,4 @@
+import logging
 import uuid
 from pathlib import Path
 
@@ -25,20 +26,43 @@ from app.models import (
 from app.schemas.ingestion import CorrectionRequest, IngestionOut, IngestionPreviewOut, LigneApercu
 from app.services.audit_service import journaliser_audit
 from app.services.candidat.matching_service import MatchingService
-from app.services.ingestion.dispatch import parser_fichier
-from app.services.ingestion.normalizer import valider_ligne_normalisee
-from app.services.ingestion.publication import construire_resultats
+from app.services.ingestion.dispatch import FichierIllisibleError, parser_fichier
+from app.services.ingestion.normalizer import normaliser_donnees
+from app.services.ingestion.publication import LignesInvalidesError, construire_resultats
 from app.services.ingestion.template import construire_modele_excel
 from app.services.phases import ErreurPhase, phase_par_defaut, verifier_phase_ouverte
 
 router = APIRouter(prefix="/api/v1/admin/ingestions", tags=["admin-ingestions"])
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
+# No ".xls": openpyxl cannot read the old binary Excel format (it used to be accepted,
+# then failed with a 500 — audit 2026-11-16, M1).
 _EXTENSIONS_AUTORISEES = {
-    TypeFichier.EXCEL: {".xlsx", ".xls"},
+    TypeFichier.EXCEL: {".xlsx"},
     TypeFichier.PDF: {".pdf"},
     TypeFichier.PDF_OCR: {".pdf"},
 }
+
+_MESSAGE_FICHIER_ILLISIBLE = (
+    "Le fichier n'a pas pu être lu : il est peut-être endommagé, protégé par un mot de "
+    "passe, ou son contenu ne correspond pas à son extension. Vérifiez qu'il s'ouvre "
+    "normalement sur votre ordinateur, puis réessayez."
+)
+
+
+def _message_extension_refusee(extension: str, type_fichier: TypeFichier) -> str:
+    acceptees = ", ".join(sorted(_EXTENSIONS_AUTORISEES[type_fichier]))
+    message = (
+        f"Extension '{extension}' incompatible avec le type de fichier {type_fichier.value} "
+        f"(accepté : {acceptees})."
+    )
+    if extension == ".xls":
+        message += (
+            " Les anciens fichiers .xls ne sont pas pris en charge : ouvrez-le dans Excel "
+            "ou LibreOffice et enregistrez-le au format .xlsx."
+        )
+    return message
 
 
 async def _get_ingestion_ou_404(
@@ -105,11 +129,7 @@ async def upload_ingestion(
     extension = Path(file.filename or "").suffix.lower()
     if extension not in _EXTENSIONS_AUTORISEES[type_fichier]:
         raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Extension '{extension}' incompatible avec le type de fichier "
-                f"{type_fichier.value}"
-            ),
+            status_code=422, detail=_message_extension_refusee(extension, type_fichier)
         )
 
     contenu = await file.read()
@@ -126,7 +146,19 @@ async def upload_ingestion(
     chemin_fichier = dossier_examen / f"{ingestion_id}{extension}"
     chemin_fichier.write_bytes(contenu)
 
-    resultat_parsing = parser_fichier(chemin_fichier, type_fichier, decision_par_defaut)
+    try:
+        resultat_parsing = parser_fichier(chemin_fichier, type_fichier, decision_par_defaut)
+    except FichierIllisibleError as erreur:
+        # No ingestion references the file: do not leave candidate data behind on disk.
+        chemin_fichier.unlink(missing_ok=True)
+        # Exception type only: parser messages may quote cell contents (personal data).
+        logger.warning(
+            "Unreadable upload rejected (ingestion %s, %s): %s",
+            ingestion_id,
+            type_fichier.value,
+            erreur,
+        )
+        raise HTTPException(status_code=422, detail=_MESSAGE_FICHIER_ILLISIBLE) from erreur
 
     ingestion = Ingestion(
         id=ingestion_id,
@@ -234,18 +266,21 @@ async def correct_ingestion(
             detail="Cette ingestion n'est plus modifiable (déjà publiée ou rejetée)",
         )
 
-    # La liste `erreurs` envoyée par le client n'est jamais fiable (bug/désync front,
-    # payload manuel) : on revalide chaque ligne côté serveur à partir de ses données,
-    # sans jamais faire confiance à ce que le client prétend avoir corrigé.
-    lignes_revalidees = [
-        LigneApercu(
-            ligne=ligne.ligne,
-            donnees=ligne.donnees,
-            brut=ligne.brut,
-            erreurs=valider_ligne_normalisee(ligne.donnees),
+    # Ni la liste `erreurs` ni le format des valeurs envoyés par le client ne sont fiables
+    # (bug/désync front, payload manuel) : chaque ligne est renormalisée et revalidée côté
+    # serveur, avec les mêmes règles qu'à l'import (moyenne "12,5" -> 12.5, décision en
+    # majuscules...), sans jamais faire confiance à ce que le client prétend avoir corrigé.
+    lignes_revalidees = []
+    for ligne in payload.lignes:
+        normalisation = normaliser_donnees(ligne.donnees)
+        lignes_revalidees.append(
+            LigneApercu(
+                ligne=ligne.ligne,
+                donnees=normalisation.donnees,
+                brut=ligne.brut,
+                erreurs=normalisation.erreurs,
+            )
         )
-        for ligne in payload.lignes
-    ]
 
     ingestion.apercu_donnees = [ligne.model_dump() for ligne in lignes_revalidees]
     ingestion.nombre_lignes_detectees = len(lignes_revalidees)
@@ -329,7 +364,14 @@ async def publish_ingestion(
     except ErreurPhase as erreur:
         raise HTTPException(status_code=409, detail=str(erreur)) from erreur
 
-    resultats = construire_resultats(ingestion, examen)
+    try:
+        resultats = construire_resultats(ingestion, examen)
+    except LignesInvalidesError as erreur:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{erreur.nombre_lignes} ligne(s) contiennent encore des erreurs : "
+            "corrigez-les avant de publier",
+        ) from erreur
     await _refuser_doublons(resultats, examen, ingestion.phase, db)
     for resultat in resultats:
         db.add(resultat)

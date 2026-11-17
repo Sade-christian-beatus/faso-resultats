@@ -1,19 +1,42 @@
 import uuid
 from datetime import UTC, date, datetime
+from typing import Any
 
 from app.models import Examen, Ingestion, Resultat
+from app.services.ingestion.normalizer import normaliser_donnees
 from app.services.phases import phase_suivante_attendue
+
+
+class LignesInvalidesError(ValueError):
+    """Some preview rows do not pass validation: nothing may be published."""
+
+    def __init__(self, nombre_lignes: int) -> None:
+        super().__init__(f"{nombre_lignes} ligne(s) invalide(s)")
+        self.nombre_lignes = nombre_lignes
+
+
+def _normaliser_apercu(apercu_donnees: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Canonical data of every preview row, revalidated at publication time rather than
+    trusting `nombre_erreurs`: what is published is exactly what passes validation
+    (audit 2026-11-16, C1/E5 — values stored in an older format or sent by a client could
+    otherwise reach the database and fail there with a 500). Raises
+    `LignesInvalidesError` if any row is invalid."""
+    normalisees = [normaliser_donnees(ligne["donnees"]) for ligne in apercu_donnees]
+    nombre_invalides = sum(1 for ligne in normalisees if ligne.erreurs)
+    if nombre_invalides:
+        raise LignesInvalidesError(nombre_invalides)
+    return [ligne.donnees for ligne in normalisees]
 
 
 def construire_resultats(ingestion: Ingestion, examen: Examen) -> list[Resultat]:
     """Transforme l'aperçu validé d'une ingestion en lignes Resultat prêtes à publier.
-    Suppose que l'appelant a déjà vérifié qu'aucune ligne ne porte d'erreur et que la
-    phase de l'ingestion est ouverte (app/services/phases.py).
+    Suppose que l'appelant a déjà vérifié que la phase de l'ingestion est ouverte
+    (app/services/phases.py). Lève `LignesInvalidesError` si une ligne est invalide.
     """
     publiee_at = datetime.now(UTC)
+    lignes_donnees = _normaliser_apercu(ingestion.apercu_donnees)
     resultats = []
-    for ligne in ingestion.apercu_donnees:
-        donnees = ligne["donnees"]
+    for ligne, donnees in zip(ingestion.apercu_donnees, lignes_donnees, strict=True):
         date_naissance = (
             date.fromisoformat(donnees["date_naissance"]) if donnees.get("date_naissance") else None
         )

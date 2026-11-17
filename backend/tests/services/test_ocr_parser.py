@@ -50,3 +50,18 @@ def test_lignes_depuis_texte_signale_les_colonnes_non_reconnues() -> None:
     resultat = lignes_depuis_texte(texte)
 
     assert resultat.erreurs_fichier == [message_colonnes_non_reconnues(["Adresse"])]
+
+
+def test_lignes_depuis_texte_ignore_l_entete_repetee_de_chaque_page() -> None:
+    """Regression (audit 2026-11-16, C2): a scanned multi-page list repeats its header,
+    which must not become a candidate."""
+    texte = (
+        "N° PV    Jury    Nom    Prénom    Décision\n"
+        "001    Ouaga 1    Traore    Awa    Admis\n"
+        "N° PV    Jury    Nom    Prénom    Décision\n"
+        "002    Ouaga 1    Kabore    Issa    Ajourne\n"
+    )
+
+    resultat = lignes_depuis_texte(texte)
+
+    assert [ligne.donnees["numero_pv"] for ligne in resultat.lignes] == ["001", "002"]

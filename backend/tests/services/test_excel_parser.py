@@ -112,3 +112,19 @@ def test_parser_excel_document_concours_direct_avec_decision_par_defaut(tmp_path
     # Prénom non séparé automatiquement : reste à corriger manuellement.
     assert "prenom manquant" in ligne.erreurs
     assert not any("illisible" in erreur for erreur in ligne.erreurs)
+
+
+def test_parser_excel_cellule_date_typee_donne_une_date_sans_heure(fichier_excel) -> None:
+    """Regression (audit 2026-11-16, C1): a real date cell — the normal case in an
+    official spreadsheet — used to produce "2008-05-12T00:00:00", accepted in preview
+    then rejected at publication with a 500. The other tests type dates as text."""
+    from datetime import datetime
+
+    chemin = fichier_excel(
+        [["001", "Ouaga 1", "Traore", "Awa", datetime(2008, 5, 12), "Admis", 13]]
+    )
+
+    resultat = parser_excel(chemin)
+
+    assert resultat.nombre_erreurs == 0
+    assert resultat.lignes[0].donnees["date_naissance"] == "2008-05-12"

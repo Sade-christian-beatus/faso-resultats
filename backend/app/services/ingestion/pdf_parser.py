@@ -5,6 +5,7 @@ import pdfplumber
 from app.services.ingestion.normalizer import (
     colonnes_non_reconnues,
     construire_mapping_colonnes,
+    est_ligne_entete,
     message_colonnes_non_reconnues,
     normaliser_ligne,
 )
@@ -34,6 +35,9 @@ def parser_pdf(
 
                 for ligne_brute_liste in table[debut:]:
                     if all(v is None for v in ligne_brute_liste):
+                        continue
+                    # Header repeated at the top of the following pages: not a candidate.
+                    if est_ligne_entete(ligne_brute_liste):
                         continue
                     ligne_brute = dict(zip(entetes, ligne_brute_liste, strict=False))
                     resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)

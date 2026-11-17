@@ -12,6 +12,13 @@ function escapeHtml(valeur) {
   return String(valeur ?? "").replace(/[&<>"']/g, (caractere) => CARACTERES_HTML[caractere]);
 }
 
+// Dates are stored as ISO (AAAA-MM-JJ) but typed and read as JJ/MM/AAAA; the server
+// accepts both. An unreadable date is shown as typed, so it can be fixed.
+function dateAffichee(valeur) {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valeur || "");
+  return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : valeur;
+}
+
 // Publication par phase (docs/CONTEXTE_METIER.md § 2.4).
 const PHASES_CONCOURS = ["EPREUVES_SPORTIVES", "ADMISSIBILITE", "ADMISSION_DEFINITIVE"];
 const LIBELLES_PHASE = {
@@ -305,6 +312,7 @@ function renderApercu() {
         <td class="pr-2"><input data-index="${index}" data-champ="jury" value="${escapeHtml(ligne.donnees.jury)}" class="${classeChamp} w-28" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="nom" value="${escapeHtml(ligne.donnees.nom)}" class="${classeChamp} w-28" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="prenom" value="${escapeHtml(ligne.donnees.prenom)}" class="${classeChamp} w-28" /></td>
+        <td class="pr-2"><input data-index="${index}" data-champ="date_naissance" value="${escapeHtml(dateAffichee(ligne.donnees.date_naissance))}" placeholder="JJ/MM/AAAA" class="${classeChamp} w-28" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="decision" value="${escapeHtml(ligne.donnees.decision)}" class="${classeChamp} w-24" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="moyenne" value="${escapeHtml(ligne.donnees.moyenne)}" class="${classeChamp} w-16" /></td>
         <td class="pr-2"><input data-index="${index}" data-champ="numero_cnib" value="${escapeHtml(ligne.donnees.numero_cnib)}" class="${classeChamp} w-24" /></td>
@@ -319,8 +327,12 @@ function lireCorrectionsDepuisTable() {
   document.querySelectorAll("#corps-table-apercu input").forEach((input) => {
     const index = Number(input.dataset.index);
     const champ = input.dataset.champ;
-    if (champ === "moyenne") {
-      lignes[index].donnees[champ] = input.value !== "" ? Number(input.value) : null;
+    if (champ === "moyenne" || champ === "date_naissance") {
+      // Sent as typed: the server normalizes ("12,5" -> 12.5, JJ/MM/AAAA -> ISO) and
+      // reports unreadable values. Number("12,5") used to give NaN, sent as null: the
+      // average was silently erased.
+      const valeur = input.value.trim();
+      lignes[index].donnees[champ] = valeur !== "" ? valeur : null;
     } else {
       lignes[index].donnees[champ] = input.value;
     }

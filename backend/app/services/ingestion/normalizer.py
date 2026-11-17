@@ -3,13 +3,19 @@ vers les champs attendus par le modèle Resultat. Fonctions pures, sans I/O,
 pour rester testables sans fichier ni base de données.
 """
 
+import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 CHAMPS_OBLIGATOIRES = ("numero_pv", "nom", "prenom", "jury", "decision")
+_CHAMPS_TEXTE_OPTIONNELS = ("lieu_naissance", "etablissement", "numero_cnib")
+
+# Minimum number of distinct business columns recognised in a table row for it to be a
+# repeated header rather than a candidate (see `est_ligne_entete`).
+_MINIMUM_COLONNES_ENTETE = 2
 
 # Alias d'en-têtes tolérés par champ canonique (déjà normalisés : minuscules, sans accent).
 _ALIAS_ENTETES: dict[str, tuple[str, ...]] = {
@@ -84,69 +90,103 @@ def message_colonnes_non_reconnues(non_reconnues: list[str]) -> str:
     )
 
 
+def est_ligne_entete(valeurs: list[Any]) -> bool:
+    """True when a table row is the column header again rather than a candidate.
+    Official PDFs usually repeat the header at the top of every page; without this check
+    each repetition was imported as a candidate named "Nom" with decision "DECISION",
+    without any error (audit 2026-11-16, C2). Two distinct recognised business columns
+    are required: a real candidate row never has two cells that are header names."""
+    cellules = [str(v) for v in valeurs if v is not None and str(v).strip()]
+    champs = set(construire_mapping_colonnes(cellules).values())
+    return len(champs) >= _MINIMUM_COLONNES_ENTETE
+
+
 def _parser_date(valeur: Any) -> tuple[date | None, str | None]:
     if valeur is None or valeur == "":
         return None, None
+    # Checked before `date`: datetime is a subclass of date, and openpyxl returns date
+    # cells as datetime — kept as is, isoformat() then carried a time ("2008-05-12T00:00:00")
+    # that made publication fail (audit 2026-11-16, C1).
+    if isinstance(valeur, datetime):
+        return valeur.date(), None
     if isinstance(valeur, date):
         return valeur, None
     texte = str(valeur).strip()
     for fmt in _FORMATS_DATE:
         try:
-            from datetime import datetime as _dt
-
-            return _dt.strptime(texte, fmt).date(), None
+            return datetime.strptime(texte, fmt).date(), None
         except ValueError:
             continue
-    return None, f"date de naissance illisible : '{texte}'"
+    try:
+        # ISO date or datetime, e.g. a preview stored before the fix above.
+        return datetime.fromisoformat(texte).date(), None
+    except ValueError:
+        return None, f"date de naissance illisible : '{texte}'"
 
 
 def _parser_moyenne(valeur: Any) -> tuple[float | None, str | None]:
     if valeur is None or valeur == "":
         return None, None
+    if isinstance(valeur, bool):
+        return None, f"moyenne illisible : '{valeur}'"
     if isinstance(valeur, int | float):
-        return float(valeur), None
-    texte = str(valeur).strip().replace(",", ".")
-    try:
-        return float(texte), None
-    except ValueError:
-        return None, f"moyenne illisible : '{texte}'"
-
-
-def valider_ligne_normalisee(donnees: dict[str, Any]) -> list[str]:
-    """Revalide une ligne déjà en forme canonique (ex. après correction manuelle par un
-    admin), en rejouant les mêmes règles que `normaliser_ligne` sur les champs
-    individuels. Contrairement à `normaliser_ligne`, ne fait aucun mapping d'en-têtes :
-    suppose que les clés de `donnees` sont déjà les champs canoniques (numero_pv, jury,
-    nom, ...). Sert de garde-fou serveur : on ne peut jamais faire confiance à la liste
-    `erreurs` telle qu'envoyée par le client (validation humaine obligatoire = revalidée
-    côté serveur, pas seulement affichée côté client).
-    """
-    erreurs: list[str] = []
-    for champ in CHAMPS_OBLIGATOIRES:
-        if not donnees.get(champ):
-            erreurs.append(f"{champ} manquant")
-
-    date_naissance = donnees.get("date_naissance")
-    if date_naissance:
+        nombre: float = float(valeur)
+    else:
+        texte = str(valeur).strip().replace(",", ".")
         try:
-            date.fromisoformat(str(date_naissance))
+            nombre = float(texte)
         except ValueError:
-            erreurs.append(f"date de naissance illisible : '{date_naissance}'")
+            return None, f"moyenne illisible : '{texte}'"
+    if not math.isfinite(nombre):  # "nan", "inf" parse as floats
+        return None, f"moyenne illisible : '{valeur}'"
+    return nombre, None
 
-    moyenne = donnees.get("moyenne")
-    if moyenne is not None and not isinstance(moyenne, int | float):
-        try:
-            float(str(moyenne).replace(",", "."))
-        except ValueError:
-            erreurs.append(f"moyenne illisible : '{moyenne}'")
 
-    return erreurs
+def _texte(valeur: Any) -> str:
+    return "" if valeur is None else str(valeur).strip()
 
 
 @dataclass
 class ResultatNormalisation:
     donnees: dict[str, Any]
     erreurs: list[str] = field(default_factory=list)
+
+
+def normaliser_donnees(donnees: dict[str, Any]) -> ResultatNormalisation:
+    """Canonical form and validation of a row already keyed by canonical fields
+    (numero_pv, jury, nom...). Single source of truth used at import, after a manual
+    correction and again at publication, so that what is validated is exactly what gets
+    published — the client's `erreurs` list and value formats are never trusted
+    (audit 2026-08-17 and 2026-11-16, E5).
+
+    Fields this function does not know (numero_recepisse, rang... from the scanned-PDF
+    parser) are kept unchanged. An unreadable date or average is kept as typed, with its
+    error, so that the error stays visible until someone fixes the value instead of the
+    value silently disappearing."""
+    normalisees = dict(donnees)
+    for champ in ("numero_pv", "jury", "nom", "prenom"):
+        normalisees[champ] = _texte(donnees.get(champ))
+    normalisees["decision"] = _texte(donnees.get("decision")).upper()
+    for champ in _CHAMPS_TEXTE_OPTIONNELS:
+        normalisees[champ] = _texte(donnees.get(champ)) or None
+
+    erreurs = [f"{champ} manquant" for champ in CHAMPS_OBLIGATOIRES if not normalisees[champ]]
+
+    date_naissance, erreur_date = _parser_date(donnees.get("date_naissance"))
+    if erreur_date:
+        erreurs.append(erreur_date)
+        normalisees["date_naissance"] = _texte(donnees.get("date_naissance"))
+    else:
+        normalisees["date_naissance"] = date_naissance.isoformat() if date_naissance else None
+
+    moyenne, erreur_moyenne = _parser_moyenne(donnees.get("moyenne"))
+    if erreur_moyenne:
+        erreurs.append(erreur_moyenne)
+        normalisees["moyenne"] = _texte(donnees.get("moyenne"))
+    else:
+        normalisees["moyenne"] = moyenne
+
+    return ResultatNormalisation(donnees=normalisees, erreurs=erreurs)
 
 
 def normaliser_ligne(
@@ -170,35 +210,9 @@ def normaliser_ligne(
 
     if not valeurs.get("nom") and valeurs.get("nom_prenom"):
         valeurs["nom"] = valeurs["nom_prenom"]
+    valeurs.pop("nom_prenom", None)
 
     if not valeurs.get("decision") and decision_par_defaut:
         valeurs["decision"] = decision_par_defaut
 
-    erreurs: list[str] = []
-
-    for champ in CHAMPS_OBLIGATOIRES:
-        if not valeurs.get(champ):
-            erreurs.append(f"{champ} manquant")
-
-    date_naissance, erreur_date = _parser_date(valeurs.get("date_naissance"))
-    if erreur_date:
-        erreurs.append(erreur_date)
-
-    moyenne, erreur_moyenne = _parser_moyenne(valeurs.get("moyenne"))
-    if erreur_moyenne:
-        erreurs.append(erreur_moyenne)
-
-    donnees = {
-        "numero_pv": str(valeurs.get("numero_pv") or "").strip(),
-        "jury": str(valeurs.get("jury") or "").strip(),
-        "nom": str(valeurs.get("nom") or "").strip(),
-        "prenom": str(valeurs.get("prenom") or "").strip(),
-        "decision": str(valeurs.get("decision") or "").strip().upper(),
-        "date_naissance": date_naissance.isoformat() if date_naissance else None,
-        "lieu_naissance": str(valeurs.get("lieu_naissance") or "").strip() or None,
-        "etablissement": str(valeurs.get("etablissement") or "").strip() or None,
-        "numero_cnib": str(valeurs.get("numero_cnib") or "").strip() or None,
-        "moyenne": moyenne,
-    }
-
-    return ResultatNormalisation(donnees=donnees, erreurs=erreurs)
+    return normaliser_donnees(valeurs)

@@ -1,10 +1,25 @@
+import pytest
+
 from app.services.ingestion.normalizer import (
     colonnes_non_reconnues,
     construire_mapping_colonnes,
+    est_ligne_entete,
     message_colonnes_non_reconnues,
+    normaliser_donnees,
     normaliser_entete,
     normaliser_ligne,
 )
+
+
+def _ligne_valide(**surcharges) -> dict:
+    return {
+        "numero_pv": "001",
+        "jury": "Ouaga 1",
+        "nom": "Traore",
+        "prenom": "Awa",
+        "decision": "ADMIS",
+        **surcharges,
+    }
 
 
 def test_normaliser_entete_supprime_accents_et_ponctuation() -> None:
@@ -178,3 +193,112 @@ def test_normaliser_ligne_decision_par_defaut_ignoree_si_colonne_presente() -> N
     resultat = normaliser_ligne(ligne, mapping, decision_par_defaut="ADMISSIBLE")
 
     assert resultat.donnees["decision"] == "AJOURNE"
+
+
+# --- Audit 2026-11-16: one canonical normalization for import, correction, publication.
+
+
+def test_date_excel_typee_datetime_devient_une_date_sans_heure() -> None:
+    """openpyxl returns date cells as datetime: the time used to leak into the ISO string
+    ("2008-05-12T00:00:00"), which made publication fail (audit C1)."""
+    from datetime import datetime
+
+    resultat = normaliser_donnees(_ligne_valide(date_naissance=datetime(2008, 5, 12)))
+
+    assert resultat.erreurs == []
+    assert resultat.donnees["date_naissance"] == "2008-05-12"
+
+
+def test_date_iso_avec_heure_deja_stockee_est_relue() -> None:
+    """Previews stored before the fix carry "2008-05-12T00:00:00": still publishable."""
+    resultat = normaliser_donnees(_ligne_valide(date_naissance="2008-05-12T00:00:00"))
+
+    assert resultat.erreurs == []
+    assert resultat.donnees["date_naissance"] == "2008-05-12"
+
+
+def test_date_saisie_jj_mm_aaaa_en_correction_est_convertie() -> None:
+    resultat = normaliser_donnees(_ligne_valide(date_naissance="12/05/2008"))
+
+    assert resultat.donnees["date_naissance"] == "2008-05-12"
+
+
+def test_date_illisible_reste_visible_avec_son_erreur() -> None:
+    """Kept as typed: if it became None, the next correction pass would make the error
+    disappear and silently drop the date."""
+    resultat = normaliser_donnees(_ligne_valide(date_naissance="31/02/2008"))
+
+    assert resultat.donnees["date_naissance"] == "31/02/2008"
+    assert any("date de naissance illisible" in erreur for erreur in resultat.erreurs)
+
+    # Same through the import path.
+    mapping = construire_mapping_colonnes(
+        ["numero_pv", "jury", "nom", "prenom", "decision", "ne le"]
+    )
+    ligne = {"numero_pv": "1", "jury": "J", "nom": "N", "prenom": "P", "decision": "ADMIS"}
+    importee = normaliser_ligne({**ligne, "ne le": "pas une date"}, mapping)
+    assert importee.donnees["date_naissance"] == "pas une date"
+
+
+@pytest.mark.parametrize(
+    ("saisie", "attendue"), [("12,5", 12.5), ("13.45", 13.45), (14, 14.0), (" 9,75 ", 9.75)]
+)
+def test_moyenne_corrigee_est_convertie_en_nombre(saisie, attendue) -> None:
+    resultat = normaliser_donnees(_ligne_valide(moyenne=saisie))
+
+    assert resultat.erreurs == []
+    assert resultat.donnees["moyenne"] == attendue
+
+
+@pytest.mark.parametrize("saisie", ["douze", "nan", "inf", True])
+def test_moyenne_invalide_signalee_et_conservee(saisie) -> None:
+    resultat = normaliser_donnees(_ligne_valide(moyenne=saisie))
+
+    assert any("moyenne illisible" in erreur for erreur in resultat.erreurs)
+    assert resultat.donnees["moyenne"] == str(saisie).strip()
+
+
+def test_decision_et_textes_corriges_sont_normalises() -> None:
+    resultat = normaliser_donnees(
+        _ligne_valide(decision=" admis ", nom=" Traore ", numero_cnib="  ", etablissement="")
+    )
+
+    assert resultat.donnees["decision"] == "ADMIS"
+    assert resultat.donnees["nom"] == "Traore"
+    assert resultat.donnees["numero_cnib"] is None
+    assert resultat.donnees["etablissement"] is None
+
+
+def test_champs_specifiques_au_parser_sont_conserves() -> None:
+    """Fields produced by the scanned-PDF parser must survive a correction pass."""
+    resultat = normaliser_donnees(
+        _ligne_valide(numero_recepisse="000015-120-03", rang_numerique=1, rang_affiche="1°")
+    )
+
+    assert resultat.donnees["numero_recepisse"] == "000015-120-03"
+    assert resultat.donnees["rang_numerique"] == 1
+    assert resultat.donnees["rang_affiche"] == "1°"
+
+
+@pytest.mark.parametrize(
+    "cellules",
+    [
+        ["Numero PV", "Jury", "Nom", "Prenom", "Decision"],
+        ["N° PV", "Centre", "Nom", "Prénom(s)", "Résultat"],
+        ["Numéro\nPV", None, "NOM", "PRENOMS", ""],
+    ],
+)
+def test_ligne_entete_repetee_reconnue(cellules) -> None:
+    assert est_ligne_entete(cellules) is True
+
+
+@pytest.mark.parametrize(
+    "cellules",
+    [
+        ["001", "Ouaga 1", "Traore", "Awa", "Admis"],
+        ["002", "Centre", "Kabore", "Issa", "Ajourne"],  # one header-like cell only
+        [None, None, None],
+    ],
+)
+def test_ligne_candidat_n_est_pas_une_entete(cellules) -> None:
+    assert est_ligne_entete(cellules) is False

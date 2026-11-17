@@ -36,6 +36,7 @@ from pdf2image import convert_from_path
 from app.services.ingestion.normalizer import (
     colonnes_non_reconnues,
     construire_mapping_colonnes,
+    est_ligne_entete,
     message_colonnes_non_reconnues,
     normaliser_ligne,
 )
@@ -84,6 +85,8 @@ def lignes_depuis_texte(texte: str, decision_par_defaut: str | None = None) -> R
     lignes: list[LigneExtraite] = []
     for numero_ligne, ligne_texte in enumerate(lignes_texte[index_entete + 1 :], start=2):
         valeurs = _SEPARATEUR_COLONNES.split(ligne_texte.strip())
+        if est_ligne_entete(valeurs):  # header repeated on each scanned page
+            continue
         ligne_brute = dict(zip(entetes, valeurs, strict=False))
         resultat = normaliser_ligne(ligne_brute, mapping_colonnes, decision_par_defaut)
         lignes.append(
