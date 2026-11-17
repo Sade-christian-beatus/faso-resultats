@@ -346,6 +346,14 @@ manuelle possible → publication explicite** .
   qu'en levant une exception** — une ligne en erreur reste visible dans
   l'aperçu pour correction manuelle, au lieu de faire échouer tout l'import.
   Champs obligatoires : `numero_pv`, `jury`, `nom`, `prenom`, `decision`.
+  `normaliser_donnees` est la **seule** règle de normalisation/validation, appliquée
+  à l'import, après chaque correction manuelle (`PATCH`) et de nouveau à la
+  publication : ce qui est publié est exactement ce qui a été validé (moyenne
+  `"12,5"` → `12.5`, décision en majuscules, date `JJ/MM/AAAA` ou cellule date
+  Excel → ISO). Une date ou une moyenne illisible est conservée telle que saisie
+  avec son erreur, pour rester visible jusqu'à correction (audit 2026-11-16).
+  `est_ligne_entete` écarte l'en-tête répété en haut de chaque page (PDF natif
+  et OCR).
 - `excel_parser.py` (openpyxl) : entièrement testé avec de vrais fichiers
   `.xlsx` générés dans les tests (aucune dépendance externe nécessaire pour
   écrire *et* lire du Excel).
@@ -361,9 +369,15 @@ manuelle possible → publication explicite** .
   `poppler` (présents dans le Dockerfile, absents de l'environnement de dev
   sandbox) et n'a donc pas pu être testé en conditions réelles. ⚠️ Heuristique
   de premier jet, à calibrer sur de vrais PV scannés.
-- `dispatch.py` : sélectionne le bon parser selon `TypeFichier`.
+- `dispatch.py` : sélectionne le bon parser selon `TypeFichier`. Un fichier
+  illisible (endommagé, protégé, contenu ≠ extension) lève
+  `FichierIllisibleError` → 422 avec un message en français, et le fichier est
+  supprimé du disque ; un outil serveur manquant (tesseract, poppler) reste une
+  erreur serveur. Seul `.xlsx` est accepté pour Excel (openpyxl ne lit pas `.xls`).
 - `publication.py` : transforme l'aperçu validé (`Ingestion.apercu_donnees`)
-  en lignes `Resultat` prêtes à insérer.
+  en lignes `Resultat` prêtes à insérer, après avoir renormalisé et revalidé
+  chaque ligne (`LignesInvalidesError` → 400) sans se fier au compteur
+  `nombre_erreurs` stocké.
 
 ### Calibrage sur un vrai document de concours (2026-07-03)
 

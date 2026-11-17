@@ -334,7 +334,8 @@ Après chaque étape majeure, produire un résumé structuré :
      obligatoire n'était pas revalidée côté serveur — le champ `erreurs` du
      payload client faisait foi tel quel. Corrigé : `nombre_erreurs` est
      désormais recalculé côté serveur à partir des données (`normalizer.
-     valider_ligne_normalisee`), jamais du payload client.
+     valider_ligne_normalisee`, devenu `normaliser_donnees` le 2026-11-17),
+     jamais du payload client.
   4. `config.py` : `environment` était un `str` libre comparé littéralement
      à `"production"` — une variante de casse (`Production`) contournait
      silencieusement à la fois le garde-fou anti-secrets-par-défaut et le
@@ -556,6 +557,27 @@ Après chaque étape majeure, produire un résumé structuré :
   photo de la bannière (illustration CSS en place) et URL des réseaux sociaux
   (`RESEAUX_SOCIAUX` dans `js/public.js`, icônes masquées tant que vide). La
   bande défilante du 2026-09-28 est remplacée par « Dernières publications ».
+- **2026-11-16 — Troisième audit complet** (`docs/AUDIT_2026-11-16.md`) :
+  4 critiques, 6 élevés, 7 moyens, chacun reproduit ou marqué « lu ». Aucun
+  n'était couvert par les tests (fixtures Excel avec des dates en texte, PDF
+  multi-pages sans en-tête répété).
+- **2026-11-17 — Lot 1 de l'audit corrigé (fiabilité de l'import)** : (C1) une
+  cellule date Excel produisait `"2008-05-12T00:00:00"`, accepté à l'aperçu puis
+  500 à la publication — tout tableur officiel avec une vraie colonne date était
+  impubliable ; (C2) l'en-tête répété en haut de chaque page d'un PDF (natif ou
+  OCR) était importé comme un candidat, sans erreur ; (E5) les valeurs corrigées
+  n'étaient pas normalisées (`"12,5"` → 500, décision en minuscules), et l'écran
+  admin effaçait en silence une moyenne saisie avec une virgule (`Number("12,5")`
+  = `NaN` → `null`) ; (M1) fichier endommagé ou `.xls` → 500 avec fichier
+  orphelin sur le disque. Décisions : une seule fonction de normalisation
+  (`normaliser_donnees`) pour import, correction et publication, la publication
+  revalidant tout sans se fier à `nombre_erreurs` ; une valeur illisible est
+  conservée telle que saisie avec son erreur (avant, la date devenait `null` et
+  l'erreur disparaissait au premier enregistrement des corrections) ; colonne
+  « Né(e) le » ajoutée à l'écran de correction, sans quoi une date illisible
+  aurait bloqué la publication sans moyen de la corriger ; `.xls` refusé avec
+  consigne de conversion plutôt qu'une nouvelle dépendance (xlrd). Vérifié dans
+  Chromium contre PostgreSQL 16 réel. Lots 2 à 4 non commencés.
 - **2026-10-05 — Guide d'exploitation locale (`docs/GUIDE_LOCAL.md`) et script
   `backend/gerer_comptes.py`.** Aucun endpoint ne permettait de changer un mot de
   passe admin ni de créer un SUPER_ADMIN : le script couvre ces opérations (+
