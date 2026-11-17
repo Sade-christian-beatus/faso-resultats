@@ -33,6 +33,6 @@ brouillons à adapter, pas des courriers prêts à envoyer.**
 | `00_fiche_presentation.md` | (annexe) | Présentation du projet en une page |
 | `01_examens_secondaire.md` | Ministère en charge de l'enseignement secondaire / structure organisatrice du BEPC | Demande d'audience — BEPC |
 | `02_office_du_bac.md` | Office du Baccalauréat | Demande d'audience — BAC |
-| `03_fonction_publique.md` | Ministère de la Fonction publique | Demande d'audience — concours directs |
+| `03_fonction_publique.md` | Ministère des Serviteurs du Peuple (ex-Fonction publique) | Demande d'audience — concours directs |
 | `04_transition_digitale.md` | Ministère de la Transition digitale | Demande d'audience — appui institutionnel |
 | `05_anssi.md` | ANSSI | Saisine — exigences de sécurité |

@@ -3,7 +3,7 @@
 > Rédigée le 2026-11-17 à partir de sources publiques (presse burkinabè, DataReportal).
 > Les chiffres viennent de la presse et pas de publications officielles consolidées :
 > **les revérifier sur les communiqués des ministères avant de les mettre dans un
-> document remis à une administration.** Chaque chiffre renvoie à sa source (§ 8).
+> document remis à une administration.** Chaque chiffre renvoie à sa source (§ 10).
 
 ---
 
@@ -166,7 +166,54 @@ Inconvénient : moins de visibilité. Les deux démarches peuvent être menées 
 | **Mai–juil. 2027** | Pilote réel : BEPC (juin), BAC (fin juin–juillet) ou concours selon la cible obtenue. |
 | **Juil.–oct. 2027** | Concours directs Fonction publique (pic de charge). Bilan chiffré du pilote → second tour de prospection avec une référence. |
 
-## 8. Sources
+## 8. Calendrier de publication des résultats (référence : session 2026)
+
+Dates observées en 2026, à confirmer chaque année par les communiqués officiels. **Le
+calendrier 2027 n'est pas encore fixé** : un projet d'arrêté du calendrier scolaire
+2026-2027 publié dans la presse place la fin des cours au 1er juin 2027 et le début des
+examens au 15 juillet 2027, mais d'autres sources le contredisent. À vérifier sur
+education.gov.bf avant de bâtir le planning du pilote.
+
+| Examen / concours | Épreuves | Publication des résultats | Organisateur |
+|---|---|---|---|
+| Concours professionnels (Fonction publique) | 1er semestre | Admissions par vagues dès début juin (15 concours le 4 juin 2026) | Ministère des Serviteurs du Peuple |
+| CEP *(hors périmètre)* | début juin (2 juin 2026) | mi-juin (portail ouvert le 13 juin 2026) | MEBAPLN |
+| BEPC, BEP, CAP | début juin | 1er tour vers le 9–11 juin, bilan national le 19 juin 2026 | Ministère en charge de l'enseignement secondaire |
+| BAC | écrits du 23 juin au 1er juillet 2026 | 1er tour le 2 juillet ; 2nd tour les 6–7 juillet ; résultats définitifs au plus tard le 9 juillet | Office du Baccalauréat |
+| Concours directs (Fonction publique) | inscriptions mai–juin, écrits juillet | admissibilité par vagues de mi-août à septembre ; épreuves sportives et oraux en octobre ; admissions jusqu'en novembre (bilan le 9 novembre 2026) | Ministère des Serviteurs du Peuple |
+| Concours paramilitaires (douane, eaux et forêts, GSP, police) | avec les concours directs | admissibilité août–septembre, puis épreuves sportives, visite médicale, admission : publication **en plusieurs phases** | Ministère des Serviteurs du Peuple + ministères de tutelle |
+| Réserve militaire | recensement en ligne depuis le 2 octobre 2026 | sélection puis admission : dates non publiées (objectif fin 2026) | Ministère de la Guerre et de la Défense patriotique |
+
+**Lecture :** la charge se concentre en **trois pics** : juin (BEPC, concours
+professionnels), début juillet (BAC) et de mi-août à novembre (concours directs, en
+continu). Pour un pilote en 2027, la convention doit être signée **avant mars–avril
+2027** pour laisser le temps de former les agents et de tester la charge.
+
+## 9. Faits nouveaux (novembre 2026)
+
+- **Le ministère de la Fonction publique s'appelle désormais « ministère des Serviteurs
+  du Peuple »** (remaniement du 12 janvier 2026, ministre Mathias Traoré). Le courrier
+  `docs/courriers/03_fonction_publique.md` est corrigé en conséquence.
+- **Incidents sur les résultats d'admissibilité des concours directs 2026** : copies
+  d'un centre partiellement prises en compte (IFPB ex-ENAREF cycle C, élèves
+  gestionnaires des services de santé), délibérations reprises, deux agents sanctionnés
+  au Conseil des ministres du 5 novembre 2026. Le ministère parle d'« erreur humaine ».
+  **Argument direct pour Faso Résultats** : le contrôle du nombre de lignes importées
+  par rapport au fichier source, la prévisualisation obligatoire et la traçabilité vers
+  le fichier d'origine visent exactement ce type d'erreur. À présenter avec tact :
+  proposer d'aider, ne jamais pointer l'erreur de l'administration.
+- **Recrutement de 100 000 réservistes** (loi n° 019-2026/ALP du 26 mai 2026,
+  recensement sur `sigsnd.defense.bf` depuis le 2 octobre 2026, plus de 86 000 inscrits
+  annoncés le 1er novembre 2026). Trois étapes : recensement, sélection, admission.
+  Opportunité réelle (gros volume, publication en phases déjà gérée par la plateforme)
+  mais : (1) le ministère dispose déjà de sa propre plateforme ; (2) l'objectif « fin
+  2026 » laisse quelques semaines, incompatible avec une démarche sans structure
+  juridique ni convention ; (3) **publier des listes nominatives de réservistes peut les
+  exposer à des représailles** : seule une consultation individuelle (numéro de
+  récépissé + seconde donnée, notification par SMS) serait défendable. À aborder
+  seulement après une première référence civile.
+
+## 10. Sources
 
 - BAC 2025 (112 985 candidats) : [Sidwaya](https://www.sidwaya.info/?p=145346), [Wakat Séra](https://www.wakatsera.com/?p=120779)
 - BAC 2026 (105 984 candidats, 433 jurys) : [Wakat Séra](https://www.wakatsera.com/?p=142692), [L'Économiste du Faso](https://leconomistedufaso.com/?p=23492)
@@ -182,3 +229,10 @@ Inconvénient : moins de visibilité. Les deux démarches peuvent être menées 
 - Ministère de la Transition digitale (91 % du contrat d'objectifs 2025) : [We Are Tech](https://www.wearetech.africa/fr/fils/actualites/tech/burkina-faso-370-localites-connectees-et-un-contrat-d-objectifs-realise-a-91)
 - Arnaques aux faux résultats et canaux de diffusion du BAC 2026 (source secondaire) : [Simoon CV](https://simoon-cv.com/burkina-faso/blog/resultats-bac-2026-burkina-faso)
 - Tests de recrutement d'entreprises publiques (ex. SONABEL) : [Burkina24](https://burkina24.com/?p=428964)
+- BAC 2026, dates des tours : [Simoon CV](https://simoon-cv.com/burkina-faso/blog/resultats-bac-2026-burkina-faso), [L'Économiste du Faso](https://leconomistedufaso.com/?p=23492)
+- Concours professionnels 2026 (admissions du 4 juin) : [YOP L-FRII](https://yop.l-frii.com/formations/burkina-faso-resultats-dadmission-de-15-concours-professionnels-session-2026/)
+- Concours directs 2026 (admissibilité, bilan) : [Burkina24 (17 août)](https://burkina24.com/2026/08/17/concours-directs-2026-62-concours-corriges-et-40-resultats-dadmissibilite-deja-publies/), [Sidwaya (bilan du 9 novembre)](https://www.sidwaya.info/2026/11/09/concours-de-la-fonction-publique-lheure-du-bilan-de-la-session-2026/)
+- Calendrier scolaire 2026-2027 (projet d'arrêté, contradictoire) : [YOP L-FRII](https://yop.l-frii.com/burkina-faso-rentree-conges-examens-le-calendrier-scolaire-2026-2027-devoile), [Wakat Séra](https://www.wakatsera.com/?p=147183)
+- Ministère des Serviteurs du Peuple : [Bénin Web TV](https://beninwebtv.bj/burkina-faso-le-ministere-de-la-fonction-publique-devient-le-ministere-des-serviteurs-du-peuple/), [Burkina24](https://burkina24.com/2026/10/04/burkina-faso-recrutements-avancements-smig-assurance-maladie-mathias-traore-devoile-les-grandes-reformes/)
+- Incidents des concours directs 2026 : [Sidwaya](https://www.sidwaya.info/incidents-dans-les-resultats-de-certains-concours-de-la-session-2026-il-sagit-dune-erreur-humaine-rassure-le-sg-rodrigue-oboulbiga/), [Burkina24 (sanctions)](https://burkina24.com/?p=460340)
+- Réserve militaire : [YOP L-FRII](https://yop.l-frii.com/burkina-faso-armees-nationales-recrutement-de-100-000-reservistes-militaires/), [La Nouvelle Tribune](https://lanouvelletribune.info/2026/11/burkina-faso-plus-de-86-000-reservistes-inscrits-sur-les-100-000-attendus-dici-fin-2026/), [PressAfrik](https://www.pressafrik.com/Service-militaire-au-Burkina-plus-de-86-000-reservistes-inscrits-en-moins-d-un-mois_a313937.html)

@@ -5,8 +5,9 @@ Tél. : [téléphone] — Courriel : [adresse électronique]
 
 Ouagadougou, le [date]
 
-À Monsieur le Ministre de la Fonction publique, du Travail et de la Protection sociale
-[À VÉRIFIER : intitulé exact]
+À Monsieur le Ministre des Serviteurs du Peuple
+(ex-ministère de la Fonction publique — nouvel intitulé depuis janvier 2026, à
+re-vérifier le jour de l'envoi)
 
 **Objet : Demande d'audience — notification des résultats des concours par SMS et
 application mobile**
