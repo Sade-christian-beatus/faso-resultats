@@ -573,6 +573,25 @@ Après chaque étape majeure, produire un résumé structuré :
   concurrent ni comme « la plateforme officielle ». Chiffres issus de la presse, à
   revérifier sur les communiqués officiels avant tout document remis à une
   administration.
+- **2026-11-20 — Faso Résultats lauréat du Concours National d'Innovation
+  Digitale « Le Faso Digital » ; profil investisseur créé sur Carrefour
+  Innovations ; nouveau document `docs/FINANCEMENT.md`.** La distinction donne
+  6 mois d'abonnement gratuit à Carrefour Innovations (mise en relation avec des
+  investisseurs) et une formation marketing digital (26 novembre 2026, ABDI).
+  Intitulé exact de la distinction (prix, rang, catégorie) **non connu** : à
+  récupérer avant de la citer dans un courrier ou sur le site (champ
+  `[À VÉRIFIER]` ajouté dans `docs/courriers/00_fiche_presentation.md`).
+  Profil rempli avec le secteur EdTech (pas de GovTech dans la liste), stade
+  amorçage, un besoin de financement proposé à **25 M FCFA sur 12 mois**
+  (USSD, hébergement au Burkina, structure juridique, audit de sécurité,
+  équipe, prospection ; deux tiers du montant sont des estimations, pas des
+  devis) et une description alignée sur le positionnement « brique
+  complémentaire » du 2026-11-17. Conséquence : la structure juridique devient
+  aussi un prérequis pour toute prise de participation d'un investisseur, en
+  plus de la CIL, de l'ANSSI et d'Orange Business. Non fait, à décider : une
+  mention « Lauréat Faso Digital 2026 » sur la page d'accueil (la bannière
+  « Faso Digital 2026 » de la maquette avait été écartée le 2026-09-30 faute de
+  fait vérifiable).
 
 ---
 

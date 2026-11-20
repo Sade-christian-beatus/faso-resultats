@@ -100,6 +100,9 @@ standard officiel est un argument et ne coûterait qu'un champ dans le formulair
 - Données chiffrées au repos, rapprochement candidat sans énumération, audit complet —
   déjà présentés à la CIL.
 - Coût marginal pour l'État (§ 1, point 5), hébergement prévu au Burkina.
+- *(Ajout 2026-11-20)* Lauréat du Concours National d'Innovation Digitale « Le Faso
+  Digital » : reconnaissance nationale utile face à la faiblesse « aucune référence »
+  (intitulé exact à récupérer, voir `docs/FINANCEMENT.md`).
 
 **Faiblesses**
 - **Pas de structure juridique** : bloque la déclaration CIL, la saisine ANSSI, le
@@ -160,7 +163,7 @@ Inconvénient : moins de visibilité. Les deux démarches peuvent être menées 
 
 | Période | Actions |
 |---|---|
-| **Nov.–déc. 2026** | Créer la structure juridique (SAS ou SARL, CEFORE/Maison de l'Entreprise) → RCCM, IFU. Déclaration CIL en ligne. Courrier de saisine ANSSI. Serveur de recette au Burkina (IKA Cloud ou autre devis) + domaine `.bf`. Envoi des demandes d'audience (`docs/courriers/`). |
+| **Nov.–déc. 2026** | Créer la structure juridique (SAS ou SARL, CEFORE/Maison de l'Entreprise) → RCCM, IFU. Déclaration CIL en ligne. Courrier de saisine ANSSI. Serveur de recette au Burkina (IKA Cloud ou autre devis) + domaine `.bf`. Envoi des demandes d'audience (`docs/courriers/`). Formation marketing digital des lauréats Faso Digital (26 nov., ABDI) ; profil investisseurs Carrefour Innovations (`docs/FINANCEMENT.md`). |
 | **Janv.–févr. 2027** | Audiences et démonstrations. Proposer une convention de pilote. Version iOS en TestFlight, APK Android signé. Identifier l'opérateur de `resultats.examens.gov.bf`. |
 | **Mars–avr. 2027** | Contrat Orange Business (nécessite le RCCM). Test de charge réel (k6/locust) sur l'infrastructure de production. Formation des opérateurs de l'administration pilote. |
 | **Mai–juil. 2027** | Pilote réel : BEPC (juin), BAC (fin juin–juillet) ou concours selon la cible obtenue. |

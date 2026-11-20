@@ -346,7 +346,7 @@ Priorité : refondre l'architecture actuelle en multi-tenant AVANT d'aller plus 
 
 2. **Modèle de facturation SMS** : refacturé au coût réel + marge, ou forfait mensuel inclus dans l'abonnement ? À arbitrer avec les premiers prospects.
 
-3. **Structure juridique** : SARL ou SAS ? Le B2G préfère souvent les SAS pour leur souplesse et leur crédibilité "société de tech". À valider avec un conseil juridique.
+3. **Structure juridique** : SARL ou SAS ? Le B2G préfère souvent les SAS pour leur souplesse et leur crédibilité "société de tech". À valider avec un conseil juridique. *(2026-11-20 : également requise pour toute prise de participation d'un investisseur, voir `docs/FINANCEMENT.md`.)*
 
 4. **Politique de données historiques** : quand une administration résilie son contrat, que devient l'historique de ses résultats déjà publiés ? Suppression, export, migration ? À clarifier dans le contrat type.
 

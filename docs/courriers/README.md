@@ -14,7 +14,10 @@ brouillons à adapter, pas des courriers prêts à envoyer.**
    `gouvernement.gov.bf` et le site du ministère concerné le jour de l'envoi. Les champs
    `[À VÉRIFIER]` doivent tous disparaître.
 3. **Annexe** : joindre `00_fiche_presentation.md` (une page, imprimée) à chaque courrier.
-4. **Ne jamais écrire** « plateforme officielle », ni promettre une capacité chiffrée non
+4. **Distinction Faso Digital** (2026-11-20) : peut être citée dans le corps des
+   courriers comme gage de sérieux, mais seulement avec son intitulé exact (prix, rang,
+   catégorie), encore à récupérer (`docs/FINANCEMENT.md` § 1).
+5. **Ne jamais écrire** « plateforme officielle », ni promettre une capacité chiffrée non
    mesurée sur une infrastructure réelle (voir `docs/ANALYSE_MARCHE.md` § 6.1).
 
 ## Dépôt et suivi

@@ -267,5 +267,13 @@ n'en dépendait pas — démarrée sur demande explicite pendant l'attente du co
    de chiffrement (`docs/CIL.md` § 7.2) ; auto-hébergement de Poppins et de
    Tailwind avant la production.
 
+7. **Financement** — **2026-11-20 : Faso Résultats lauréat du concours « Le Faso
+   Digital »** (intitulé exact de la distinction à récupérer). Profil créé sur la
+   plateforme investisseurs Carrefour Innovations (6 mois offerts), avec un besoin
+   proposé de 25 M FCFA sur 12 mois. Budget détaillé, textes du profil et points
+   ouverts dans `docs/FINANCEMENT.md`. Tout investissement en capital suppose la
+   structure juridique (`docs/PIVOT_SAAS_B2G.md` § 9), déjà prérequise pour la
+   CIL, l'ANSSI et Orange Business.
+
 Chaque phase reste conditionnée à une demande explicite avant de démarrer le code,
 conformément à `CLAUDE.md`, même si les choix techniques ci-dessus sont déjà actés.

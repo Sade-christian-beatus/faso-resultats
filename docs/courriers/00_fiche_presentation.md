@@ -31,6 +31,10 @@ leurs résultats **sur tous les canaux** :
 - Données d'identité chiffrées en base ; journal d'audit de toutes les opérations.
 - Hébergement prévu au Burkina Faso. Démarches engagées auprès de la CIL.
 
+## Reconnaissance
+Lauréat du Concours National d'Innovation Digitale « Le Faso Digital » [À VÉRIFIER :
+intitulé exact de la distinction — prix, rang, catégorie, édition].
+
 ## Ce que nous proposons
 Un **pilote sur une session**, sans frais de licence, sous convention, avec un bilan
 chiffré à l'issue.
